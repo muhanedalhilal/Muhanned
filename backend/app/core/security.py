@@ -1,39 +1,42 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from firebase_admin import auth
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.db_user import DBUser
+from app.core.supabase_client import supabase
 
-# This tells FastAPI that endpoints using this dependency require an "Authorization: Bearer <token>" header
+# This forces the requester to present an "Authorization: Bearer <token>" header
 security = HTTPBearer()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     """
-    This is our Bouncer function. 
-    It stands guard on any route that requires a user to be logged in.
+    Supabase 'Bouncer'. Blocks unauthorized requests automatically.
     """
     token = credentials.credentials
     try:
-        # 1. Ask Firebase: "Is this a real, unexpired token?"
-        decoded_token = auth.verify_id_token(token)
-        uid = decoded_token.get("uid")
+        # 1. Provide the token to Supabase and ask "Who is this?"
+        response = supabase.auth.get_user(token)
+        
+        if not response or not response.user:
+            raise Exception("Invalid Supabase token")
 
-        # 2. Assuming Firebase says YES, ask PostgreSQL: "Do we have this user saved?"
-        user = db.query(DBUser).filter(DBUser.firebase_uid == uid).first()
+        uid = response.user.id
+
+        # 2. Ask PostgreSQL: "Do we have this valid user stored in our database?"
+        user = db.query(DBUser).filter(DBUser.supabase_auth_id == uid).first()
         
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, 
-                detail="User found in Firebase but completely missing from PostgreSQL!"
+                detail="User found in Supabase but completely missing from our PostgreSQL 'users' table!"
             )
             
-        # 3. Return the fully loaded PostgreSQL user out to the API route!
+        # 3. Success! Return the full SQL user!
         return user
 
     except Exception as e:
-        # If the token is fake, expired, or mangled, deny access!
+        # Faked, expired, or invalid token gets instantly rejected
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or Expired Authentication Token"
+            detail=f"Invalid or Expired Authentication Token. ({str(e)})"
         )

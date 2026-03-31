@@ -1,15 +1,11 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.api import auth
-from app.core.firebase import init_firebase
 from app.database.database import engine, Base
 import app.models.db_user  # Imported so SQLAlchemy detects the table
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize Firebase on startup
-    init_firebase()
-    
     # Create PostgreSQL Tables if they don't exist yet
     Base.metadata.create_all(bind=engine)
     

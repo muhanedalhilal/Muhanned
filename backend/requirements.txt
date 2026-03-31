@@ -2,7 +2,7 @@ fastapi
 uvicorn
 pydantic
 email-validator
-firebase-admin
+supabase
 sqlalchemy
 psycopg2-binary
 python-dotenv
