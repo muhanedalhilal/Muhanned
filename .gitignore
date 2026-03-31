@@ -11,3 +11,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Firebase Secrets - DO NOT COMMIT!
+serviceAccountKey.json
