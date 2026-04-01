@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
-from app.models.user import UserSignup
+from app.models.user import UserSignup, UserLogin
 from app.database.database import get_db
 from app.models.db_user import DBUser
 from app.core.security import get_current_user
@@ -57,6 +57,33 @@ def signup(user: UserSignup, db: Session = Depends(get_db)):
             detail=f"Auth error: {str(e)}"
         )
 
+@router.post("/login")
+def login(user: UserLogin):
+    try:
+        # Supabase inherently checks if the user/password is correct!
+        response = supabase.auth.sign_in_with_password({
+            "email": user.email,
+            "password": user.password
+        })
+        
+        # If it succeeds, grab the mighty "access token"
+        session = response.session
+        if not session:
+            raise HTTPException(status_code=400, detail="Invalid login credentials")
+            
+        return {
+            "message": "Login successful!",
+            "access_token": session.access_token,
+            "token_type": "bearer",
+            "user_id": response.user.id
+        }
+        
+    except Exception as e:
+        # Prevent hackers or mistakes by responding strongly
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password, or user doesn't exist."
+        )
 
 @router.get("/me")
 def get_my_profile(current_user: DBUser = Depends(get_current_user)):
