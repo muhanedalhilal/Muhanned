@@ -1,4 +1,8 @@
 fastapi
 uvicorn
 pydantic
-firebase-admin
+email-validator
+supabase
+sqlalchemy
+psycopg2-binary
+python-dotenv
