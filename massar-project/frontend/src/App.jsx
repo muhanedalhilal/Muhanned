@@ -7,7 +7,7 @@ import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
-import { User, Settings } from 'lucide-react';
+import { User, Settings, Menu, X, Globe, ChevronDown } from 'lucide-react';
 
 // Centralized Translation Dictionary
 const translations = {
@@ -131,6 +131,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [currentUser, setCurrentUser] = useState({ name: 'Student User', email: '' });
   const [authToken, setAuthToken] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // App-level handlers
   const handleLogout = () => {
@@ -185,19 +186,41 @@ function App() {
           <span className="nav-brand-text">{t.appName}</span>
         </div>
 
-        <div className="nav-links" style={isRtl ? { flexDirection: 'row-reverse' } : {}}>
-          <button className="nav-link" onClick={() => setLanguage(isRtl ? 'en' : 'ar')}>{isRtl ? 'English' : 'عربي'}</button>
+        <button className="hamburger-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+          {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+        </button>
 
-          <button className="nav-link" onClick={() => setCurrentPage('home')}>{t.home}</button>
+        <div className={`nav-links ${isMobileMenuOpen ? 'open' : ''}`} style={isRtl ? { flexDirection: 'row-reverse' } : {}}>
+          <button 
+            className="nav-link" 
+            onClick={() => { setLanguage(isRtl ? 'en' : 'ar'); setIsMobileMenuOpen(false); }} 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              justifyContent: 'center',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '24px',
+              padding: '6px 16px',
+              backgroundColor: 'rgba(0,0,0,0.15)',
+              transition: 'all 0.3s'
+            }}
+          >
+            <Globe size={16} color="#e2e8f0" /> 
+            <span style={{ fontSize: '14px', fontWeight: '500' }}>{isRtl ? 'English' : 'العربية'}</span>
+            <ChevronDown size={16} color="#94a3b8" />
+          </button>
+
+          <button className="nav-link" onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }}>{t.home}</button>
 
           {isLoggedIn && (
             <>
-              <button className="nav-link" onClick={() => setCurrentPage('dashboard')}>{t.dashboard}</button>
-              <button className="nav-link" onClick={() => setCurrentPage('profile')} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <button className="nav-link" onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); }}>{t.dashboard}</button>
+              <button className="nav-link" onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <User size={16} /> {t.profile || 'Profile'}
               </button>
               {isAdmin && (
-                <button className="nav-link" onClick={() => setCurrentPage('admin')} style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#60a5fa' }}>
+                <button className="nav-link" onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#60a5fa', justifyContent: 'center' }}>
                   <Settings size={16} /> {t.adminPanel || 'Admin Panel'}
                 </button>
               )}
@@ -205,9 +228,9 @@ function App() {
           )}
 
           {!isLoggedIn ? (
-            <button className="nav-btn primary" onClick={goLogin}>{t.login}</button>
+            <button className="nav-btn primary" onClick={() => { goLogin(); setIsMobileMenuOpen(false); }}>{t.login}</button>
           ) : (
-            <button className="nav-btn danger" onClick={handleLogout}>{t.logout}</button>
+            <button className="nav-btn danger" onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}>{t.logout}</button>
           )}
         </div>
       </nav>

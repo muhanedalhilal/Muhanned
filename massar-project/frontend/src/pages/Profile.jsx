@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { User, Mail, Lock, Save, ArrowLeft } from 'lucide-react';
 
-export default function Profile({ t, onBack, currentUser, setCurrentUser }) {
+export default function Profile({ t, onBack, currentUser, setCurrentUser, authToken }) {
   const [profileData, setProfileData] = useState({
     name: currentUser?.name || '',
     email: currentUser?.email || '',
@@ -9,18 +9,60 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser }) {
   });
 
   const [message, setMessage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChange = (e) => {
     setProfileData({ ...profileData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (setCurrentUser) {
-      setCurrentUser({ name: profileData.name, email: profileData.email });
+    setIsLoading(true);
+    setMessage(null);
+
+    // Build only the fields that actually changed
+    const payload = {};
+    if (profileData.name && profileData.name !== currentUser.name) payload.name = profileData.name;
+    if (profileData.email && profileData.email !== currentUser.email) payload.email = profileData.email;
+    if (profileData.password) payload.password = profileData.password;
+
+    if (Object.keys(payload).length === 0) {
+      setMessage({ type: 'info', text: 'No changes to save.' });
+      setIsLoading(false);
+      return;
     }
-    setMessage({ type: 'success', text: t.profileSaved || 'Profile successfully updated!' });
-    setTimeout(() => setMessage(null), 3000);
+
+    try {
+      const res = await fetch('http://127.0.0.1:8000/users/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Sync updated name/email back to the global app state
+        if (setCurrentUser) {
+          setCurrentUser({
+            name: data.user?.name || profileData.name,
+            email: data.user?.email || profileData.email
+          });
+        }
+        setProfileData({ ...profileData, password: '' }); // clear password field
+        setMessage({ type: 'success', text: data.message || t.profileSaved || 'Profile updated!' });
+      } else {
+        setMessage({ type: 'error', text: data.detail || 'Update failed.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Server connection failed.' });
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => setMessage(null), 4000);
+    }
   };
 
   return (
@@ -88,9 +130,8 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser }) {
             </div>
           </div>
 
-          <button type="submit" className="btn-luxe submit" style={{ marginTop: '20px', background: '#3b82f6', display: 'flex', gap: '8px', justifyContent: 'center', color: 'white' }}>
-            <Save size={18} />
-            {t.saveChanges || 'Save Changes'}
+          <button type="submit" className="btn-luxe submit" disabled={isLoading} style={{ marginTop: '20px', background: '#3b82f6', display: 'flex', gap: '8px', justifyContent: 'center', color: 'white' }}>
+            {isLoading ? <span className="loader"></span> : <><Save size={18} /> {t.saveChanges || 'Save Changes'}</>}
           </button>
 
           {message && (

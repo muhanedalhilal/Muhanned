@@ -70,7 +70,6 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
                 required 
                 value={formData.name} 
                 onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                dir={isRtl ? 'rtl' : 'ltr'} 
               />
             </div>
           )}
@@ -81,7 +80,7 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
               required 
               value={formData.email} 
               onChange={(e) => setFormData({...formData, email: e.target.value})} 
-              dir="ltr" 
+              style={{ textAlign: formData.email ? 'left' : 'start', direction: formData.email ? 'ltr' : 'inherit' }}
             />
           </div>
           <div className="input-group">
@@ -91,7 +90,7 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
               required 
               value={formData.password} 
               onChange={(e) => setFormData({...formData, password: e.target.value})} 
-              dir="ltr" 
+              style={{ textAlign: formData.password ? 'left' : 'start', direction: formData.password ? 'ltr' : 'inherit' }}
             />
           </div>
           <button type="submit" className="submit-btn" disabled={isLoading}>
