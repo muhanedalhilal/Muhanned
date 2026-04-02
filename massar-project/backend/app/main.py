@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.api import auth
+from app.api import auth, admin
 from app.database.database import engine, Base
 import app.models.db_user  # Imported so SQLAlchemy detects the table
 
@@ -34,6 +34,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(admin.router)
 
 @app.get("/")
 def read_root():

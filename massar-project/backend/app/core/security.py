@@ -40,3 +40,15 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid or Expired Authentication Token. ({str(e)})"
         )
+
+def require_admin(current_user: DBUser = Depends(get_current_user)):
+    """
+    Admin-only gate. Any route that depends on this will
+    automatically reject non-admin users with a 403 Forbidden.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Admin privileges required."
+        )
+    return current_user
