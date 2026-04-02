@@ -34,7 +34,19 @@ const translations = {
     dashSub: "Your live learning analytics are securely protected.",
     statMastery: "Overall Knowledge Mastery",
     statCourses: "Active Modules",
-    statTasks: "Pending Assessments"
+    statTasks: "Pending Assessments",
+    commandCenter: "Learning Command Center",
+    manageSubjects: "Organize and track your learning progress.",
+    addSubject: "Add New Subject",
+    subjectName: "Subject Name",
+    tasksCompleted: "tasks completed",
+    noSubjects: "No subjects added yet. Start by adding one!",
+    activeSubjects: "Active Subjects",
+    completedSubjects: "Completed Subjects",
+    searchPlaceholder: "Search subjects...",
+    backToDashboard: "Back to Command Center",
+    addTask: "Add new task...",
+    noTasksYet: "No tasks added yet."
   },
   ar: {
     appName: "مسار",
@@ -62,18 +74,30 @@ const translations = {
     dashSub: ".تحليلات التعلم المباشرة الخاصة بك محمية بأمان تام",
     statMastery: "إتقان المعرفة الشامل",
     statCourses: "الوحدات النشطة",
-    statTasks: "التقييمات المعلقة"
+    statTasks: "التقييمات المعلقة",
+    commandCenter: "مركز قيادة التعلم",
+    manageSubjects: "تنظيم وتتبع تقدمك في التعلم.",
+    addSubject: "إضافة مادة جديدة",
+    subjectName: "اسم المادة",
+    tasksCompleted: "مهمة منجزة",
+    noSubjects: "لم يتم إضافة مواد بعد. ابدأ بإضافة واحدة!",
+    activeSubjects: "المواد النشطة",
+    completedSubjects: "المواد المكتملة",
+    searchPlaceholder: "ابحث عن المواد...",
+    backToDashboard: "العودة لمركز القيادة",
+    addTask: "إضافة مهمة جديدة...",
+    noTasksYet: "لم يتم إضافة مهام بعد."
   }
 };
 
 function App() {
   // Global State
-  const [language, setLanguage] = useState('en'); 
+  const [language, setLanguage] = useState('en');
   const t = translations[language];
 
   // Routing State
-  const [currentPage, setCurrentPage] = useState('home'); 
-  
+  const [currentPage, setCurrentPage] = useState('home');
+
   // Security State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginView, setIsLoginView] = useState(true);
@@ -89,21 +113,21 @@ function App() {
     setCurrentPage('dashboard');
   };
 
-  const goSignUp = () => { 
-    setIsLoginView(false); 
-    setCurrentPage('auth'); 
+  const goSignUp = () => {
+    setIsLoginView(false);
+    setCurrentPage('auth');
   };
-  
-  const goLogin = () => { 
-    setIsLoginView(true); 
-    setCurrentPage('auth'); 
+
+  const goLogin = () => {
+    setIsLoginView(true);
+    setCurrentPage('auth');
   };
 
   const isRtl = language === 'ar';
 
   return (
     <div className="app-container" dir={isRtl ? 'rtl' : 'ltr'}>
-      
+
       {/* Universal Floating Particles */}
       <div className="background-elements">
         <div className="circle circle-1"></div>
@@ -111,17 +135,17 @@ function App() {
       </div>
 
       {/* Global Navigation Header */}
-      <nav className="navbar" style={isRtl ? {flexDirection: 'row-reverse'} : {}}>
-        <div className="nav-logo" onClick={() => setCurrentPage('home')} style={isRtl ? {flexDirection: 'row-reverse'} : {}}>
+      <nav className="navbar" style={isRtl ? { flexDirection: 'row-reverse' } : {}}>
+        <div className="nav-logo" onClick={() => setCurrentPage('home')} style={isRtl ? { flexDirection: 'row-reverse' } : {}}>
           <img src="/logo.png" alt="Massar Logo" onError={(e) => { e.target.src = 'https://via.placeholder.com/60x60/2b4a8e/ffffff?text=M' }} />
           <span className="nav-brand-text">{t.appName}</span>
         </div>
-        
-        <div className="nav-links" style={isRtl ? {flexDirection: 'row-reverse'} : {}}>
+
+        <div className="nav-links" style={isRtl ? { flexDirection: 'row-reverse' } : {}}>
           <button className="nav-link" onClick={() => setLanguage(isRtl ? 'en' : 'ar')}>{isRtl ? 'English' : 'عربي'}</button>
-          
+
           <button className="nav-link" onClick={() => setCurrentPage('home')}>{t.home}</button>
-          
+
           {isLoggedIn && (
             <button className="nav-link" onClick={() => setCurrentPage('dashboard')}>{t.dashboard}</button>
           )}
@@ -135,20 +159,20 @@ function App() {
       </nav>
 
       <main className="main-content">
-        
+
         {/* Dynamic Route Rendering utilizing the 'pages' Folder */}
-        
+
         {currentPage === 'home' && (
           <Home t={t} goSignUp={goSignUp} isLoggedIn={isLoggedIn} />
         )}
 
         {currentPage === 'auth' && !isLoggedIn && (
-          <Auth 
-            t={t} 
-            isLoginView={isLoginView} 
-            setIsLoginView={setIsLoginView} 
-            onSecureLogin={handleSecureLogin} 
-            isRtl={isRtl} 
+          <Auth
+            t={t}
+            isLoginView={isLoginView}
+            setIsLoginView={setIsLoginView}
+            onSecureLogin={handleSecureLogin}
+            isRtl={isRtl}
           />
         )}
 
