@@ -141,7 +141,7 @@ function App() {
     setCurrentPage('home');
   };
 
-  const handleSecureLogin = (email = '', name = '', token = null) => {
+  const handleSecureLogin = (email = '', name = '', token = null, role = 'student') => {
     setIsLoggedIn(true);
     setAuthToken(token);
     let defaultName = name || 'Student User';
@@ -152,12 +152,8 @@ function App() {
     }
     
     setCurrentUser({ name: defaultName, email: email || 'student@massar.edu' });
-    // Simple frontend logic: if email contains 'admin', 'saeed', or 'mhanad', set them as admin
-    if (email && (email.includes('admin') || email.includes('saeed') || email.includes('mhanad'))) {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(false);
-    }
+    // Use the actual role from the backend instead of guessing from email
+    setIsAdmin(role === 'admin');
     setCurrentPage('dashboard');
   };
 
@@ -239,7 +235,7 @@ function App() {
         )}
 
         {currentPage === 'profile' && isLoggedIn && (
-          <Profile t={t} onBack={() => setCurrentPage('dashboard')} currentUser={currentUser} setCurrentUser={setCurrentUser} />
+          <Profile t={t} onBack={() => setCurrentPage('dashboard')} currentUser={currentUser} setCurrentUser={setCurrentUser} authToken={authToken} />
         )}
 
         {currentPage === 'admin' && isLoggedIn && isAdmin && (

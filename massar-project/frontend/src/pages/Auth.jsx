@@ -33,12 +33,12 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
              });
              const meData = await meRes.json();
              if (meRes.ok && meData.name) {
-               onSecureLogin(meData.email || formData.email, meData.name, data.access_token);
+               onSecureLogin(meData.email || formData.email, meData.name, data.access_token, meData.user_role);
              } else {
-               onSecureLogin(formData.email, '', data.access_token);
+               onSecureLogin(formData.email, '', data.access_token, 'student');
              }
            } catch {
-             onSecureLogin(formData.email, '', data.access_token);
+             onSecureLogin(formData.email, '', data.access_token, 'student');
            }
         } else {
            setStatus({ message: data.message, type: 'success' });
