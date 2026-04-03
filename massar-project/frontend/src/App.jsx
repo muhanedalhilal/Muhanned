@@ -5,6 +5,9 @@ import './index.css';
 import Home from './pages/Home';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard';
+import { User, Settings } from 'lucide-react';
 
 // Centralized Translation Dictionary
 const translations = {
@@ -46,7 +49,19 @@ const translations = {
     searchPlaceholder: "Search subjects...",
     backToDashboard: "Back to Command Center",
     addTask: "Add new task...",
-    noTasksYet: "No tasks added yet."
+    noTasksYet: "No tasks added yet.",
+    profile: "Profile Management",
+    profileSub: "Manage your personal account details securely.",
+    profileSaved: "Profile successfully updated!",
+    adminPanel: "Admin Panel",
+    platformAnalytics: "Platform Analytics",
+    platformAnalyticsSub: "Monitor overall engagement and system trends.",
+    totalUsers: "Total Users",
+    activeCourses: "Active Courses",
+    systemHealth: "System Health",
+    userAdmin: "User Administration",
+    manageUsers: "Manage Accounts",
+    searchUsers: "Search users..."
   },
   ar: {
     appName: "مسار",
@@ -86,7 +101,19 @@ const translations = {
     searchPlaceholder: "ابحث عن المواد...",
     backToDashboard: "العودة لمركز القيادة",
     addTask: "إضافة مهمة جديدة...",
-    noTasksYet: "لم يتم إضافة مهام بعد."
+    noTasksYet: "لم يتم إضافة مهام بعد.",
+    profile: "إدارة الملف الشخصي",
+    profileSub: "أدر تفاصيل حسابك الشخصي بأمان.",
+    profileSaved: "تم تحديث الملف الشخصي بنجاح!",
+    adminPanel: "لوحة تحكم المشرف",
+    platformAnalytics: "تحليلات المنصة",
+    platformAnalyticsSub: "مراقبة التفاعل والاتجاهات العامة للمنصة.",
+    totalUsers: "إجمالي المستخدمين",
+    activeCourses: "المواد النشطة",
+    systemHealth: "صحة النظام",
+    userAdmin: "إدارة المستخدمين",
+    manageUsers: "إدارة الحسابات",
+    searchUsers: "البحث عن مستخدمين..."
   }
 };
 
@@ -101,15 +128,36 @@ function App() {
   // Security State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginView, setIsLoginView] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUser, setCurrentUser] = useState({ name: 'Student User', email: '' });
+  const [authToken, setAuthToken] = useState(null);
 
   // App-level handlers
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setIsAdmin(false);
+    setAuthToken(null);
+    setCurrentUser({ name: 'Student User', email: '' });
     setCurrentPage('home');
   };
 
-  const handleSecureLogin = () => {
+  const handleSecureLogin = (email = '', name = '', token = null) => {
     setIsLoggedIn(true);
+    setAuthToken(token);
+    let defaultName = name || 'Student User';
+    if (!name && email) {
+      defaultName = email.split('@')[0];
+      // Capitalize the first letter if possible
+      defaultName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
+    }
+    
+    setCurrentUser({ name: defaultName, email: email || 'student@massar.edu' });
+    // Simple frontend logic: if email contains 'admin', 'saeed', or 'mhanad', set them as admin
+    if (email && (email.includes('admin') || email.includes('saeed') || email.includes('mhanad'))) {
+      setIsAdmin(true);
+    } else {
+      setIsAdmin(false);
+    }
     setCurrentPage('dashboard');
   };
 
@@ -147,7 +195,17 @@ function App() {
           <button className="nav-link" onClick={() => setCurrentPage('home')}>{t.home}</button>
 
           {isLoggedIn && (
-            <button className="nav-link" onClick={() => setCurrentPage('dashboard')}>{t.dashboard}</button>
+            <>
+              <button className="nav-link" onClick={() => setCurrentPage('dashboard')}>{t.dashboard}</button>
+              <button className="nav-link" onClick={() => setCurrentPage('profile')} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <User size={16} /> {t.profile || 'Profile'}
+              </button>
+              {isAdmin && (
+                <button className="nav-link" onClick={() => setCurrentPage('admin')} style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#60a5fa' }}>
+                  <Settings size={16} /> {t.adminPanel || 'Admin Panel'}
+                </button>
+              )}
+            </>
           )}
 
           {!isLoggedIn ? (
@@ -178,6 +236,14 @@ function App() {
 
         {currentPage === 'dashboard' && isLoggedIn && (
           <Dashboard t={t} />
+        )}
+
+        {currentPage === 'profile' && isLoggedIn && (
+          <Profile t={t} onBack={() => setCurrentPage('dashboard')} currentUser={currentUser} setCurrentUser={setCurrentUser} />
+        )}
+
+        {currentPage === 'admin' && isLoggedIn && isAdmin && (
+          <AdminDashboard t={t} authToken={authToken} />
         )}
 
       </main>

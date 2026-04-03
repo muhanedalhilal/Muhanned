@@ -26,7 +26,20 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
       
       if (response.ok) {
         if (isLoginView && data.access_token) {
-           onSecureLogin();
+           try {
+             // Fetch real profile from backend
+             const meRes = await fetch('http://127.0.0.1:8000/auth/me', {
+               headers: { 'Authorization': `Bearer ${data.access_token}` }
+             });
+             const meData = await meRes.json();
+             if (meRes.ok && meData.name) {
+               onSecureLogin(meData.email || formData.email, meData.name, data.access_token);
+             } else {
+               onSecureLogin(formData.email, '', data.access_token);
+             }
+           } catch {
+             onSecureLogin(formData.email, '', data.access_token);
+           }
         } else {
            setStatus({ message: data.message, type: 'success' });
            setFormData({ name: '', email: '', password: '' });
