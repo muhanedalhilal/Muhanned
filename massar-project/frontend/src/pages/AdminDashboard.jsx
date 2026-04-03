@@ -162,7 +162,7 @@ export default function AdminDashboard({ t, authToken }) {
                           <input 
                             type="text" 
                             className="input-luxe" 
-                            style={{ padding: '8px', fontSize: '14px', borderRadius: '8px', width: '100%', marginBottom: '4px' }} 
+                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', marginBottom: '4px', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white' }} 
                             value={editFormData.name} 
                             onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} 
                           />
@@ -171,13 +171,13 @@ export default function AdminDashboard({ t, authToken }) {
                         <td style={{ padding: '15px 30px' }}>
                           <select 
                             className="input-luxe" 
-                            style={{ padding: '8px', fontSize: '14px', borderRadius: '8px', width: '100%' }}
+                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white', cursor: 'pointer' }}
                             value={editFormData.role}
                             onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
                           >
-                            <option value="student">student</option>
-                            <option value="teacher">teacher</option>
-                            <option value="admin">admin</option>
+                            <option value="student" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Student</option>
+                            <option value="teacher" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Teacher</option>
+                            <option value="admin" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Admin</option>
                           </select>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
