@@ -36,17 +36,33 @@ const translations = {
     statCourses: "Active Modules",
     statTasks: "Pending Assessments",
     commandCenter: "Learning Command Center",
-    manageSubjects: "Organize and track your learning progress.",
-    addSubject: "Add New Subject",
-    subjectName: "Subject Name",
-    tasksCompleted: "tasks completed",
-    noSubjects: "No subjects added yet. Start by adding one!",
-    activeSubjects: "Active Subjects",
-    completedSubjects: "Completed Subjects",
-    searchPlaceholder: "Search subjects...",
+    manageCourses: "Organize and track your learning progress.",
+    addCourse: "Add New Course",
+    courseName: "Course Name",
+    componentsCompleted: "components completed",
+    noCourses: "No courses added yet. Start by adding one!",
+    activeCourses: "Active Courses",
+    completedCourses: "Completed Courses",
+    searchPlaceholder: "Search courses...",
     backToDashboard: "Back to Command Center",
-    addTask: "Add new task...",
-    noTasksYet: "No tasks added yet."
+    addComponent: "Add new component...",
+    noComponentsYet: "No components added yet.",
+    mastery: "Mastery",
+    growthTimeline: "Cognitive Growth Timeline",
+    masteredTask: "Completed",
+    joinedPlatform: "Joined Massar",
+    masteredLinearAlgebra: "Completed: Linear Algebra Worksheet",
+    platform: "Platform",
+    mathSubject: "Mathematics",
+    csSubject: "Computer Science",
+    historySubject: "World History",
+    literatureSubject: "Literature",
+    startQuiz: "Start the quiz",
+    progressDiagram: "Progress Diagram",
+    resourcesLearningAssets: "Resources & Learning Assets",
+    addResources: "Add Resources (PDF/PPTX)",
+    addingResource: "Adding Resource...",
+    open: "Open"
   },
   ar: {
     appName: "مسار",
@@ -76,17 +92,33 @@ const translations = {
     statCourses: "الوحدات النشطة",
     statTasks: "التقييمات المعلقة",
     commandCenter: "مركز قيادة التعلم",
-    manageSubjects: "تنظيم وتتبع تقدمك في التعلم.",
-    addSubject: "إضافة مادة جديدة",
-    subjectName: "اسم المادة",
-    tasksCompleted: "مهمة منجزة",
-    noSubjects: "لم يتم إضافة مواد بعد. ابدأ بإضافة واحدة!",
-    activeSubjects: "المواد النشطة",
-    completedSubjects: "المواد المكتملة",
-    searchPlaceholder: "ابحث عن المواد...",
+    manageCourses: "تنظيم وتتبع تقدمك في التعلم.",
+    addCourse: "إضافة مقرر جديد",
+    courseName: "اسم المقرر",
+    componentsCompleted: "مكوّن منجز",
+    noCourses: "لم يتم إضافة مقررات بعد. ابدأ بإضافة واحد!",
+    activeCourses: "المقررات النشطة",
+    completedCourses: "المقررات المكتملة",
+    searchPlaceholder: "ابحث عن المقررات...",
     backToDashboard: "العودة لمركز القيادة",
-    addTask: "إضافة مهمة جديدة...",
-    noTasksYet: "لم يتم إضافة مهام بعد."
+    addComponent: "إضافة مكوّن جديد...",
+    noComponentsYet: "لم يتم إضافة مكوّنات بعد.",
+    mastery: "إتقان",
+    growthTimeline: "الجدول الزمني للنمو المعرفي",
+    masteredTask: "تم إنجاز",
+    joinedPlatform: "انضم إلى مسار",
+    masteredLinearAlgebra: "تم إنجاز: ورقة عمل الجبر الخطي",
+    platform: "المنصة",
+    mathSubject: "رياضيات",
+    csSubject: "علوم الحاسب",
+    historySubject: "تاريخ العالم",
+    literatureSubject: "الأدب",
+    startQuiz: "ابدأ الاختبار",
+    progressDiagram: "مخطط التقدم",
+    resourcesLearningAssets: "الموارد والأصول التعليمية",
+    addResources: "إضافة موارد (PDF/PPTX)",
+    addingResource: "جاري إضافة المورد...",
+    open: "فتح"
   }
 };
 
@@ -101,6 +133,9 @@ function App() {
   // Security State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginView, setIsLoginView] = useState(true);
+
+  // Dashboard Sub-Routing State
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
 
   // App-level handlers
   const handleLogout = () => {
@@ -147,7 +182,10 @@ function App() {
           <button className="nav-link" onClick={() => setCurrentPage('home')}>{t.home}</button>
 
           {isLoggedIn && (
-            <button className="nav-link" onClick={() => setCurrentPage('dashboard')}>{t.dashboard}</button>
+            <button className="nav-link" onClick={() => {
+              setCurrentPage('dashboard');
+              setSelectedCourseId(null);
+            }}>{t.dashboard}</button>
           )}
 
           {!isLoggedIn ? (
@@ -177,7 +215,11 @@ function App() {
         )}
 
         {currentPage === 'dashboard' && isLoggedIn && (
-          <Dashboard t={t} />
+          <Dashboard
+            t={t}
+            selectedCourseId={selectedCourseId}
+            setSelectedCourseId={setSelectedCourseId}
+          />
         )}
 
       </main>
