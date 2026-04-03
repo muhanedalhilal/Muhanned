@@ -45,6 +45,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
   const [newCourseName, setNewCourseName] = useState('');
   const [newCourseIcon, setNewCourseIcon] = useState('book');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   // Global Timeline
@@ -164,7 +165,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
 
     // Chart Data Preparation
     const chartData = selectedCourse.componentList.map((comp) => ({
-      name: comp.text.length > 12 ? comp.text.substring(0, 10) + '...' : comp.text,
+      name: comp.text,
       fullName: comp.text,
       progress: comp.progress,
       fill: comp.progress === 100 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
@@ -179,7 +180,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
         </div>
 
         {/* Course Hero Panel */}
-        <div className="luxe-panel detail-hero">
+        <div className="luxe-panel detail-hero bento-hero">
           <div className="detail-hero-top">
             <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '15px' }}>
               <ArrowLeft size={24} color="white" />
@@ -209,17 +210,17 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
           </div>
         </div>
 
-        {/* Two-column layout: Checklist + Chart */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '20px', marginTop: '20px' }}>
+        {/* Bento Box layout: Checklist + Chart */}
+        <div className="bento-layout">
 
           {/* Components Checklist */}
-          <div className="task-checklist luxe-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="task-checklist luxe-panel bento-tasks">
             <h3 style={{ color: 'white', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Library size={22} color={selectedCourse.color} />
               {t.resourcesLearningAssets || 'Resources & Learning Assets'}
             </h3>
 
-            <div className="task-list" style={{ flex: 1 }}>
+            <div className="task-list custom-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '10px' }}>
               {selectedCourse.componentList.length === 0 ? (
                 <div className="empty-state" style={{ padding: '30px', background: 'transparent', border: 'none' }}>
                   <p>{t.noComponentsYet || 'No resources added yet. Add a PDF or PPTX to begin.'}</p>
@@ -284,7 +285,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
           </div>
 
           {/* Progress Chart & Quiz Action */}
-          <div className="luxe-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="luxe-panel bento-chart">
             <h3 style={{ color: 'white', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <BarChart3 size={22} color={selectedCourse.color} />
               {t.progressDiagram || 'Progress Diagram'}
@@ -413,7 +414,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
         </div>
 
         <div className="header-actions">
-          <div className="search-bar">
+          <div className="search-bar" style={{ position: 'relative' }}>
             <Search size={18} color="#94a3b8" />
             <input
               type="text"
@@ -421,7 +422,37 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
               className="search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
             />
+            {isSearchFocused && searchQuery && (
+              <div className="search-suggestions" style={{
+                position: 'absolute', top: '100%', left: 0, right: 0,
+                background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px',
+                marginTop: '8px', padding: '8px 0', zIndex: 100,
+                boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)',
+                display: 'flex', flexDirection: 'column', gap: '4px'
+              }}>
+                {filteredCourses.length > 0 ? filteredCourses.map(course => (
+                  <div key={course.id} style={{
+                    padding: '8px 16px', cursor: 'pointer', color: 'white', display: 'flex', alignItems: 'center', gap: '10px',
+                    transition: '0.2s'
+                  }} onClick={() => {
+                    setSelectedCourseId(course.id);
+                    setSearchQuery('');
+                  }} onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                     onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                    <div style={{ transform: 'scale(0.8)' }}>
+                      {availableIcons[course.icon]}
+                    </div>
+                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{course.name}</span>
+                  </div>
+                )) : (
+                  <div style={{ padding: '8px 16px', color: '#94a3b8', fontSize: '14px' }}>No matches found...</div>
+                )}
+              </div>
+            )}
           </div>
           <button className="btn-luxe primary" onClick={() => setIsAdding(!isAdding)}>
             <Plus size={18} />
