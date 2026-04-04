@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library } from 'lucide-react';
+import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const availableIcons = {
@@ -11,48 +11,66 @@ const availableIcons = {
   science: <FlaskConical size={24} />
 };
 
+const CustomXAxisTick = ({ x, y, payload }) => {
+  const fullText = payload.value;
+  const truncated = fullText.length > 12 ? fullText.substring(0, 12) + '...' : fullText;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={16} textAnchor="end" fill="#94a3b8" fontSize={11} transform="rotate(-25)">
+        <title>{fullText}</title>
+        {truncated}
+      </text>
+    </g>
+  );
+};
+
 export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) {
   const [courses, setCourses] = useState([
     {
       id: 1, name: 'Mathematics', icon: 'math', color: '#3b82f6',
+      resourceList: [
+        { id: 1001, text: 'Linear Algebra Worksheet', type: 'pdf' },
+        { id: 1002, text: 'Study for Midterm', type: 'pptx' }
+      ],
       componentList: [
-        { id: 101, text: 'Linear Algebra Worksheet', progress: 100, type: 'pdf' },
-        { id: 102, text: 'Study for Midterm', progress: 0, type: 'pptx' }
+        { id: 101, text: 'Linear Algebra Core Concepts', progress: 100 },
+        { id: 102, text: 'Midterm Prep', progress: 0 }
       ]
     },
     {
       id: 2, name: 'Computer Science', icon: 'code', color: '#8b5cf6',
+      resourceList: [
+        { id: 2001, text: 'React Docs.pdf', type: 'pdf' }
+      ],
       componentList: [
-        { id: 201, text: 'Install React', progress: 100, type: 'pdf' },
-        { id: 202, text: 'Build API Backend', progress: 50, type: 'pdf' },
-        { id: 203, text: 'Deploy to Vercel', progress: 0, type: 'pdf' }
+        { id: 201, text: 'Install React', progress: 100 },
+        { id: 202, text: 'Build API Backend', progress: 50 },
+        { id: 203, text: 'Deploy to Vercel', progress: 0 }
       ]
     },
     {
       id: 3, name: 'World History', icon: 'globe', color: '#10b981',
+      resourceList: [],
       componentList: [
-        { id: 301, text: 'Read Chapter 4', progress: 100, type: 'pdf' },
-        { id: 302, text: 'Essay Outline', progress: 100, type: 'pdf' }
+        { id: 301, text: 'Read Chapter 4', progress: 100 },
+        { id: 302, text: 'Essay Outline', progress: 100 }
       ]
     },
     {
       id: 4, name: 'Literature', icon: 'book', color: '#f59e0b',
+      resourceList: [],
       componentList: []
     }
   ]);
 
   const [isAdding, setIsAdding] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
-  const [newCourseIcon, setNewCourseIcon] = useState('book');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-
-  // Global Timeline
-  const [timeline, setTimeline] = useState([
-    { id: 2, date: 'Apr 02', textKey: 'masteredLinearAlgebra', subjectKey: 'mathSubject', color: '#3b82f6', icon: 'math' },
-    { id: 1, date: 'Apr 01', textKey: 'joinedPlatform', subjectKey: 'platform', color: '#10b981', icon: 'globe' }
-  ]);
+  const [splittingResId, setSplittingResId] = useState(null);
+  const [isAddingComponent, setIsAddingComponent] = useState(false);
+  const [newComponentName, setNewComponentName] = useState('');
 
   const addCourse = (e) => {
     e.preventDefault();
@@ -63,8 +81,9 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     const newCourse = {
       id: Date.now(),
       name: newCourseName,
-      icon: newCourseIcon,
+      icon: 'book',
       color: randomColor,
+      resourceList: [],
       componentList: []
     };
     setCourses([...courses, newCourse]);
@@ -81,38 +100,16 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
 
   // Component Handlers
   const updateProgress = (courseId, compId, newValue) => {
-    let taskBecameCompleted = false;
-    let targetCourse = null;
-    let targetCompText = '';
-
     setCourses(courses.map(course => {
       if (course.id !== courseId) return course;
       const updatedList = course.componentList.map(comp => {
         if (comp.id === compId) {
-          const oldProg = comp.progress;
-          if (oldProg < 100 && newValue === 100) {
-            taskBecameCompleted = true;
-            targetCourse = course;
-            targetCompText = comp.text;
-          }
           return { ...comp, progress: newValue };
         }
         return comp;
       });
       return { ...course, componentList: updatedList };
     }));
-
-    if (taskBecameCompleted) {
-      const newMilestone = {
-        id: Date.now(),
-        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        text: `${t.masteredTask || 'Mastered'}: ${targetCompText}`,
-        subject: targetCourse.name,
-        color: targetCourse.color,
-        icon: targetCourse.icon
-      };
-      setTimeline(prev => [newMilestone, ...prev]);
-    }
   };
 
   const handleResourceSelect = (e, courseId) => {
@@ -129,11 +126,10 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
         const newResource = {
           id: Date.now(),
           text: file.name,
-          progress: 0,
           type: extension,
           fileUrl: URL.createObjectURL(file)
         };
-        return { ...course, componentList: [...course.componentList, newResource] };
+        return { ...course, resourceList: [...(course.resourceList || []), newResource] };
       }));
       setIsUploading(false);
       e.target.value = ''; 
@@ -145,9 +141,55 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
       if (course.id !== courseId) return course;
       return {
         ...course,
-        componentList: course.componentList.filter(res => res.id !== resourceId)
+        resourceList: (course.resourceList || []).filter(res => res.id !== resourceId)
       };
     }));
+  };
+
+  const deleteComponent = (courseId, compId) => {
+    setCourses(courses.map(course => {
+      if (course.id !== courseId) return course;
+      return {
+        ...course,
+        componentList: (course.componentList || []).filter(c => c.id !== compId)
+      };
+    }));
+  };
+
+  const handleSaveComponent = (courseId) => {
+    if (newComponentName && newComponentName.trim()) {
+      setCourses(courses.map(course => {
+        if (course.id !== courseId) return course;
+        return {
+          ...course,
+          componentList: [...(course.componentList || []), { id: Date.now(), text: newComponentName.trim(), progress: 0 }]
+        };
+      }));
+    }
+    setNewComponentName('');
+    setIsAddingComponent(false);
+  };
+
+  const handleSplitResource = (courseId, resource) => {
+    setSplittingResId(resource.id);
+    setTimeout(() => {
+      setCourses(courses.map(course => {
+        if (course.id !== courseId) return course;
+        
+        const resName = resource.text.replace(/\.[^/.]+$/, "");
+        const newComponents = [
+          { id: Date.now() + 1, text: `Chap 1: ${resName} Intro`, progress: 0 },
+          { id: Date.now() + 2, text: `Chap 2: ${resName} Core`, progress: 0 },
+          { id: Date.now() + 3, text: `Chap 3: ${resName} Review`, progress: 0 }
+        ];
+
+        return {
+          ...course,
+          componentList: [...(course.componentList || []), ...newComponents]
+        };
+      }));
+      setSplittingResId(null);
+    }, 1500);
   };
 
   // Render Course Detail View
@@ -213,78 +255,205 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
         {/* Bento Box layout: Checklist + Chart */}
         <div className="bento-layout">
 
-          {/* Components Checklist */}
-          <div className="task-checklist luxe-panel bento-tasks">
-            <h3 style={{ color: 'white', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Library size={22} color={selectedCourse.color} />
-              {t.resourcesLearningAssets || 'Resources & Learning Assets'}
-            </h3>
+          {/* Panel 1: Resources Section */}
+          <div className="task-checklist luxe-panel bento-tasks" style={{ display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ color: 'white', marginBottom: '15px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Library size={22} color={selectedCourse.color} />
+                {t.resourcesLearningAssets || 'Resources & Learning Assets'}
+              </h3>
 
-            <div className="task-list custom-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '10px' }}>
-              {selectedCourse.componentList.length === 0 ? (
-                <div className="empty-state" style={{ padding: '30px', background: 'transparent', border: 'none' }}>
-                  <p>{t.noComponentsYet || 'No resources added yet. Add a PDF or PPTX to begin.'}</p>
-                </div>
-              ) : (
-                selectedCourse.componentList.map(comp => (
-                  <div
-                    key={comp.id}
-                    className={`task-item ${comp.progress === 100 ? 'completed' : ''}`}
-                    style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px', padding: '20px' }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span className="task-text" style={{ fontSize: '16px', fontWeight: '600' }}>{comp.text}</span>
-                        {comp.fileUrl && (
-                          <a href={comp.fileUrl} target="_blank" rel="noreferrer" style={{ fontSize: '11px', color: selectedCourse.color, textDecoration: 'underline' }}>
+              <div className="task-list custom-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '10px', minHeight: '150px' }}>
+                {(selectedCourse.resourceList || []).length === 0 ? (
+                  <div className="empty-state" style={{ padding: '20px', background: 'transparent', border: 'none' }}>
+                    <p style={{ margin: 0, fontSize: '14px' }}>{t.noResourcesYet || 'No resources added yet. Add a PDF or PPTX to begin.'}</p>
+                  </div>
+                ) : (
+                  (selectedCourse.resourceList || []).map(res => (
+                    <div
+                      key={res.id}
+                      className="task-item"
+                      style={{ padding: '15px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                        <span className="task-text" style={{ fontSize: '15px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{res.text}</span>
+                        {res.fileUrl && (
+                          <a href={res.fileUrl} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: selectedCourse.color, textDecoration: 'underline' }}>
                             {t.open || 'Open'}
                           </a>
                         )}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: comp.progress === 100 ? selectedCourse.color : '#94a3b8' }}>
-                          {comp.progress}%
-                        </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button
+                          className="btn-luxe hover-lift"
+                          title="Split into Components"
+                          onClick={() => handleSplitResource(selectedCourse.id, res)}
+                          disabled={splittingResId === res.id}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            background: splittingResId === res.id ? 'transparent' : 'rgba(255,255,255,0.05)',
+                            color: '#e2e8f0',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            opacity: splittingResId === res.id ? 0.7 : 1
+                          }}
+                        >
+                          {splittingResId === res.id ? <Loader2 size={14} className="spin-icon" /> : <Wand2 size={14} color={selectedCourse.color} />}
+                          {splittingResId === res.id ? (t.generating || 'Generating...') : (t.generateComponents || 'Generate Components')}
+                        </button>
                         <button 
                           className="del-btn" 
-                          onClick={() => deleteResource(selectedCourse.id, comp.id)}
+                          onClick={() => deleteResource(selectedCourse.id, res.id)}
                           style={{ padding: '4px', opacity: 0.6 }}
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </div>
+                  ))
+                )}
+              </div>
 
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={comp.progress}
-                      onChange={(e) => updateProgress(selectedCourse.id, comp.id, parseInt(e.target.value))}
-                      className="styled-slider"
-                      style={{ '--slider-color': selectedCourse.color }}
-                    />
-                  </div>
-                ))
-              )}
-            </div>
+              <div className="add-task-form" style={{ marginTop: '10px' }}>
+                <label className="btn-luxe" style={{ background: selectedCourse.color, color: 'white', padding: '14px', flex: 1, justifyItems: 'center', cursor: isUploading ? 'wait' : 'pointer', opacity: isUploading ? 0.7 : 1 }}>
+                  <Plus size={20} style={{ marginLeft: '8px', marginRight: '8px' }} />
+                  <span>{isUploading ? (t.addingResource || 'Adding Resource...') : (t.addResources || 'Add Resources (PDF/PPTX) +')}</span>
+                  <input
+                    type="file"
+                    accept=".pdf,.pptx"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleResourceSelect(e, selectedCourse.id)}
+                    disabled={isUploading}
+                  />
+                </label>
+              </div>
 
-            <div className="add-task-form">
-              <label className="btn-luxe" style={{ background: selectedCourse.color, color: 'white', padding: '16px', flex: 1, justifyItems: 'center', cursor: isUploading ? 'wait' : 'pointer', opacity: isUploading ? 0.7 : 1 }}>
-                <Plus size={20} style={{ marginLeft: '8px', marginRight: '8px' }} />
-                <span>{isUploading ? (t.addingResource || 'Adding Resource...') : (t.addResources || 'Add Resources (PDF/PPTX) +')}</span>
-                <input
-                  type="file"
-                  accept=".pdf,.pptx"
-                  style={{ display: 'none' }}
-                  onChange={(e) => handleResourceSelect(e, selectedCourse.id)}
-                  disabled={isUploading}
-                />
-              </label>
-            </div>
           </div>
 
-          {/* Progress Chart & Quiz Action */}
+          {/* Panel 2: Components Section (With Progress) */}
+          <div className="components-section luxe-panel bento-components" style={{ display: 'flex', flexDirection: 'column' }}>
+              <h3 style={{ color: 'white', marginBottom: '15px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Layers size={22} color={selectedCourse.color} />
+                {t.components || 'Components'}
+              </h3>
+
+              <div className="task-list custom-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '10px', minHeight: '150px' }}>
+                {selectedCourse.componentList.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '30px', background: 'transparent', border: 'none' }}>
+                    <p style={{ margin: 0 }}>{t.noComponentsYet || 'No components defined.'}</p>
+                  </div>
+                ) : (
+                  selectedCourse.componentList.map(comp => (
+                    <div
+                      key={comp.id}
+                      className={`task-item ${comp.progress === 100 ? 'completed' : ''}`}
+                      style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px', padding: '20px', marginBottom: '15px' }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="task-text" style={{ fontSize: '16px', fontWeight: '600' }}>{comp.text}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 'bold', color: comp.progress === 100 ? selectedCourse.color : '#94a3b8' }}>
+                            {comp.progress}%
+                          </span>
+                          <button 
+                            className="del-btn" 
+                            onClick={() => deleteComponent(selectedCourse.id, comp.id)}
+                            style={{ padding: '4px', opacity: 0.6 }}
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={comp.progress}
+                        onChange={(e) => updateProgress(selectedCourse.id, comp.id, parseInt(e.target.value))}
+                        className="styled-slider"
+                        style={{ '--slider-color': selectedCourse.color }}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+
+
+              {/* Add Component Button OR Input */}
+              {isAddingComponent ? (
+                <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <input
+                    type="text"
+                    value={newComponentName}
+                    onChange={(e) => setNewComponentName(e.target.value)}
+                    placeholder={t.addComponent || 'Component name...'}
+                    className="input-luxe"
+                    autoFocus
+                    style={{ background: 'rgba(15, 23, 42, 0.5)', width: '100%', marginBottom: '0' }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveComponent(selectedCourse.id);
+                      if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); }
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      className="btn-luxe hover-lift" 
+                      onClick={() => handleSaveComponent(selectedCourse.id)}
+                      style={{ background: selectedCourse.color, color: 'white', padding: '8px', flex: 1, justifyContent: 'center' }}
+                    >
+                      {t.save || 'Save'}
+                    </button>
+                    <button 
+                      className="btn-luxe hover-lift" 
+                      onClick={() => { setIsAddingComponent(false); setNewComponentName(''); }}
+                      style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px', flex: 1, justifyContent: 'center' }}
+                    >
+                      {t.cancel || 'Cancel'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button 
+                  className="btn-luxe hover-lift" 
+                  onClick={() => setIsAddingComponent(true)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px dashed rgba(255, 255, 255, 0.2)',
+                    color: '#e2e8f0',
+                    marginTop: '10px',
+                    width: '100%',
+                    padding: '12px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  <Plus size={18} />
+                  <span>{t.addComponent || 'Add Component'}</span>
+                </button>
+              )}
+
+              {/* Start Quiz Button Under Components */}
+              <button className="start-quiz-btn hover-lift" style={{
+                background: `linear-gradient(135deg, ${selectedCourse.color}, ${selectedCourse.color}dd)`,
+                boxShadow: `0 8px 20px -5px ${selectedCourse.color}aa`,
+                marginTop: '15px',
+                width: '100%',
+                display: 'flex',
+                justifyContent: 'center'
+              }}>
+                <PlayCircle size={22} className="quiz-icon" />
+                <span>{t.startQuiz || 'Start the quiz'}</span>
+                <div className="btn-glow" style={{ background: selectedCourse.color }}></div>
+              </button>
+          </div>
+
+          {/* Panel 3: Progress Chart ONLY */}
           <div className="luxe-panel bento-chart">
             <h3 style={{ color: 'white', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <BarChart3 size={22} color={selectedCourse.color} />
@@ -300,7 +469,13 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                    <XAxis 
+                      dataKey="name" 
+                      stroke="#94a3b8" 
+                      interval={0}
+                      height={60}
+                      tick={<CustomXAxisTick />} 
+                    />
                     <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} tickFormatter={(val) => `${val}%`} />
                     <Tooltip
                       cursor={{ fill: 'rgba(255,255,255,0.05)' }}
@@ -323,17 +498,6 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                 </ResponsiveContainer>
               </div>
             )}
-
-            {/* Nice Design Button "Start the quiz" */}
-            <button className="start-quiz-btn" style={{
-              background: `linear-gradient(135deg, ${selectedCourse.color}, ${selectedCourse.color}dd)`,
-              boxShadow: `0 8px 20px -5px ${selectedCourse.color}aa`
-            }}>
-              <PlayCircle size={22} className="quiz-icon" />
-              <span>{t.startQuiz || 'Start the quiz'}</span>
-              <div className="btn-glow" style={{ background: selectedCourse.color }}></div>
-            </button>
-
           </div>
         </div>
       </div>
@@ -387,7 +551,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
             <CheckCircle2 size={14} color="#94a3b8" />
             <span>{done} / {total} {t.componentsCompleted || 'Resources'}</span>
           </div>
-          <span className="progress-text" style={{ color: course.color }}>{prog}% Mastery</span>
+          <span className="progress-text" style={{ color: course.color }}>{prog}% {t.mastery || 'Mastery'}</span>
         </div>
 
         <div className="luxe-progress-bg">
@@ -449,7 +613,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                     <span style={{ fontSize: '14px', fontWeight: '500' }}>{course.name}</span>
                   </div>
                 )) : (
-                  <div style={{ padding: '8px 16px', color: '#94a3b8', fontSize: '14px' }}>No matches found...</div>
+                  <div style={{ padding: '8px 16px', color: '#94a3b8', fontSize: '14px' }}>{t.noMatchesFound || 'No matches found...'}</div>
                 )}
               </div>
             )}
@@ -476,59 +640,12 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
               className="input-luxe"
               autoFocus
             />
-            <div className="icon-grid">
-              {Object.keys(availableIcons).map(iconKey => (
-                <div
-                  key={iconKey}
-                  className={`icon-box ${newCourseIcon === iconKey ? 'active' : ''}`}
-                  onClick={() => setNewCourseIcon(iconKey)}
-                  title={iconKey.charAt(0).toUpperCase() + iconKey.slice(1)}
-                >
-                  {availableIcons[iconKey]}
-                </div>
-              ))}
-            </div>
             <button type="submit" className="btn-luxe submit">{t.addCourse}</button>
           </div>
         </form>
       )}
 
-      {/* Global Cognitive Growth Timeline (restored here) */}
-      <div className="section-divider" style={{ marginTop: '20px' }}>
-        <span className="divider-text">{t.growthTimeline || 'Cognitive Growth Timeline'}</span>
-        <div className="divider-line" style={{ background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.5), transparent)' }}></div>
-      </div>
 
-      <div className="timeline-scroll-wrapper glass-glow animate-slide-up">
-        <div className="timeline-track">
-          {timeline.map((node, index) => (
-            <div key={node.id} className="timeline-node" style={{ animationDelay: `${index * 0.1}s` }}>
-              <div className="node-date">{node.date}</div>
-              <div className="node-body">
-                <div 
-                  className="node-icon-wrapper" 
-                  style={{ 
-                    background: `${node.color}15`, 
-                    color: node.color, 
-                    border: `1px solid ${node.color}30`, 
-                    boxShadow: `0 0 20px ${node.color}20`
-                  }}
-                >
-                  {availableIcons[node.icon] || availableIcons['book']}
-                </div>
-              </div>
-              <div className="node-content">
-                <div className="node-subject" style={{ color: node.color }}>
-                  {node.subjectKey ? t[node.subjectKey] : node.subject}
-                </div>
-                <div className="node-text">
-                  {node.textKey ? t[node.textKey] : node.text}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       {/* Active Courses Section */}
       <div className="section-divider" style={{ marginTop: '30px' }}>

@@ -98,7 +98,13 @@ const translations = {
     footerCompany: "Company",
     footerAboutUs: "About Us",
     footerContactUs: "Contact Us",
-    rightsReserved: "All rights reserved. © 2026 Massar AI"
+    rightsReserved: "All rights reserved. © 2026 Massar AI",
+    components: "Components",
+    generateComponents: "Generate Components",
+    generating: "Generating...",
+    splitAI: "Split AI",
+    noResourcesYet: "No resources added yet. Add a PDF or PPTX to begin.",
+    noMatchesFound: "No matches found..."
   },
   ar: {
     appName: "مسار",
@@ -186,7 +192,13 @@ const translations = {
     footerCompany: "الشركة",
     footerAboutUs: "من نحن",
     footerContactUs: "تواصل معنا",
-    rightsReserved: "جميع الحقوق محفوظة. © 2026 مسار"
+    rightsReserved: "جميع الحقوق محفوظة. © 2026 مسار",
+    components: "المكونات",
+    generateComponents: "توليد المكونات",
+    generating: "جاري التوليد...",
+    splitAI: "تفكيك ذكي",
+    noResourcesYet: "لم يتم إضافة موارد بعد. أضف PDF أو PPTX للبدء.",
+    noMatchesFound: "لم يتم العثور على نتائج..."
   }
 };
 

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /* Reset and Base Styles */
 * {
   margin: 0;
@@ -1354,9 +1353,6 @@ body {
   align-items: center;
 }
 
-.task-checklist {
-  margin-top: 30px;
-}
 
 .task-list {
   display: flex;
@@ -1807,7 +1803,6 @@ body {
   .footer-links-grid { gap: 30px; }
   .footer-bottom { flex-direction: column; gap: 15px; text-align: center; justify-content: center; }
 }
-=======
 :root {
   --primary: #3b82f6;
   --primary-glow: rgba(59, 130, 246, 0.4);
@@ -2969,23 +2964,29 @@ body {
 }
 
 .bento-chart {
-  grid-column: span 5;
+  grid-column: span 4;
   display: flex;
   flex-direction: column;
 }
 
 .bento-tasks {
-  grid-column: span 7;
+  grid-column: span 4;
   display: flex;
   flex-direction: column;
-  max-height: 480px; 
+  margin-top: 0;
+}
+
+.bento-components {
+  grid-column: span 4;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 992px) {
-  .bento-chart, .bento-tasks {
+  .bento-chart, .bento-tasks, .bento-components {
     grid-column: span 12;
   }
-  .bento-tasks {
+  .bento-tasks, .bento-components {
     max-height: unset;
   }
 }
@@ -3009,4 +3010,12 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25); 
 }
->>>>>>> 12ae81904b705b03b794c99a407a0cbef6c00a4c
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
