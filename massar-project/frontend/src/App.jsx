@@ -7,7 +7,8 @@ import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
-import { User, Settings, Menu, X, Globe, ChevronDown } from 'lucide-react';
+import Footer from './components/Footer';
+import { User, Settings, Menu, X, Globe, ChevronDown, Home as HomeIcon, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
 
 // Centralized Translation Dictionary
 const translations = {
@@ -20,6 +21,13 @@ const translations = {
     heroTitle: "Intelligent Pathways to Mastery",
     heroSubtitle: "Massar uses advanced Artificial Intelligence to dynamically evaluate your performance and build a customized educational journey just for you.",
     startLearning: "Start Learning Now",
+    feat1Title: "Adaptive AI Assessment",
+    feat1Desc: "Our smart engine constantly evaluates your skill level to pinpoint exact knowledge gaps.",
+    feat2Title: "Dynamic Skill Trees",
+    feat2Desc: "Learning paths dynamically restructure themselves in real-time based on your progression.",
+    feat3Title: "Real-time Mastery Tracking",
+    feat3Desc: "Visualize your entire cognitive growth with advanced metrics and performance charts.",
+    engineTitle: "Powered by Cognitive AI",
     welcomeBack: "Welcome Back",
     joinSystem: "Join Massar",
     authSubLogin: "Authenticate to access your personalized learning profile.",
@@ -61,7 +69,19 @@ const translations = {
     systemHealth: "System Health",
     userAdmin: "User Administration",
     manageUsers: "Manage Accounts",
-    searchUsers: "Search users..."
+    searchUsers: "Search users...",
+    n1: "Real-time Analytics",
+    n2: "Knowledge Tracing",
+    n3: "Adaptive Pathing",
+    n4: "Mastery Evaluation",
+    footerTagline: "Empowering the future through intelligent, adaptive AI education.",
+    footerSupport: "Support",
+    footerDocumentation: "Documentation",
+    footerSupportCenter: "Support Center",
+    footerCompany: "Company",
+    footerAboutUs: "About Us",
+    footerContactUs: "Contact Us",
+    rightsReserved: "All rights reserved. © 2026 Massar AI"
   },
   ar: {
     appName: "مسار",
@@ -72,6 +92,13 @@ const translations = {
     heroTitle: "مسارات ذكية نحو الإتقان",
     heroSubtitle: "يستخدم مسار الذكاء الاصطناعي المتقدم لتقييم أدائك ديناميكيًا وبناء رحلة تعليمية مخصصة لك فقط.",
     startLearning: "ابدأ التعلم الآن",
+    feat1Title: "التقييم الذكي المستمر",
+    feat1Desc: "يقوم محركنا الذكي بتقييم مستوى مهاراتك بشكل مستمر لتحديد فجوات المعرفة بدقة.",
+    feat2Title: "مسارات المهارات الديناميكية",
+    feat2Desc: "تعيد مسارات التعلم هيكلة نفسها ديناميكيًا في الوقت الفعلي بناءً على تطور مستواك.",
+    feat3Title: "تتبع الإتقان المباشر",
+    feat3Desc: "تصور نموك المعرفي بالكامل باستخدام مقاييس متقدمة ومخططات أداء دقيقة.",
+    engineTitle: "مدعوم بالذكاء الاصطناعي المعرفي",
     welcomeBack: "مرحباً بعودتك",
     joinSystem: "انضم إلى مسار",
     authSubLogin: "قم بتسجيل الدخول للوصول إلى ملف التعلم المخصص الخاص بك.",
@@ -113,7 +140,19 @@ const translations = {
     systemHealth: "صحة النظام",
     userAdmin: "إدارة المستخدمين",
     manageUsers: "إدارة الحسابات",
-    searchUsers: "البحث عن مستخدمين..."
+    searchUsers: "البحث عن مستخدمين...",
+    n1: "تحليلات البيانات الفورية",
+    n2: "تتبع المعرفة الدقيق",
+    n3: "المسار التعليمي التكيفي",
+    n4: "تقييم مستوى الإتقان",
+    footerTagline: "تمكين المستقبل من خلال الذكاء الاصطناعي التعليمي التكيفي.",
+    footerSupport: "الدعم",
+    footerDocumentation: "التوثيق",
+    footerSupportCenter: "مركز المساعدة",
+    footerCompany: "الشركة",
+    footerAboutUs: "من نحن",
+    footerContactUs: "تواصل معنا",
+    rightsReserved: "جميع الحقوق محفوظة. © 2026 مسار"
   }
 };
 
@@ -177,6 +216,7 @@ function App() {
       <div className="background-elements">
         <div className="circle circle-1"></div>
         <div className="circle circle-2"></div>
+        <div className="circle circle-3"></div>
       </div>
 
       {/* Global Navigation Header */}
@@ -192,30 +232,23 @@ function App() {
 
         <div className={`nav-links ${isMobileMenuOpen ? 'open' : ''}`} style={isRtl ? { flexDirection: 'row-reverse' } : {}}>
           <button 
-            className="nav-link" 
+            className="lang-toggle-btn"
             onClick={() => { setLanguage(isRtl ? 'en' : 'ar'); setIsMobileMenuOpen(false); }} 
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              justifyContent: 'center',
-              border: '1px solid rgba(255,255,255,0.2)',
-              borderRadius: '24px',
-              padding: '6px 16px',
-              backgroundColor: 'rgba(0,0,0,0.15)',
-              transition: 'all 0.3s'
-            }}
           >
-            <Globe size={16} color="#e2e8f0" /> 
-            <span style={{ fontSize: '14px', fontWeight: '500' }}>{isRtl ? 'English' : 'العربية'}</span>
-            <ChevronDown size={16} color="#94a3b8" />
+            <Globe size={16} color="#94a3b8" /> 
+            <span>{isRtl ? 'English' : 'العربية'}</span>
+            <ChevronDown size={14} color="#64748b" />
           </button>
 
-          <button className="nav-link" onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }}>{t.home}</button>
+          <button className="nav-link" onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+            <HomeIcon size={16} /> {t.home}
+          </button>
 
           {isLoggedIn && (
             <>
-              <button className="nav-link" onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); }}>{t.dashboard}</button>
+              <button className="nav-link" onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                <LayoutDashboard size={16} /> {t.dashboard}
+              </button>
               <button className="nav-link" onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <User size={16} /> {t.profile || 'Profile'}
               </button>
@@ -228,9 +261,13 @@ function App() {
           )}
 
           {!isLoggedIn ? (
-            <button className="nav-btn primary" onClick={() => { goLogin(); setIsMobileMenuOpen(false); }}>{t.login}</button>
+            <button className="nav-btn primary" onClick={() => { goLogin(); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+              <LogIn size={18} /> {t.login}
+            </button>
           ) : (
-            <button className="nav-btn danger" onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }}>{t.logout}</button>
+            <button className="nav-btn danger" onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
+              <LogOut size={18} /> {t.logout}
+            </button>
           )}
         </div>
       </nav>
@@ -266,6 +303,9 @@ function App() {
         )}
 
       </main>
+      
+      <Footer t={t} />
+      
     </div>
   );
 }
