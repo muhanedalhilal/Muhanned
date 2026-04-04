@@ -47,17 +47,35 @@ const translations = {
     statCourses: "Active Modules",
     statTasks: "Pending Assessments",
     commandCenter: "Learning Command Center",
-    manageSubjects: "Organize and track your learning progress.",
-    addSubject: "Add New Subject",
-    subjectName: "Subject Name",
-    tasksCompleted: "tasks completed",
-    noSubjects: "No subjects added yet. Start by adding one!",
-    activeSubjects: "Active Subjects",
-    completedSubjects: "Completed Subjects",
-    searchPlaceholder: "Search subjects...",
+    manageCourses: "Organize and track your learning progress.",
+    addCourse: "Add New Course",
+    courseName: "Course Name",
+    componentsCompleted: "components completed",
+    noCourses: "No courses added yet. Start by adding one!",
+    activeCourses: "Active Courses",
+    completedCourses: "Completed Courses",
+    searchPlaceholder: "Search courses...",
     backToDashboard: "Back to Command Center",
     addTask: "Add new task...",
     noTasksYet: "No tasks added yet.",
+    addComponent: "Add new component...",
+    noComponentsYet: "No components added yet.",
+    mastery: "Mastery",
+    growthTimeline: "Cognitive Growth Timeline",
+    masteredTask: "Completed",
+    joinedPlatform: "Joined Massar",
+    masteredLinearAlgebra: "Completed: Linear Algebra Worksheet",
+    platform: "Platform",
+    mathSubject: "Mathematics",
+    csSubject: "Computer Science",
+    historySubject: "World History",
+    literatureSubject: "Literature",
+    startQuiz: "Start the quiz",
+    progressDiagram: "Progress Diagram",
+    resourcesLearningAssets: "Resources & Learning Assets",
+    addResources: "Add Resources (PDF/PPTX)",
+    addingResource: "Adding Resource...",
+    open: "Open",
     profile: "Profile Management",
     profileSub: "Manage your personal account details securely.",
     profileSaved: "Profile successfully updated!",
@@ -65,7 +83,6 @@ const translations = {
     platformAnalytics: "Platform Analytics",
     platformAnalyticsSub: "Monitor overall engagement and system trends.",
     totalUsers: "Total Users",
-    activeCourses: "Active Courses",
     systemHealth: "System Health",
     userAdmin: "User Administration",
     manageUsers: "Manage Accounts",
@@ -118,17 +135,35 @@ const translations = {
     statCourses: "الوحدات النشطة",
     statTasks: "التقييمات المعلقة",
     commandCenter: "مركز قيادة التعلم",
-    manageSubjects: "تنظيم وتتبع تقدمك في التعلم.",
-    addSubject: "إضافة مادة جديدة",
-    subjectName: "اسم المادة",
-    tasksCompleted: "مهمة منجزة",
-    noSubjects: "لم يتم إضافة مواد بعد. ابدأ بإضافة واحدة!",
-    activeSubjects: "المواد النشطة",
-    completedSubjects: "المواد المكتملة",
-    searchPlaceholder: "ابحث عن المواد...",
+    manageCourses: "تنظيم وتتبع تقدمك في التعلم.",
+    addCourse: "إضافة مقرر جديد",
+    courseName: "اسم المقرر",
+    componentsCompleted: "مكوّن منجز",
+    noCourses: "لم يتم إضافة مقررات بعد. ابدأ بإضافة واحد!",
+    activeCourses: "المقررات النشطة",
+    completedCourses: "المقررات المكتملة",
+    searchPlaceholder: "ابحث عن المقررات...",
     backToDashboard: "العودة لمركز القيادة",
     addTask: "إضافة مهمة جديدة...",
     noTasksYet: "لم يتم إضافة مهام بعد.",
+    addComponent: "إضافة مكوّن جديد...",
+    noComponentsYet: "لم يتم إضافة مكوّنات بعد.",
+    mastery: "إتقان",
+    growthTimeline: "الجدول الزمني للنمو المعرفي",
+    masteredTask: "تم إنجاز",
+    joinedPlatform: "انضم إلى مسار",
+    masteredLinearAlgebra: "تم إنجاز: ورقة عمل الجبر الخطي",
+    platform: "المنصة",
+    mathSubject: "رياضيات",
+    csSubject: "علوم الحاسب",
+    historySubject: "تاريخ العالم",
+    literatureSubject: "الأدب",
+    startQuiz: "ابدأ الاختبار",
+    progressDiagram: "مخطط التقدم",
+    resourcesLearningAssets: "الموارد والأصول التعليمية",
+    addResources: "إضافة موارد (PDF/PPTX)",
+    addingResource: "جاري إضافة المورد...",
+    open: "فتح",
     profile: "إدارة الملف الشخصي",
     profileSub: "أدر تفاصيل حسابك الشخصي بأمان.",
     profileSaved: "تم تحديث الملف الشخصي بنجاح!",
@@ -136,7 +171,6 @@ const translations = {
     platformAnalytics: "تحليلات المنصة",
     platformAnalyticsSub: "مراقبة التفاعل والاتجاهات العامة للمنصة.",
     totalUsers: "إجمالي المستخدمين",
-    activeCourses: "المواد النشطة",
     systemHealth: "صحة النظام",
     userAdmin: "إدارة المستخدمين",
     manageUsers: "إدارة الحسابات",
@@ -171,6 +205,9 @@ function App() {
   const [currentUser, setCurrentUser] = useState({ name: 'Student User', email: '' });
   const [authToken, setAuthToken] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Dashboard Sub-Routing State
+  const [selectedCourseId, setSelectedCourseId] = useState(null);
 
   // App-level handlers
   const handleLogout = () => {
@@ -246,7 +283,7 @@ function App() {
 
           {isLoggedIn && (
             <>
-              <button className="nav-link" onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+              <button className="nav-link" onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <LayoutDashboard size={16} /> {t.dashboard}
               </button>
               <button className="nav-link" onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
@@ -291,7 +328,11 @@ function App() {
         )}
 
         {currentPage === 'dashboard' && isLoggedIn && (
-          <Dashboard t={t} />
+          <Dashboard
+            t={t}
+            selectedCourseId={selectedCourseId}
+            setSelectedCourseId={setSelectedCourseId}
+          />
         )}
 
         {currentPage === 'profile' && isLoggedIn && (
