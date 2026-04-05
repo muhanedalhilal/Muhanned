@@ -365,7 +365,7 @@ function App() {
 
       </main>
       
-      <Footer t={t} />
+      <Footer t={t} key={currentPage} />
       
     </div>
   );

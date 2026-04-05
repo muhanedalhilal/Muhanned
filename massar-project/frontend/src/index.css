@@ -1762,7 +1762,21 @@ body {
   -webkit-backdrop-filter: blur(25px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: 60px 40px 30px 40px;
-  margin-top: 0; /* Already separated by features-viewport padding */
+  margin-top: 0;
+
+  /* Scroll Fade Logic */
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.professional-footer.visible {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .footer-top {
@@ -1891,7 +1905,6 @@ body {
   .footer-links-grid { gap: 30px; }
   .footer-bottom { flex-direction: column; gap: 15px; text-align: center; justify-content: center; }
 }
-<<<<<<< Updated upstream
 :root {
   --primary: #3b82f6;
   --primary-glow: rgba(59, 130, 246, 0.4);
@@ -2024,8 +2037,6 @@ body {
   color: #cbd5e1;
   line-height: 1.4;
 }
-<<<<<<< Updated upstream
-
 /* Detail UI Refinement */
 .task-list {
   display: flex;
