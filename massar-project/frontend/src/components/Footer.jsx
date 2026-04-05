@@ -1,8 +1,33 @@
+import { useState, useEffect } from 'react';
 import { BrainCircuit, Globe, Mail, MessageSquare } from 'lucide-react';
 
 export default function Footer({ t }) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 50) {
+        setIsVisible(true);
+      } else {
+        setIsVisible(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
-    <footer className="professional-footer">
+    <footer 
+      className={`professional-footer ${isVisible ? 'visible' : 'hidden'}`}
+      style={{ 
+        opacity: isVisible ? 1 : 0, 
+        transform: isVisible ? 'translateY(0)' : 'translateY(30px)',
+        transition: 'opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+        visibility: isVisible ? 'visible' : 'hidden',
+        pointerEvents: isVisible ? 'auto' : 'none'
+      }}
+    >
       <div className="footer-top">
         <div className="footer-brand">
           <div className="footer-logo-row">
