@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { User, Mail, Lock, Save, ArrowLeft } from 'lucide-react';
+import { User, Mail, Save, ArrowLeft } from 'lucide-react';
 
 export default function Profile({ t, onBack, currentUser, setCurrentUser, authToken }) {
   const [profileData, setProfileData] = useState({
     name: currentUser?.name || '',
     email: currentUser?.email || '',
-    password: ''
   });
 
   const [message, setMessage] = useState(null);
@@ -23,8 +22,6 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
     // Build only the fields that actually changed
     const payload = {};
     if (profileData.name && profileData.name !== currentUser.name) payload.name = profileData.name;
-    if (profileData.email && profileData.email !== currentUser.email) payload.email = profileData.email;
-    if (profileData.password) payload.password = profileData.password;
 
     if (Object.keys(payload).length === 0) {
       setMessage({ type: 'info', text: 'No changes to save.' });
@@ -45,14 +42,12 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
       const data = await res.json();
 
       if (res.ok) {
-        // Sync updated name/email back to the global app state
         if (setCurrentUser) {
           setCurrentUser({
-            name: data.user?.name || profileData.name,
-            email: data.user?.email || profileData.email
+            ...currentUser,
+            name: data.user?.name || profileData.name
           });
         }
-        setProfileData({ ...profileData, password: '' }); // clear password field
         setMessage({ type: 'success', text: data.message || t.profileSaved || 'Profile updated!' });
       } else {
         setMessage({ type: 'error', text: data.detail || 'Update failed.' });
@@ -73,74 +68,58 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
         </button>
       </div>
 
-      <div className="command-header-premium">
-        <div className="header-text-group">
-          <h1 className="luxe-title">{t.profile || 'Profile Management'}</h1>
-          <p className="luxe-subtitle">{t.profileSub || 'Manage your personal account details securely.'}</p>
+      <div className="luxe-panel" style={{ padding: '0', overflow: 'hidden' }}>
+        <div className="command-header-premium" style={{ margin: '0', borderRadius: '0', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="header-text-group">
+            <h1 className="luxe-title">{t.profile || 'Profile Management'}</h1>
+            <p className="luxe-subtitle">{t.profileSub || 'Manage your personal account details.'}</p>
+          </div>
         </div>
+
+        <form onSubmit={handleSubmit} style={{ padding: '30px' }}>
+          <div className="form-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ position: 'relative' }}>
+              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.fullName || 'Full Name'}</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0 15px' }}>
+                <User size={18} color="#94a3b8" />
+                <input
+                  type="text"
+                  name="name"
+                  value={profileData.name}
+                  onChange={handleChange}
+                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none', padding: '12px', color: 'white', fontSize: '16px' }}
+                  placeholder={t.fullName || 'Full Name'}
+                />
+              </div>
+            </div>
+
+            <div style={{ position: 'relative', opacity: 0.7 }}>
+              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.email || 'Email Address'}</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '0 15px' }}>
+                <Mail size={18} color="#64748b" />
+                <input
+                  type="email"
+                  name="email"
+                  value={profileData.email}
+                  readOnly
+                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none', cursor: 'not-allowed', color: '#64748b', padding: '12px', fontSize: '16px' }}
+                  placeholder={t.email || 'Email Address'}
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="btn-luxe submit" disabled={isLoading} style={{ marginTop: '10px', background: '#3b82f6', display: 'flex', gap: '8px', justifyContent: 'center', color: 'white', width: '100%' }}>
+              {isLoading ? <span className="loader"></span> : <><Save size={18} /> {t.saveChanges || 'Save Changes'}</>}
+            </button>
+
+            {message && (
+              <div style={{ textAlign: 'center', color: message.type === 'success' ? '#10b981' : '#ef4444', marginTop: '15px' }}>
+                {message.text}
+              </div>
+            )}
+          </div>
+        </form>
       </div>
-
-      <form onSubmit={handleSubmit} className="luxe-panel">
-        <div className="form-body">
-          <div style={{ position: 'relative' }}>
-            <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.fullName || 'Full Name'}</label>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0 15px' }}>
-              <User size={18} color="#94a3b8" />
-              <input
-                type="text"
-                name="name"
-                value={profileData.name}
-                onChange={handleChange}
-                className="input-luxe"
-                style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
-                placeholder={t.fullName || 'Full Name'}
-              />
-            </div>
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.email || 'Email Address'}</label>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0 15px' }}>
-              <Mail size={18} color="#94a3b8" />
-              <input
-                type="email"
-                name="email"
-                value={profileData.email}
-                onChange={handleChange}
-                className="input-luxe"
-                style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
-                placeholder={t.email || 'Email Address'}
-              />
-            </div>
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.password || 'New Password'}</label>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0 15px' }}>
-              <Lock size={18} color="#94a3b8" />
-              <input
-                type="password"
-                name="password"
-                value={profileData.password}
-                onChange={handleChange}
-                className="input-luxe"
-                style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
-                placeholder={t.password || 'Secure Password'}
-              />
-            </div>
-          </div>
-
-          <button type="submit" className="btn-luxe submit" disabled={isLoading} style={{ marginTop: '20px', background: '#3b82f6', display: 'flex', gap: '8px', justifyContent: 'center', color: 'white' }}>
-            {isLoading ? <span className="loader"></span> : <><Save size={18} /> {t.saveChanges || 'Save Changes'}</>}
-          </button>
-
-          {message && (
-            <div style={{ textAlign: 'center', color: message.type === 'success' ? '#10b981' : '#ef4444', marginTop: '15px' }}>
-              {message.text}
-            </div>
-          )}
-        </div>
-      </form>
     </div>
   );
 }

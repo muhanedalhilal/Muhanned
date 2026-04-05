@@ -1,18 +1,22 @@
 import React from 'react';
-import { Target, Map, BookOpen, Award, BrainCircuit, ActivitySquare, GitMerge } from 'lucide-react';
+import { Target, Map, BookOpen, Award, BrainCircuit, ActivitySquare, GitMerge, ArrowRight, Zap } from 'lucide-react';
 
-export default function Home({ t, goSignUp, isLoggedIn }) {
+export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
   return (
     <div className="home-container">
       <div className="hero-section">
         <h1 className="hero-title">{t.heroTitle}</h1>
         <p className="hero-subtitle">{t.heroSubtitle}</p>
         <div className="hero-buttons">
-          {!isLoggedIn && (
-            <button className="action-btn glow" onClick={goSignUp}>
-              {t.startLearning}
-            </button>
-          )}
+          <button 
+            className="action-btn glow" 
+            onClick={() => isLoggedIn ? setCurrentPage('dashboard') : goSignUp()}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', marginInline: 'auto' }}
+          >
+            <Zap size={20} fill="#1e3a75" color="#1e3a75" />
+            <span>{t.startLearning}</span>
+            <ArrowRight size={20} />
+          </button>
         </div>
       </div>
 
@@ -29,46 +33,42 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
              </div>
           </div>
 
-          {/* Petal 1: Discovery */}
           <div className="blossom-petal petal-top-left">
             <div className="petal-glass opaque">
               <Target size={32} className="p-icon" />
               <div className="p-text">
-                <h5>{t.n1 || 'Real-time Analytics'}</h5>
-                <p>We discover how you learn best.</p>
+                <h5>{t.n1}</h5>
+                <p>{t.n1Desc}</p>
               </div>
             </div>
           </div>
 
-          {/* Petal 2: Mapping */}
           <div className="blossom-petal petal-top-right">
             <div className="petal-glass opaque">
               <Map size={32} className="p-icon" />
               <div className="p-text">
-                <h5>{t.n2 || 'Knowledge Tracing'}</h5>
-                <p>Creating your personal roadmap.</p>
+                <h5>{t.n2}</h5>
+                <p>{t.n2Desc}</p>
               </div>
             </div>
           </div>
 
-          {/* Petal 3: Progress */}
           <div className="blossom-petal petal-bot-left">
             <div className="petal-glass opaque">
               <BookOpen size={32} className="p-icon" />
               <div className="p-text">
-                <h5>{t.n3 || 'Adaptive Pathing'}</h5>
-                <p>Content that grows with you.</p>
+                <h5>{t.n3}</h5>
+                <p>{t.n3Desc}</p>
               </div>
             </div>
           </div>
 
-          {/* Petal 4: Success */}
           <div className="blossom-petal petal-bot-right">
             <div className="petal-glass opaque">
               <Award size={32} className="p-icon" />
               <div className="p-text">
-                 <h5>{t.n4 || 'Mastery Evaluation'}</h5>
-                 <p>Proving your new skills.</p>
+                 <h5>{t.n4}</h5>
+                 <p>{t.n4Desc}</p>
               </div>
             </div>
           </div>

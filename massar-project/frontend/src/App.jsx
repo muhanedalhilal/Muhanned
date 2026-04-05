@@ -88,9 +88,13 @@ const translations = {
     manageUsers: "Manage Accounts",
     searchUsers: "Search users...",
     n1: "Real-time Analytics",
+    n1Desc: "We discover how you learn best.",
     n2: "Knowledge Tracing",
+    n2Desc: "Creating your personal roadmap.",
     n3: "Adaptive Pathing",
+    n3Desc: "Content that grows with you.",
     n4: "Mastery Evaluation",
+    n4Desc: "Proving your new skills.",
     footerTagline: "Empowering the future through intelligent, adaptive AI education.",
     footerSupport: "Support",
     footerDocumentation: "Documentation",
@@ -182,9 +186,13 @@ const translations = {
     manageUsers: "إدارة الحسابات",
     searchUsers: "البحث عن مستخدمين...",
     n1: "تحليلات البيانات الفورية",
+    n1Desc: "نكتشف كيف تتعلم بشكل أفضل.",
     n2: "تتبع المعرفة الدقيق",
+    n2Desc: "إنشاء خارطة طريق شخصية لك.",
     n3: "المسار التعليمي التكيفي",
+    n3Desc: "محتوى ينمو معك ويتطور بتطورك.",
     n4: "تقييم مستوى الإتقان",
+    n4Desc: "إثبات مهاراتك الجديدة بدقة.",
     footerTagline: "تمكين المستقبل من خلال الذكاء الاصطناعي التعليمي التكيفي.",
     footerSupport: "الدعم",
     footerDocumentation: "التوثيق",
@@ -289,20 +297,20 @@ function App() {
             <ChevronDown size={14} color="#64748b" />
           </button>
 
-          <button className="nav-link" onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+          <button className={`nav-link ${currentPage === 'home' ? 'active' : ''}`} onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
             <HomeIcon size={16} /> {t.home}
           </button>
 
           {isLoggedIn && (
             <>
-              <button className="nav-link" onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+              <button className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <LayoutDashboard size={16} /> {t.dashboard}
               </button>
-              <button className="nav-link" onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+              <button className={`nav-link ${currentPage === 'profile' ? 'active' : ''}`} onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <User size={16} /> {t.profile || 'Profile'}
               </button>
               {isAdmin && (
-                <button className="nav-link" onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#60a5fa', justifyContent: 'center' }}>
+                <button className={`nav-link ${currentPage === 'admin' ? 'active' : ''}`} onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                   <Settings size={16} /> {t.adminPanel || 'Admin Panel'}
                 </button>
               )}
@@ -326,7 +334,7 @@ function App() {
         {/* Dynamic Route Rendering utilizing the 'pages' Folder */}
 
         {currentPage === 'home' && (
-          <Home t={t} goSignUp={goSignUp} isLoggedIn={isLoggedIn} />
+          <Home t={t} goSignUp={goSignUp} isLoggedIn={isLoggedIn} setCurrentPage={setCurrentPage} />
         )}
 
         {currentPage === 'auth' && !isLoggedIn && (
