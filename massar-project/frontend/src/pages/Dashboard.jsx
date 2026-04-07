@@ -269,50 +269,77 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                   <div
                     key={res.id}
                     className="task-item"
-                    style={{ padding: '15px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+                    style={{ padding: '18px 20px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '15px' }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0, paddingRight: '25px' }}>
-                      <span className="task-text" style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', lineHeight: '1.4' }}>{res.text}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                      {res.fileUrl && (
+                    <div style={{ width: '100%' }}>
+                      {res.fileUrl ? (
                         <a
                           href={res.fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '700', textDecoration: 'underline' }}
+                          className="task-text"
+                          title={res.text}
+                          style={{
+                            fontSize: '16px',
+                            fontWeight: '800',
+                            color: '#1e293b',
+                            lineHeight: '1.4',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                            display: 'inline-block',
+                            wordBreak: 'break-word'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.color = '#3b82f6'}
+                          onMouseOut={(e) => e.currentTarget.style.color = '#1e293b'}
                         >
-                          {t.open || 'Open'}
+                          {res.text}
                         </a>
+                      ) : (
+                        <span 
+                          className="task-text" 
+                          style={{ 
+                            fontSize: '16px', 
+                            fontWeight: '800', 
+                            color: '#1e293b', 
+                            lineHeight: '1.4',
+                            display: 'inline-block',
+                            wordBreak: 'break-word'
+                          }}
+                        >
+                          {res.text}
+                        </span>
                       )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
                       <button
                         className="btn-luxe hover-lift"
                         title="Split into Components"
                         onClick={() => handleSplitResource(selectedCourse.id, res)}
                         disabled={splittingResId === res.id}
                         style={{
-                          padding: '4px 8px',
-                          fontSize: '11px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
                           background: splittingResId === res.id ? 'transparent' : 'rgba(59, 130, 246, 0.05)',
                           color: '#3b82f6',
                           border: '1px solid rgba(59, 130, 246, 0.2)',
-                          borderRadius: '6px',
+                          borderRadius: '8px',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px',
+                          gap: '6px',
                           fontWeight: '700',
                           opacity: splittingResId === res.id ? 0.7 : 1
                         }}
                       >
-                        {splittingResId === res.id ? <Loader2 size={12} className="spin-icon" /> : <Wand2 size={12} color="#3b82f6" />}
+                        {splittingResId === res.id ? <Loader2 size={14} className="spin-icon" /> : <Wand2 size={14} color="#3b82f6" />}
                         {splittingResId === res.id ? (t.generating || 'Gen...') : (t.generateComponents || 'Generate Components')}
                       </button>
                       <button
                         className="del-btn"
                         onClick={() => deleteResource(selectedCourse.id, res.id)}
-                        style={{ padding: '4px', opacity: 0.6 }}
+                        style={{ padding: '6px', opacity: 0.6 }}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={18} />
                       </button>
                     </div>
                   </div>
