@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './index.css';
 
 // Import our beautiful modular components!
@@ -9,6 +9,7 @@ import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import Footer from './components/Footer';
 import { User, Settings, Menu, X, Globe, ChevronDown, Home as HomeIcon, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
+import { api } from './services/api';
 
 // Centralized Translation Dictionary
 const translations = {
@@ -234,7 +235,26 @@ function App() {
   const [selectedCourseId, setSelectedCourseId] = useState(null);
 
   // App-level handlers
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      const token = localStorage.getItem('massar_token');
+      if (token) {
+        const response = await api.get('/users/me');
+        if (response.ok) {
+          handleSecureLogin(response.data.email, response.data.name, token, response.data.role);
+        } else {
+          localStorage.removeItem('massar_token');
+        }
+      }
+      setIsInitializing(false);
+    };
+    initAuth();
+  }, []);
+
   const handleLogout = () => {
+    localStorage.removeItem('massar_token');
     setIsLoggedIn(false);
     setIsAdmin(false);
     setAuthToken(null);
@@ -269,6 +289,10 @@ function App() {
   };
 
   const isRtl = language === 'ar';
+
+  if (isInitializing) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: 'white' }}>Loading System...</div>;
+  }
 
   return (
     <div className="app-container" dir={isRtl ? 'rtl' : 'ltr'}>
