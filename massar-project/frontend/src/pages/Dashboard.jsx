@@ -223,10 +223,10 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
 
         {/* Course Hero Panel */}
         <div className="luxe-panel detail-hero bento-hero">
-            <div className="detail-hero-top" style={{ display: 'flex', alignItems: 'center' }}>
-              <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '15px' }}>
-                <ArrowLeft size={24} color="#1e293b" />
-              </button>
+          <div className="detail-hero-top" style={{ display: 'flex', alignItems: 'center' }}>
+            <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '15px' }}>
+              <ArrowLeft size={24} color="#1e293b" />
+            </button>
             <h2 className="luxe-title" style={{ fontSize: '28px', color: 'black' }}>
               {selectedCourse.name === 'Mathematics' ? t.mathSubject :
                 selectedCourse.name === 'Computer Science' ? (t.csSubject || 'Computer Science') :
@@ -266,36 +266,25 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                 </div>
               ) : (
                 (selectedCourse.resourceList || []).map(res => (
-                    <div
-                      key={res.id}
-                      className="task-item"
-                      style={{ padding: '15px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
-                    >
+                  <div
+                    key={res.id}
+                    className="task-item"
+                    style={{ padding: '15px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+                  >
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0, paddingRight: '25px' }}>
-                      {res.fileUrl ? (
-                        <a 
-                          href={res.fileUrl} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          style={{ 
-                            fontSize: '15.5px', 
-                            fontWeight: '800', 
-                            color: '#1e293b', 
-                            lineHeight: '1.3', 
-                            textDecoration: 'none',
-                            transition: 'color 0.2s'
-                          }}
-                          className="resource-title-link"
-                          onMouseEnter={(e) => e.target.style.color = '#3b82f6'}
-                          onMouseLeave={(e) => e.target.style.color = '#1e293b'}
-                        >
-                          {res.text}
-                        </a>
-                      ) : (
-                        <span className="task-text" style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', lineHeight: '1.4' }}>{res.text}</span>
-                      )}
+                      <span className="task-text" style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', lineHeight: '1.4' }}>{res.text}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0, marginTop: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                      {res.fileUrl && (
+                        <a
+                          href={res.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '700', textDecoration: 'underline' }}
+                        >
+                          {t.open || 'Open'}
+                        </a>
+                      )}
                       <button
                         className="btn-luxe hover-lift"
                         title="Split into Components"
@@ -424,7 +413,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                   <button
                     className="btn-luxe hover-lift"
                     onClick={() => { setIsAddingComponent(false); setNewComponentName(''); }}
-                    style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '8px', flex: 1, justifyContent: 'center' }}
+                    style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.1)', color: '#1e293b', padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
                     {t.cancel || 'Cancel'}
                   </button>
@@ -435,9 +424,9 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                 className="btn-luxe hover-lift"
                 onClick={() => setIsAddingComponent(true)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px dashed rgba(255, 255, 255, 0.2)',
-                  color: '#e2e8f0',
+                  background: 'rgba(0, 0, 0, 0.03)',
+                  border: '1px dashed rgba(0, 0, 0, 0.15)',
+                  color: '#1e293b',
                   marginTop: '10px',
                   width: '100%',
                   padding: '12px',
@@ -453,7 +442,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
             )}
 
             {/* Start Quiz Button Under Components */}
-            <button className="start-quiz-btn hover-lift" style={{ 
+            <button className="start-quiz-btn hover-lift" style={{
               background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
               boxShadow: '0 8px 20px -5px rgba(59, 130, 246, 0.4)',
               marginTop: '15px',

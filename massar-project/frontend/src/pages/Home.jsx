@@ -1,7 +1,7 @@
 import React from 'react';
-import { Target, Map, BookOpen, Award, BrainCircuit, ActivitySquare, GitMerge } from 'lucide-react';
+import { Target, Map, BookOpen, Award, BrainCircuit, ActivitySquare, GitMerge, ArrowRight, Zap } from 'lucide-react';
 
-export default function Home({ t, goSignUp, isLoggedIn }) {
+export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
   return (
     <div className="home-container">
       <div className="hero-section">
@@ -16,20 +16,18 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
         </div>
       </div>
 
-      {/* The 'Growth Blossom' - High-Visibility Pro Edition */}
       <div className="growth-blossom-container">
         <div className="blossom-system">
-          
+
           {/* Central Heart of the Blossom with Massar Logo */}
           <div className="blossom-heart">
-             <div className="heart-pulse pulse-1"></div>
-             <div className="heart-pulse pulse-2"></div>
-             <div className="heart-core-logo">
-               <img src="/logo.png" alt="Massar Logo" className="hub-logo" />
-             </div>
+            <div className="heart-pulse pulse-1"></div>
+            <div className="heart-pulse pulse-2"></div>
+            <div className="heart-core-logo">
+              <img src="/logo.png" alt="Massar Logo" className="hub-logo" />
+            </div>
           </div>
 
-          {/* Petal 1: Discovery */}
           <div className="blossom-petal petal-top-left">
             <div className="petal-glass opaque">
               <Target size={32} className="p-icon" />
@@ -40,7 +38,6 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
             </div>
           </div>
 
-          {/* Petal 2: Mapping */}
           <div className="blossom-petal petal-top-right">
             <div className="petal-glass opaque">
               <Map size={32} className="p-icon" />
@@ -51,7 +48,6 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
             </div>
           </div>
 
-          {/* Petal 3: Progress */}
           <div className="blossom-petal petal-bot-left">
             <div className="petal-glass opaque">
               <BookOpen size={32} className="p-icon" />
@@ -62,13 +58,12 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
             </div>
           </div>
 
-          {/* Petal 4: Success */}
           <div className="blossom-petal petal-bot-right">
             <div className="petal-glass opaque">
               <Award size={32} className="p-icon" />
               <div className="p-text">
-                 <h5>{t.n4 || 'Mastery Evaluation'}</h5>
-                 <p>{t.n4Desc}</p>
+                <h5>{t.n4 || 'Mastery Evaluation'}</h5>
+                <p>{t.n4Desc}</p>
               </div>
             </div>
           </div>

@@ -1,8 +1,38 @@
+import { useState, useEffect, useRef } from 'react';
 import { BrainCircuit, Globe, Mail, MessageSquare } from 'lucide-react';
 
 export default function Footer({ t }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const footerRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+        } else {
+          setIsVisible(false);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (footerRef.current) {
+      observer.observe(footerRef.current);
+    }
+
+    return () => {
+      if (footerRef.current) {
+        observer.unobserve(footerRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <footer className="professional-footer">
+    <footer 
+      ref={footerRef}
+      className={`professional-footer ${isVisible ? 'visible' : ''}`}
+    >
       <div className="footer-top">
         <div className="footer-brand">
           <div className="footer-logo-row">

@@ -108,7 +108,7 @@ const translations = {
     components: "Components",
     generateComponents: "Generate Components",
     generating: "Generating...",
-    splitAI: "Split AI",
+    saveChanges: "Save Changes",
     noResourcesYet: "No resources added yet. Add a PDF or PPTX to begin.",
     noMatchesFound: "No matches found..."
   },
@@ -194,9 +194,9 @@ const translations = {
     n2: "تتبع المعرفة الدقيق",
     n2Desc: "إنشاء خارطة طريق شخصية لك.",
     n3: "المسار التعليمي التكيفي",
-    n3Desc: "محتوى ينمو معك.",
+    n3Desc: "محتوى ينمو معك ويتطور بتطورك.",
     n4: "تقييم مستوى الإتقان",
-    n4Desc: "إثبات مهاراتك الجديدة.",
+    n4Desc: "إثبات مهاراتك الجديدة بدقة.",
     footerTagline: "تمكين المستقبل من خلال الذكاء الاصطناعي التعليمي التكيفي.",
     footerSupport: "الدعم",
     footerDocumentation: "التوثيق",
@@ -208,7 +208,7 @@ const translations = {
     components: "المكونات",
     generateComponents: "توليد المكونات",
     generating: "جاري التوليد...",
-    splitAI: "تفكيك ذكي",
+    saveChanges: "حفظ التغييرات",
     noResourcesYet: "لم يتم إضافة موارد بعد. أضف PDF أو PPTX للبدء.",
     noMatchesFound: "لم يتم العثور على نتائج..."
   }
@@ -251,7 +251,7 @@ function App() {
       // Capitalize the first letter if possible
       defaultName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
     }
-    
+
     setCurrentUser({ name: defaultName, email: email || 'student@massar.edu' });
     // Use the actual role from the backend instead of guessing from email
     setIsAdmin(role === 'admin');
@@ -292,29 +292,29 @@ function App() {
         </button>
 
         <div className={`nav-links ${isMobileMenuOpen ? 'open' : ''}`} style={isRtl ? { flexDirection: 'row-reverse' } : {}}>
-          <button 
+          <button
             className="lang-toggle-btn"
-            onClick={() => { setLanguage(isRtl ? 'en' : 'ar'); setIsMobileMenuOpen(false); }} 
+            onClick={() => { setLanguage(isRtl ? 'en' : 'ar'); setIsMobileMenuOpen(false); }}
           >
-            <Globe size={16} color="#94a3b8" /> 
+            <Globe size={16} color="#94a3b8" />
             <span>{isRtl ? 'English' : 'العربية'}</span>
             <ChevronDown size={14} color="#64748b" />
           </button>
 
-          <button className="nav-link" onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+          <button className={`nav-link ${currentPage === 'home' ? 'active' : ''}`} onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
             <HomeIcon size={16} /> {t.home}
           </button>
 
           {isLoggedIn && (
             <>
-              <button className="nav-link" onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+              <button className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <LayoutDashboard size={16} /> {t.dashboard}
               </button>
-              <button className="nav-link" onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+              <button className={`nav-link ${currentPage === 'profile' ? 'active' : ''}`} onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <User size={16} /> {t.profile || 'Profile'}
               </button>
               {isAdmin && (
-                <button className="nav-link" onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#60a5fa', justifyContent: 'center' }}>
+                <button className={`nav-link ${currentPage === 'admin' ? 'active' : ''}`} onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                   <Settings size={16} /> {t.adminPanel || 'Admin Panel'}
                 </button>
               )}
@@ -338,7 +338,7 @@ function App() {
         {/* Dynamic Route Rendering utilizing the 'pages' Folder */}
 
         {currentPage === 'home' && (
-          <Home t={t} goSignUp={goSignUp} isLoggedIn={isLoggedIn} />
+          <Home t={t} goSignUp={goSignUp} isLoggedIn={isLoggedIn} setCurrentPage={setCurrentPage} />
         )}
 
         {currentPage === 'auth' && !isLoggedIn && (
@@ -368,9 +368,9 @@ function App() {
         )}
 
       </main>
-      
-      <Footer t={t} />
-      
+
+      <Footer t={t} key={currentPage} />
+
     </div>
   );
 }
