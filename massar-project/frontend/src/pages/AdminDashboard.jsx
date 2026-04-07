@@ -116,10 +116,11 @@ export default function AdminDashboard({ t, authToken }) {
         ))}
       </div>
 
-      {/* User Administration Section */}
-      <div className="section-divider">
-        <span className="divider-text">{t.userAdmin || 'User Administration'}</span>
-        <div className="divider-line"></div>
+      <div className="section-divider" style={{ display: 'flex', alignItems: 'center', gap: '20px', margin: '40px 0 20px 0' }}>
+        <span className="divider-text" style={{ color: '#0f172a', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '14px' }}>
+          {t.userAdmin || 'User Administration'}
+        </span>
+        <div className="divider-line" style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.1)' }}></div>
       </div>
 
       <div className="luxe-panel" style={{ padding: '0', overflow: 'hidden' }}>

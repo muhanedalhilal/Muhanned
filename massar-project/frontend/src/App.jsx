@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './index.css';
 
 // Import our beautiful modular components!
@@ -281,9 +281,6 @@ function App() {
   const [language, setLanguage] = useState('en');
   const t = translations[language];
 
-  // Routing State
-  const [currentPage, setCurrentPage] = useState('home');
-
   // Security State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginView, setIsLoginView] = useState(true);
@@ -292,8 +289,31 @@ function App() {
   const [authToken, setAuthToken] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Determine initial page based on session restoration
+  const [currentPage, setCurrentPage] = useState('home');
+
   // Dashboard Sub-Routing State
   const [selectedCourseId, setSelectedCourseId] = useState(null);
+
+  // Restore session from localStorage on app load
+  useEffect(() => {
+    const savedSession = localStorage.getItem('massar_auth');
+    if (savedSession) {
+      try {
+        const sessionData = JSON.parse(savedSession);
+        setIsLoggedIn(true);
+        setAuthToken(sessionData.token);
+        setCurrentUser({ name: sessionData.name, email: sessionData.email });
+        setIsAdmin(sessionData.role === 'admin');
+        setCurrentPage('dashboard');
+      } catch (error) {
+        console.error("Failed to parse session", error);
+        localStorage.removeItem('massar_auth');
+      }
+    }
+  }, []);
+
+
 
   // App-level handlers
   const handleLogout = () => {
@@ -302,6 +322,7 @@ function App() {
     setAuthToken(null);
     setCurrentUser({ name: 'Student User', email: '' });
     setCurrentPage('home');
+    localStorage.removeItem('massar_auth');
   };
 
   const handleSecureLogin = (email = '', name = '', token = null, role = 'student') => {
@@ -318,6 +339,14 @@ function App() {
     // Use the actual role from the backend instead of guessing from email
     setIsAdmin(role === 'admin');
     setCurrentPage('dashboard');
+    
+    // Save to local storage to persist session
+    localStorage.setItem('massar_auth', JSON.stringify({
+      token: token,
+      name: defaultName,
+      email: email || 'student@massar.edu',
+      role: role
+    }));
   };
 
   const goSignUp = () => {

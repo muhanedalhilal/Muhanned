@@ -4,8 +4,7 @@ import { User, Mail, Save, Lock, ArrowLeft } from 'lucide-react';
 export default function Profile({ t, onBack, currentUser, setCurrentUser, authToken }) {
   const [profileData, setProfileData] = useState({
     name: currentUser?.name || '',
-    email: currentUser?.email || '',
-    password: ''
+    email: currentUser?.email || ''
   });
 
   const [message, setMessage] = useState(null);
@@ -23,7 +22,6 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
     // Build only the fields that actually changed
     const payload = {};
     if (profileData.name && profileData.name !== currentUser.name) payload.name = profileData.name;
-    if (profileData.password) payload.password = profileData.password;
 
     if (Object.keys(payload).length === 0) {
       setMessage({ type: 'info', text: 'No changes to save.' });
@@ -99,35 +97,20 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
 
             <div style={{ position: 'relative' }}>
               <label style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.email || 'Email Address'}</label>
-              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.05)', borderRadius: '12px', padding: '0 15px', opacity: '0.7', cursor: 'not-allowed' }}>
                 <Mail size={18} color="#94a3b8" />
                 <input
                   type="email"
                   name="email"
                   value={profileData.email}
-                  onChange={handleChange}
-                  className="input-luxe"
-                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
-                  placeholder={t.email || 'Email Address'}
+                  readOnly={true}
+                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none', cursor: 'not-allowed', padding: '12px 10px', fontSize: '15px', color: '#1e293b' }}
+                  title="Your email address cannot be changed."
                 />
               </div>
             </div>
 
-            <div style={{ position: 'relative' }}>
-              <label style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.password || 'New Password'}</label>
-              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
-                <Lock size={18} color="#94a3b8" />
-                <input
-                  type="password"
-                  name="password"
-                  value={profileData.password}
-                  onChange={handleChange}
-                  className="input-luxe"
-                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
-                  placeholder={t.password || 'Secure Password'}
-                />
-              </div>
-            </div>
+
 
             <button type="submit" className="btn-luxe submit" disabled={isLoading} style={{ marginTop: '20px', background: '#3b82f6', display: 'flex', gap: '8px', justifyContent: 'center', color: 'white' }}>
               {isLoading ? <span className="loader"></span> : <><Save size={18} /> {t.saveChanges || 'Save Changes'}</>}
