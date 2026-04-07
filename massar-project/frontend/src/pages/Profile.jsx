@@ -68,7 +68,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
   return (
     <div className="dashboard-section command-center" style={{ maxWidth: '600px', margin: '0 auto' }}>
       <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-        <button className="btn-luxe" onClick={onBack} style={{ background: 'rgba(255,255,255,0.05)', color: 'white' }}>
+        <button className="btn-luxe" onClick={onBack} style={{ background: 'rgba(0,0,0,0.05)', color: '#1e293b' }}>
           <ArrowLeft size={18} /> {t.backToDashboard || 'Back'}
         </button>
       </div>
@@ -84,7 +84,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
         <div className="form-body">
           <div style={{ position: 'relative' }}>
             <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.fullName || 'Full Name'}</label>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0 15px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
               <User size={18} color="#94a3b8" />
               <input
                 type="text"
@@ -100,7 +100,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
 
           <div style={{ position: 'relative' }}>
             <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.email || 'Email Address'}</label>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0 15px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
               <Mail size={18} color="#94a3b8" />
               <input
                 type="email"
@@ -116,7 +116,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
 
           <div style={{ position: 'relative' }}>
             <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.password || 'New Password'}</label>
-            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0 15px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
               <Lock size={18} color="#94a3b8" />
               <input
                 type="password"

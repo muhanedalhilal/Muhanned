@@ -35,7 +35,7 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
               <Target size={32} className="p-icon" />
               <div className="p-text">
                 <h5>{t.n1 || 'Real-time Analytics'}</h5>
-                <p>We discover how you learn best.</p>
+                <p>{t.n1Desc}</p>
               </div>
             </div>
           </div>
@@ -46,7 +46,7 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
               <Map size={32} className="p-icon" />
               <div className="p-text">
                 <h5>{t.n2 || 'Knowledge Tracing'}</h5>
-                <p>Creating your personal roadmap.</p>
+                <p>{t.n2Desc}</p>
               </div>
             </div>
           </div>
@@ -57,7 +57,7 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
               <BookOpen size={32} className="p-icon" />
               <div className="p-text">
                 <h5>{t.n3 || 'Adaptive Pathing'}</h5>
-                <p>Content that grows with you.</p>
+                <p>{t.n3Desc}</p>
               </div>
             </div>
           </div>
@@ -68,7 +68,7 @@ export default function Home({ t, goSignUp, isLoggedIn }) {
               <Award size={32} className="p-icon" />
               <div className="p-text">
                  <h5>{t.n4 || 'Mastery Evaluation'}</h5>
-                 <p>Proving your new skills.</p>
+                 <p>{t.n4Desc}</p>
               </div>
             </div>
           </div>
