@@ -19,7 +19,7 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
       <div className="hero-section">
         <div className="hero-badge">
           <Zap size={14} />
-          <span>Powered by Bayesian Knowledge Tracing (BKT)</span>
+          <span>{t.poweredBy}</span>
         </div>
         <h1 className="hero-title">{t.heroTitle}</h1>
         <p className="hero-subtitle">{t.heroSubtitle}</p>
@@ -51,14 +51,12 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
 
       {/* ── VISION & MISSION ─────────────────────────────────── */}
       <div className="vision-section">
-        <div className="section-label"><Eye size={14} /> Our Vision</div>
+        <div className="section-label"><Eye size={14} /> {t.visionLabel}</div>
         <h2 className="section-title">
-          Education That Thinks <span className="gradient-text">With You</span>
+          {t.visionTitleMain} <span className="gradient-text">{t.visionTitleHighlight}</span>
         </h2>
         <p className="section-subtitle">
-          We believe every student deserves a learning experience as unique as their mind.
-          Massar was built to eliminate the "one-size-fits-all" approach by placing
-          cognitive science and artificial intelligence at the heart of every lesson.
+          {t.visionSubtitle}
         </p>
 
         <div className="vision-grid">
@@ -66,36 +64,24 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
             <div className="vision-icon-wrap blue">
               <Eye size={28} color="#60a5fa" />
             </div>
-            <h3>Our Vision</h3>
-            <p>
-              A world where no student is left behind because the system couldn't adapt.
-              We envision AI-powered education as the great equalizer — available to
-              every student, everywhere.
-            </p>
+            <h3>{t.visionCard1Title}</h3>
+            <p>{t.visionCard1Text}</p>
           </div>
 
           <div className="vision-card vision-card-center">
             <div className="vision-icon-wrap purple">
               <Lightbulb size={28} color="#c084fc" />
             </div>
-            <h3>Our Mission</h3>
-            <p>
-              To build the most intelligent adaptive learning engine ever deployed —
-              one that continuously learns how you learn, and builds a curriculum that
-              meets you exactly where you are.
-            </p>
+            <h3>{t.visionCard2Title}</h3>
+            <p>{t.visionCard2Text}</p>
           </div>
 
           <div className="vision-card">
             <div className="vision-icon-wrap green">
               <Users size={28} color="#34d399" />
             </div>
-            <h3>Our Values</h3>
-            <p>
-              Transparency in AI, fairness in assessment, and relentless pursuit of
-              mastery. We measure our success by how far each student travels from
-              where they started.
-            </p>
+            <h3>{t.visionCard3Title}</h3>
+            <p>{t.visionCard3Text}</p>
           </div>
         </div>
       </div>
@@ -125,14 +111,14 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
 
       {/* ── HOW IT WORKS ─────────────────────────────────────── */}
       <div className="how-section">
-        <div className="section-label"><TrendingUp size={14} /> Process</div>
-        <h2 className="section-title">How Massar Works</h2>
+        <div className="section-label"><TrendingUp size={14} /> {t.processLabel}</div>
+        <h2 className="section-title">{t.howItWorksTitle}</h2>
         <div className="how-steps">
           {[
-            { num: '01', title: 'You Start Learning', desc: 'Begin any module. Massar silently observes how you interact with content and problems.' },
-            { num: '02', title: 'AI Builds Your Model', desc: 'Our BKT engine calculates your real knowledge probability per topic — not just a score.' },
-            { num: '03', title: 'Path Adapts Instantly', desc: 'Content difficulty, order, and type are dynamically adjusted based on your live model.' },
-            { num: '04', title: 'Mastery Is Proven', desc: 'You advance only when the system is statistically confident you\'ve truly mastered the concept.' },
+            { num: '01', title: t.step1Title, desc: t.step1Desc },
+            { num: '02', title: t.step2Title, desc: t.step2Desc },
+            { num: '03', title: t.step3Title, desc: t.step3Desc },
+            { num: '04', title: t.step4Title, desc: t.step4Desc },
           ].map(({ num, title, desc }) => (
             <div className="how-step" key={num}>
               <div className="how-num">{num}</div>
@@ -147,14 +133,14 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
       </div>
       {/* ── TEAM SECTION ─────────────────────────────────────── */}
       <div className="team-section">
-        <div className="section-label"><Users size={14} /> Our People</div>
-        <h2 className="section-title">Meet The Team</h2>
+        <div className="section-label"><Users size={14} /> {t.peopleLabel}</div>
+        <h2 className="section-title">{t.teamTitle}</h2>
         <div className="team-grid">
           {[
-            { name: 'Saeed Abdulrahman Alzahrani', role: 'Project Manager', img: '/team/saeed.jpg' },
-            { name: 'Mujahid Bandar Alshehri', role: 'Backend Infrastructure', img: '/team/mujahid.jpg' },
-            { name: 'Muhaned Mohammed Alhilal', role: 'Frontend Engineering', img: '/team/muhaned.jpg' },
-            { name: 'Mohammed Tareq Althumairy', role: 'Frontend Engineering', img: '/team/mohammed.jpg' },
+            { name: 'Saeed Abdulrahman Alzahrani', role: t.teamRolePM, img: '/team/saeed.jpg' },
+            { name: 'Mujahid Bandar Alshehri', role: t.teamRoleBackend, img: '/team/mujahid.jpg' },
+            { name: 'Muhaned Mohammed Alhilal', role: t.teamRoleFrontend, img: '/team/muhaned.jpg' },
+            { name: 'Mohammed Tareq Althumairy', role: t.teamRoleFrontend, img: '/team/mohammed.jpg' },
           ].map(({ name, role, img }) => (
             <div className="team-card" key={name}>
               <div className="team-avatar-wrapper">
@@ -182,15 +168,15 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
         <div className="cta-section">
           <div className="cta-glow" />
           <div className="cta-content">
-            <h2>Ready to Master Anything?</h2>
-            <p>Join thousands of students building real knowledge — not just passing grades.</p>
+            <h2>{t.ctaReady}</h2>
+            <p>{t.ctaJoin}</p>
             <div className="cta-checks">
-              {['Free to start', 'No credit card required', 'Bilingual (AR/EN)'].map(c => (
+              {[t.ctaFree, t.ctaNoCard, t.ctaBilingual].map(c => (
                 <span key={c} className="cta-check"><CheckCircle size={16} color="#34d399" /> {c}</span>
               ))}
             </div>
             <button className="action-btn glow cta-btn" onClick={goSignUp}>
-              Start Learning Now <ArrowRight size={18} />
+              {t.startLearning} <ArrowRight size={18} />
             </button>
           </div>
         </div>

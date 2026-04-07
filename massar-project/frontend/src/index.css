@@ -3869,4 +3869,53 @@ body {
   .action-btn,
   .action-btn-outline { font-size: 15px; padding: 12px 24px; }
 }
+
+/* ══════════════════════════════════════════════
+   AUTH FORM FIX
+   ══════════════════════════════════════════════ */
+.auth-form .input-group input {
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  padding: 16px 20px;
+  border-radius: 12px;
+  width: 100%;
+  font-size: 15px;
+  color: #0f172a;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+.auth-form .input-group input::placeholder {
+  color: #94a3b8;
+}
+.auth-form .input-group input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+.auth-form .submit-btn {
+  background: linear-gradient(135deg, #2563eb, #4f46e5);
+  color: white;
+  border: none;
+  padding: 18px;
+  width: 100%;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.auth-form .submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.5);
+}
+.auth-form .submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
 

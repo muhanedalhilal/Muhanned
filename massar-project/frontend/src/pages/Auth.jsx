@@ -77,11 +77,6 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
             </div>
             <h2 className="art-title">{t.appName}</h2>
             <p className="art-subtitle" style={{ color: '#000000', fontSize: '17px', lineHeight: '1.6', fontWeight: '600' }}>{t.authArtSubtitle}</p>
-            
-            <div className="art-status-pill">
-              <div className="pulse-dot"></div>
-              <span>{t.neuralEngineOnline}</span>
-            </div>
           </div>
         </div>
 
