@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { User, Mail, Save, ArrowLeft } from 'lucide-react';
+import { User, Mail, Save, Lock, ArrowLeft } from 'lucide-react';
 
 export default function Profile({ t, onBack, currentUser, setCurrentUser, authToken }) {
   const [profileData, setProfileData] = useState({
     name: currentUser?.name || '',
     email: currentUser?.email || '',
+    password: ''
   });
 
   const [message, setMessage] = useState(null);
@@ -22,6 +23,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
     // Build only the fields that actually changed
     const payload = {};
     if (profileData.name && profileData.name !== currentUser.name) payload.name = profileData.name;
+    if (profileData.password) payload.password = profileData.password;
 
     if (Object.keys(payload).length === 0) {
       setMessage({ type: 'info', text: 'No changes to save.' });
@@ -64,7 +66,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
   return (
     <div className="dashboard-section command-center" style={{ maxWidth: '600px', margin: '0 auto' }}>
       <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
-        <button className="btn-luxe" onClick={onBack} style={{ background: 'rgba(255,255,255,0.05)', color: 'white' }}>
+        <button className="btn-luxe" onClick={onBack} style={{ background: 'rgba(0,0,0,0.05)', color: '#1e293b' }}>
           <ArrowLeft size={18} /> {t.backToDashboard || 'Back'}
         </button>
       </div>
@@ -77,39 +79,57 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ padding: '30px' }}>
-          <div className="form-body" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form onSubmit={handleSubmit} className="luxe-panel">
+          <div className="form-body">
             <div style={{ position: 'relative' }}>
-              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.fullName || 'Full Name'}</label>
-              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0 15px' }}>
+              <label style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.fullName || 'Full Name'}</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
                 <User size={18} color="#94a3b8" />
                 <input
                   type="text"
                   name="name"
                   value={profileData.name}
                   onChange={handleChange}
-                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none', padding: '12px', color: 'white', fontSize: '16px' }}
+                  className="input-luxe"
+                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
                   placeholder={t.fullName || 'Full Name'}
                 />
               </div>
             </div>
 
-            <div style={{ position: 'relative', opacity: 0.7 }}>
-              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.email || 'Email Address'}</label>
-              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', padding: '0 15px' }}>
-                <Mail size={18} color="#64748b" />
+            <div style={{ position: 'relative' }}>
+              <label style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.email || 'Email Address'}</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
+                <Mail size={18} color="#94a3b8" />
                 <input
                   type="email"
                   name="email"
                   value={profileData.email}
-                  readOnly
-                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none', cursor: 'not-allowed', color: '#64748b', padding: '12px', fontSize: '16px' }}
+                  onChange={handleChange}
+                  className="input-luxe"
+                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
                   placeholder={t.email || 'Email Address'}
                 />
               </div>
             </div>
 
-            <button type="submit" className="btn-luxe submit" disabled={isLoading} style={{ marginTop: '10px', background: '#3b82f6', display: 'flex', gap: '8px', justifyContent: 'center', color: 'white', width: '100%' }}>
+            <div style={{ position: 'relative' }}>
+              <label style={{ color: '#1e293b', fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.password || 'New Password'}</label>
+              <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
+                <Lock size={18} color="#94a3b8" />
+                <input
+                  type="password"
+                  name="password"
+                  value={profileData.password}
+                  onChange={handleChange}
+                  className="input-luxe"
+                  style={{ border: 'none', background: 'transparent', width: '100%', outline: 'none' }}
+                  placeholder={t.password || 'Secure Password'}
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="btn-luxe submit" disabled={isLoading} style={{ marginTop: '20px', background: '#3b82f6', display: 'flex', gap: '8px', justifyContent: 'center', color: 'white' }}>
               {isLoading ? <span className="loader"></span> : <><Save size={18} /> {t.saveChanges || 'Save Changes'}</>}
             </button>
 

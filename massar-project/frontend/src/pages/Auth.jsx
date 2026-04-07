@@ -76,18 +76,18 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
               </div>
             </div>
             <h2 className="art-title">{t.appName}</h2>
-            <p className="art-subtitle">The Adaptive AI learning engine that constantly evaluates your cognitive progress.</p>
+            <p className="art-subtitle" style={{ color: '#000000', fontSize: '17px', lineHeight: '1.6', fontWeight: '600' }}>{t.authArtSubtitle}</p>
             
             <div className="art-status-pill">
               <div className="pulse-dot"></div>
-              <span>Neural Engine Online</span>
+              <span>{t.neuralEngineOnline}</span>
             </div>
           </div>
         </div>
 
         {/* Right Form Card */}
         <div className="auth-form-column card-container-new">
-          <h2 className="title">{isLoginView ? t.welcomeBack : t.joinSystem}</h2>
+          <h2 className="title" style={{ color: '#000000', fontWeight: '900', fontSize: '30px' }}>{isLoginView ? t.welcomeBack : t.joinSystem}</h2>
           <p className="subtitle">{isLoginView ? t.authSubLogin : t.authSubSignup}</p>
 
           <form onSubmit={handleAuthSubmit} className="auth-form">
@@ -127,9 +127,14 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
             </button>
           </form>
 
-          <div className="toggle-view">
-              <span className="toggle-text">{isLoginView ? t.noAccount : t.haveAccount}</span>
-              <button type="button" onClick={() => setIsLoginView(!isLoginView)} className="toggle-btn">
+          <div className="toggle-view" style={{ marginTop: '25px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
+              <span className="toggle-text" style={{ color: '#000000', fontWeight: '600' }}>{isLoginView ? t.noAccount : t.haveAccount}</span>
+              <button 
+                type="button" 
+                onClick={() => setIsLoginView(!isLoginView)} 
+                className="toggle-btn"
+                style={{ color: '#1e40af', fontWeight: '800', textDecoration: 'underline', background: 'none', border: 'none', padding: 0 }}
+              >
                 {isLoginView ? t.clickSignUp : t.clickSignIn}
               </button>
           </div>

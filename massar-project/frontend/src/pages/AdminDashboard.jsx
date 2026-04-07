@@ -50,7 +50,7 @@ export default function AdminDashboard({ t, authToken }) {
     try {
       const res = await fetch(`${API_URL}/admin/users/${id}`, {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         },
@@ -69,7 +69,7 @@ export default function AdminDashboard({ t, authToken }) {
   };
 
   const deleteUser = async (id) => {
-    if(window.confirm('Are you sure you want to delete this user?')) {
+    if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         const res = await fetch(`${API_URL}/admin/users/${id}`, {
           method: 'DELETE',
@@ -86,14 +86,14 @@ export default function AdminDashboard({ t, authToken }) {
     }
   };
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="dashboard-section command-center" style={{ maxWidth: '1200px' }}>
-      
+
       {/* Platform Analytics Section */}
       <div className="command-header-premium" style={{ marginBottom: '0' }}>
         <div className="header-text-group">
@@ -105,7 +105,7 @@ export default function AdminDashboard({ t, authToken }) {
       <div className="dashboard-grid" style={{ paddingTop: '20px', paddingBottom: '30px' }}>
         {platformStats.map((stat, i) => (
           <div key={i} className="glass-panel" style={{ padding: '25px', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '20px', textAlign: 'left' }}>
-            <div className="icon-wrapper" style={{ background: 'rgba(255,255,255,0.05)', padding: '15px' }}>
+            <div className="icon-wrapper" style={{ background: 'rgba(0,0,0,0.03)', padding: '15px' }}>
               {stat.icon}
             </div>
             <div>
@@ -123,14 +123,14 @@ export default function AdminDashboard({ t, authToken }) {
       </div>
 
       <div className="luxe-panel" style={{ padding: '0', overflow: 'hidden' }}>
-        <div style={{ padding: '20px 30px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-          <h3 style={{ color: 'white', margin: 0, fontSize: '18px' }}>{t.manageUsers || 'Manage Accounts'}</h3>
-          <div className="search-bar" style={{ padding: '8px 15px', background: 'rgba(0,0,0,0.2)' }}>
-            <Search size={16} color="#94a3b8" />
-            <input 
-              type="text" 
-              placeholder={t.searchUsers || 'Search users...'} 
-              className="search-input" 
+        <div style={{ padding: '20px 30px', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+          <h3 style={{ color: 'black', margin: 0, fontSize: '18px' }}>{t.manageUsers || 'Manage Accounts'}</h3>
+          <div className="search-bar" style={{ padding: '8px 15px', background: 'rgba(0,0,0,0.03)' }}>
+            <Search size={16} color="#64748b" />
+            <input
+              type="text"
+              placeholder={t.searchUsers || 'Search users...'}
+              className="search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ fontSize: '14px' }}
@@ -157,22 +157,22 @@ export default function AdminDashboard({ t, authToken }) {
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'white' }}>
+                  <tr key={user.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'black' }}>
                     {editingUserId === user.id ? (
                       <>
                         <td style={{ padding: '15px 30px' }}>
-                          <input 
-                            type="text" 
-                            className="input-luxe" 
-                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', marginBottom: '4px', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white' }} 
-                            value={editFormData.name} 
-                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} 
+                          <input
+                            type="text"
+                            className="input-luxe"
+                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', marginBottom: '4px', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white' }}
+                            value={editFormData.name}
+                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                           />
                           <div style={{ fontSize: '13px', color: '#94a3b8', paddingLeft: '8px' }}>{user.email}</div>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
-                          <select 
-                            className="input-luxe" 
+                          <select
+                            className="input-luxe"
                             style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white', cursor: 'pointer' }}
                             value={editFormData.role}
                             onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
@@ -206,12 +206,12 @@ export default function AdminDashboard({ t, authToken }) {
                           <div style={{ fontSize: '13px', color: '#94a3b8' }}>{user.email}</div>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
-                          <span style={{ 
-                            padding: '4px 10px', 
-                            borderRadius: '20px', 
-                            fontSize: '12px', 
-                            background: user.role === 'admin' || user.role === 'Admin' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.1)',
-                            color: user.role === 'admin' || user.role === 'Admin' ? '#60a5fa' : '#e2e8f0'
+                          <span style={{
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            background: user.role === 'admin' || user.role === 'Admin' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(0,0,0,0.03)',
+                            color: user.role === 'admin' || user.role === 'Admin' ? '#3b82f6' : '#475569'
                           }}>
                             {user.role}
                           </span>

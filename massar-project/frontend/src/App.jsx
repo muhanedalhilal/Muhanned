@@ -78,6 +78,8 @@ const translations = {
     open: "Open",
     profile: "Profile Management",
     profileSub: "Manage your personal account details securely.",
+    authArtSubtitle: "The Adaptive AI learning engine that constantly evaluates your cognitive progress.",
+    neuralEngineOnline: "Neural Engine Online",
     profileSaved: "Profile successfully updated!",
     adminPanel: "Admin Panel",
     platformAnalytics: "Platform Analytics",
@@ -106,7 +108,7 @@ const translations = {
     components: "Components",
     generateComponents: "Generate Components",
     generating: "Generating...",
-    splitAI: "Split AI",
+    saveChanges: "Save Changes",
     noResourcesYet: "No resources added yet. Add a PDF or PPTX to begin.",
     noMatchesFound: "No matches found..."
   },
@@ -176,6 +178,8 @@ const translations = {
     open: "فتح",
     profile: "إدارة الملف الشخصي",
     profileSub: "أدر تفاصيل حسابك الشخصي بأمان.",
+    authArtSubtitle: "محرك التعلم المعتمد على الذكاء الاصطناعي التكيفي الذي يقيم تقدمك المعرفي باستمرار.",
+    neuralEngineOnline: "محرك الذكاء الاصطناعي (نشط)",
     profileSaved: "تم تحديث الملف الشخصي بنجاح!",
     adminPanel: "لوحة تحكم المشرف",
     platformAnalytics: "تحليلات المنصة",
@@ -204,7 +208,7 @@ const translations = {
     components: "المكونات",
     generateComponents: "توليد المكونات",
     generating: "جاري التوليد...",
-    splitAI: "تفكيك ذكي",
+    saveChanges: "حفظ التغييرات",
     noResourcesYet: "لم يتم إضافة موارد بعد. أضف PDF أو PPTX للبدء.",
     noMatchesFound: "لم يتم العثور على نتائج..."
   }
@@ -247,7 +251,7 @@ function App() {
       // Capitalize the first letter if possible
       defaultName = defaultName.charAt(0).toUpperCase() + defaultName.slice(1);
     }
-    
+
     setCurrentUser({ name: defaultName, email: email || 'student@massar.edu' });
     // Use the actual role from the backend instead of guessing from email
     setIsAdmin(role === 'admin');
@@ -288,11 +292,11 @@ function App() {
         </button>
 
         <div className={`nav-links ${isMobileMenuOpen ? 'open' : ''}`} style={isRtl ? { flexDirection: 'row-reverse' } : {}}>
-          <button 
+          <button
             className="lang-toggle-btn"
-            onClick={() => { setLanguage(isRtl ? 'en' : 'ar'); setIsMobileMenuOpen(false); }} 
+            onClick={() => { setLanguage(isRtl ? 'en' : 'ar'); setIsMobileMenuOpen(false); }}
           >
-            <Globe size={16} color="#94a3b8" /> 
+            <Globe size={16} color="#94a3b8" />
             <span>{isRtl ? 'English' : 'العربية'}</span>
             <ChevronDown size={14} color="#64748b" />
           </button>
@@ -364,9 +368,9 @@ function App() {
         )}
 
       </main>
-      
+
       <Footer t={t} key={currentPage} />
-      
+
     </div>
   );
 }
