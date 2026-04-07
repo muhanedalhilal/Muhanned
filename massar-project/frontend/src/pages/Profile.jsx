@@ -29,8 +29,9 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
       return;
     }
 
+    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
     try {
-      const res = await fetch('http://127.0.0.1:8000/users/me', {
+      const res = await fetch(`${API_URL}/users/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

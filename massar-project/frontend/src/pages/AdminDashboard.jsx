@@ -8,18 +8,20 @@ export default function AdminDashboard({ t, authToken }) {
   const [editingUserId, setEditingUserId] = useState(null);
   const [editFormData, setEditFormData] = useState({ name: '', role: '' });
 
+  const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+
   // Fetch real data on mount if token exists
   useEffect(() => {
     if (!authToken) return;
 
-    fetch('http://127.0.0.1:8000/admin/stats', {
+    fetch(`${API_URL}/admin/stats`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
     })
       .then(res => res.json())
       .then(data => setApiStats(data))
       .catch(e => console.error("Could not load stats.", e));
 
-    fetch('http://127.0.0.1:8000/admin/users', {
+    fetch(`${API_URL}/admin/users`, {
       headers: { 'Authorization': `Bearer ${authToken}` }
     })
       .then(res => res.json())
@@ -46,7 +48,7 @@ export default function AdminDashboard({ t, authToken }) {
 
   const saveEdit = async (id) => {
     try {
-      const res = await fetch(`http://127.0.0.1:8000/admin/users/${id}`, {
+      const res = await fetch(`${API_URL}/admin/users/${id}`, {
         method: 'PUT',
         headers: { 
           'Authorization': `Bearer ${authToken}`,
@@ -69,7 +71,7 @@ export default function AdminDashboard({ t, authToken }) {
   const deleteUser = async (id) => {
     if(window.confirm('Are you sure you want to delete this user?')) {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/admin/users/${id}`, {
+        const res = await fetch(`${API_URL}/admin/users/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${authToken}` }
         });

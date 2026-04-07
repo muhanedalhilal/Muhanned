@@ -11,9 +11,10 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
     setIsLoading(true);
     setStatus({ message: '', type: '' });
 
+    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
     const endpointUrl = isLoginView 
-      ? 'http://127.0.0.1:8000/auth/login' 
-      : 'http://127.0.0.1:8000/auth/signup';
+      ? `${API_URL}/auth/login` 
+      : `${API_URL}/auth/signup`;
 
     try {
       const response = await fetch(endpointUrl, {
@@ -28,7 +29,7 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
         if (isLoginView && data.access_token) {
            try {
              // Fetch real profile from backend
-             const meRes = await fetch('http://127.0.0.1:8000/auth/me', {
+             const meRes = await fetch(`${API_URL}/auth/me`, {
                headers: { 'Authorization': `Bearer ${data.access_token}` }
              });
              const meData = await meRes.json();

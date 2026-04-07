@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from app.api import auth, admin, users
 from app.database.database import engine, Base
 import app.models.db_user  # Imported so SQLAlchemy detects the table
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,9 +26,12 @@ app = FastAPI(
 )
 
 # Restoring CORS so React won't get blocked by the browser!
+frontend_url = os.getenv("FRONTEND_URL", "*")
+allowed_origins = [frontend_url] if frontend_url != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
