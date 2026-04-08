@@ -310,10 +310,14 @@ function App() {
         console.error("Failed to parse session", error);
         localStorage.removeItem('massar_auth');
       }
+    } else {
+      // If ?page=auth is in URL, open the login page (useful for email confirmations)
+      if (window.location.search.includes('page=auth')) {
+        setCurrentPage('auth');
+        setIsLoginView(true);
+      }
     }
   }, []);
-
-
 
   // App-level handlers
   const handleLogout = () => {
