@@ -12,16 +12,11 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def signup(user: UserSignup, db: Session = Depends(get_db)):
     try:
         # 1. Create user in Supabase securely
-        # Using a frontend URL read from env, or a fallback
-        import os
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-        
         response = supabase.auth.sign_up({
             "email": user.email,
             "password": user.password,
             "options": {
-                "data": {"name": user.name},
-                "emailRedirectTo": f"{frontend_url}/?page=auth"
+                "data": {"name": user.name}
             }
         })
         
@@ -43,10 +38,9 @@ def signup(user: UserSignup, db: Session = Depends(get_db)):
             
         except Exception as db_error:
             db.rollback()
-            print(f"CRITICAL SYSTEM ERROR during user signup (DBSync): {str(db_error)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Your account was securely created, but we encountered a temporary system error. Please try logging in or contact support."
+                detail=f"Database insert failed: {str(db_error)}"
             )
 
         return {
@@ -58,10 +52,9 @@ def signup(user: UserSignup, db: Session = Depends(get_db)):
         }
         
     except Exception as e:
-        print(f"CRITICAL AUTH SERVER ERROR: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="We encountered an unexpected error during authentication. Please try again."
+            detail=f"Auth error: {str(e)}"
         )
 
 @router.post("/login")
