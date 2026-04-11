@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle, AlertTriangle, CloudOff, BrainCircuit } from 'lucide-react';
+import { api } from '../services/api';
 
 export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, isRtl }) {
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
@@ -11,30 +12,21 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
     setIsLoading(true);
     setStatus({ message: '', type: '' });
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-    const endpointUrl = isLoginView 
-      ? `${API_URL}/auth/login` 
-      : `${API_URL}/auth/signup`;
+    const endpointUrl = isLoginView ? '/auth/login' : '/auth/signup';
 
     try {
-      const response = await fetch(endpointUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(isLoginView ? { email: formData.email, password: formData.password } : formData)
-      });
-      
-      const data = await response.json();
+      const payload = isLoginView ? { email: formData.email, password: formData.password } : formData;
+      const response = await api.post(endpointUrl, payload);
       
       if (response.ok) {
+        const data = response.data;
         if (isLoginView && data.access_token) {
+           localStorage.setItem('massar_token', data.access_token);
            try {
              // Fetch real profile from backend
-             const meRes = await fetch(`${API_URL}/auth/me`, {
-               headers: { 'Authorization': `Bearer ${data.access_token}` }
-             });
-             const meData = await meRes.json();
-             if (meRes.ok && meData.name) {
-               onSecureLogin(meData.email || formData.email, meData.name, data.access_token, meData.user_role);
+             const meRes = await api.get('/users/me');
+             if (meRes.ok && meRes.data.name) {
+               onSecureLogin(meRes.data.email || formData.email, meRes.data.name, data.access_token, meRes.data.role);
              } else {
                onSecureLogin(formData.email, '', data.access_token, 'student');
              }
@@ -47,7 +39,7 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
            setTimeout(() => setIsLoginView(true), 2000);
         }
       } else {
-        setStatus({ message: (data.detail || "Authentication failed."), type: 'error' });
+        setStatus({ message: (response.message || "Authentication failed."), type: 'error' });
       }
     } catch (error) {
        setStatus({ message: "Server connection failed.", type: 'error' });

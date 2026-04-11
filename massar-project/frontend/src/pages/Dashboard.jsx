@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { api } from '../services/api';
 
 const availableIcons = {
   book: <BookOpen size={24} />,
@@ -72,6 +73,28 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
   const [isAddingComponent, setIsAddingComponent] = useState(false);
   const [newComponentName, setNewComponentName] = useState('');
 
+  const [dashboardUser, setDashboardUser] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await api.get('/users/me');
+        if (response.ok) {
+          setDashboardUser(response.data);
+        } else {
+          setDashboardError(response.message);
+        }
+      } catch (e) {
+        setDashboardError("Failed to fetch dashboard user data");
+      } finally {
+        setDashboardLoading(false);
+      }
+    };
+    fetchUserData();
+  }, []);
+
   const addCourse = (e) => {
     e.preventDefault();
     if (!newCourseName.trim()) return;
@@ -112,28 +135,46 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     }));
   };
 
-  const handleResourceSelect = (e, courseId) => {
+  const handleResourceSelect = async (e, courseId) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validExts = ['pdf', 'ppt', 'pptx'];
+    const extension = file.name.split('.').pop().toLowerCase();
+    if (!validExts.includes(extension)) {
+        alert("Invalid file type! Only PDF, PPT, and PPTX are allowed.");
+        e.target.value = '';
+        return;
+    }
+
     setIsUploading(true);
 
-    // Simulate "Real" addition (since we can't touch backend)
-    setTimeout(() => {
-      setCourses(courses.map(course => {
-        if (course.id !== courseId) return course;
-        const extension = file.name.split('.').pop().toLowerCase();
-        const newResource = {
-          id: Date.now(),
-          text: file.name,
-          type: extension,
-          fileUrl: URL.createObjectURL(file)
-        };
-        return { ...course, resourceList: [...(course.resourceList || []), newResource] };
-      }));
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await api.post('/upload/', formData);
+      if (response.ok) {
+        setCourses(courses.map(course => {
+          if (course.id !== courseId) return course;
+          
+          const newResource = {
+            id: Date.now(),
+            text: response.data.original_filename,
+            type: response.data.file_type,
+            fileUrl: null // Wait for backend serving later
+          };
+          return { ...course, resourceList: [...(course.resourceList || []), newResource] };
+        }));
+      } else {
+        alert("Upload failed: " + response.message);
+      }
+    } catch (err) {
+      alert("Error parsing upload: " + err.message);
+    } finally {
       setIsUploading(false);
-      e.target.value = '';
-    }, 800);
+      e.target.value = ''; 
+    }
   };
 
   const deleteResource = (courseId, resourceId) => {
@@ -573,7 +614,10 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
       {/* Premium Header */}
       <div className="command-header-premium">
         <div className="header-text-group">
-          <h1 className="luxe-title">{t.commandCenter}</h1>
+          <h1 className="luxe-title">
+            {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{display: 'inline', marginRight: '10px'}}/>}
+            {dashboardError ? "Learning Command Center" : (dashboardUser ? `Welcome back, ${dashboardUser.name}` : t.commandCenter)}
+          </h1>
           <p className="luxe-subtitle">{t.manageCourses}</p>
         </div>
 
