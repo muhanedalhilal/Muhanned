@@ -143,17 +143,17 @@ export default function AdminDashboard({ t, authToken }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.02)', color: '#94a3b8', fontSize: '14px' }}>
-                <th style={{ padding: '15px 30px', fontWeight: '500' }}>Name</th>
-                <th style={{ padding: '15px 30px', fontWeight: '500' }}>Role</th>
-                <th style={{ padding: '15px 30px', fontWeight: '500' }}>Status</th>
-                <th style={{ padding: '15px 30px', fontWeight: '500', textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '15px 30px', fontWeight: '500' }}>{t.adminName || 'Name'}</th>
+                <th style={{ padding: '15px 30px', fontWeight: '500' }}>{t.adminRole || 'Role'}</th>
+                <th style={{ padding: '15px 30px', fontWeight: '500' }}>{t.adminStatus || 'Status'}</th>
+                <th style={{ padding: '15px 30px', fontWeight: '500', textAlign: 'right' }}>{t.adminActions || 'Actions'}</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
-                    No users found matching your search.
+                    {t.adminSearchEmpty || 'No users found matching your search.'}
                   </td>
                 </tr>
               ) : (
@@ -165,7 +165,7 @@ export default function AdminDashboard({ t, authToken }) {
                           <input
                             type="text"
                             className="input-luxe"
-                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', marginBottom: '4px', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white' }}
+                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', marginBottom: '4px', backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(59, 130, 246, 0.3)', color: 'black' }}
                             value={editFormData.name}
                             onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                           />
@@ -174,19 +174,19 @@ export default function AdminDashboard({ t, authToken }) {
                         <td style={{ padding: '15px 30px' }}>
                           <select
                             className="input-luxe"
-                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white', cursor: 'pointer' }}
+                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(59, 130, 246, 0.3)', color: 'black', cursor: 'pointer' }}
                             value={editFormData.role}
                             onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
                           >
-                            <option value="student" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Student</option>
-                            <option value="teacher" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Teacher</option>
-                            <option value="admin" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Admin</option>
+                            <option value="student">{t.adminStudent || 'Student'}</option>
+                            <option value="teacher">{t.adminTeacher || 'Teacher'}</option>
+                            <option value="admin">{t.adminAdmin || 'Admin'}</option>
                           </select>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#10b981' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
-                            Active
+                            {t.adminActive || 'Active'}
                           </span>
                         </td>
                         <td style={{ padding: '15px 30px', textAlign: 'right' }}>
@@ -214,13 +214,13 @@ export default function AdminDashboard({ t, authToken }) {
                             background: user.role === 'admin' || user.role === 'Admin' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(0,0,0,0.03)',
                             color: user.role === 'admin' || user.role === 'Admin' ? '#3b82f6' : '#475569'
                           }}>
-                            {user.role}
+                            {user.role === 'admin' || user.role === 'Admin' ? (t.adminAdmin || 'Admin') : user.role === 'student' || user.role === 'Student' ? (t.adminStudent || 'Student') : (t.adminTeacher || 'Teacher')}
                           </span>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#10b981' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
-                            Active
+                            {t.adminActive || 'Active'}
                           </span>
                         </td>
                         <td style={{ padding: '15px 30px', textAlign: 'right' }}>
