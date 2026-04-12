@@ -137,14 +137,13 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
         <h2 className="section-title">{t.teamTitle}</h2>
         <div className="team-grid">
           {[
-            { name: 'Saeed Abdulrahman Alzahrani', role: t.teamRolePM, img: '/team/saeed.jpg' },
-            { name: 'Mujahid Bandar Alshehri', role: t.teamRoleBackend, img: '/team/mujahid.jpg' },
-            { name: 'Muhaned Mohammed Alhilal', role: t.teamRoleFrontend, img: '/team/muhaned.jpg' },
-            { name: 'Mohammed Tareq Althumairy', role: t.teamRoleFrontend, img: '/team/mohammed.jpg' },
+            { name: 'Saeed Abdulrahman Alzahrani', role: t.teamRolePM, img: 'https://pkngqwjvekvolmirldgw.supabase.co/storage/v1/object/public/team/saeed.jpg' },
+            { name: 'Mujahid Bandar Alshehri', role: t.teamRoleBackend, img: 'https://pkngqwjvekvolmirldgw.supabase.co/storage/v1/object/public/team/mujahid.jpg' },
+            { name: 'Muhaned Mohammed Alhilal', role: t.teamRoleFrontend, img: 'https://pkngqwjvekvolmirldgw.supabase.co/storage/v1/object/public/team/muhaned.jpg' },
+            { name: 'Mohammed Tareq Althumairy', role: t.teamRoleFrontend, img: 'https://pkngqwjvekvolmirldgw.supabase.co/storage/v1/object/public/team/mohammed.jpg' },
           ].map(({ name, role, img }) => (
             <div className="team-card" key={name}>
               <div className="team-avatar-wrapper">
-                {/* Fallback to initials if the image is missing */}
                 <div className="team-avatar-fallback">
                   {name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                 </div>
