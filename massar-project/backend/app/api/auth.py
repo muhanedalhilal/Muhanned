@@ -38,23 +38,38 @@ def signup(user: UserSignup, db: Session = Depends(get_db)):
             
         except Exception as db_error:
             db.rollback()
+            error_msg = str(db_error)
+            if "ix_users_email" in error_msg or "UniqueViolation" in error_msg:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="An account with this email address already exists. Please log in instead."
+                )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Database insert failed: {str(db_error)}"
+                detail="An unexpected error occurred during account creation. Please try again."
             )
 
         return {
-            "message": "User created super fast in Supabase & our PostgreSQL DB!",
+            "message": "Account created successfully! Please check your email to verify your account before signing in.",
             "uid": response.user.id,
             "email": response.user.email,
             "name": response.user.user_metadata.get("name") if response.user.user_metadata else user.name,
             "database_id": new_db_user.id
         }
         
+    except HTTPException:
+        # Re-raise standard HTTPExceptions to prevent wrapping them in another error
+        raise
     except Exception as e:
+        error_msg = str(e)
+        if "User already registered" in error_msg:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="An account with this email address already exists. Please log in instead."
+            )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Auth error: {str(e)}"
+            detail=f"Authentication failed: {error_msg}"
         )
 
 @router.post("/login")
