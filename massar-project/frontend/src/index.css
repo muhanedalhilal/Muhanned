@@ -3,12 +3,105 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Outfit', -apple-system, sans-serif;
 }
 
-/* Prevent tracking issues on Arabic cursive script */
+body {
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  background: #FAFAFA;
+  color: #0f172a;
+}
+
+/* Prevent tracking issues on Arabic cursive script globally if misapplied */
 [dir="rtl"] * {
   letter-spacing: normal !important;
+}
+
+/* =============================================
+   ARABIC TYPOGRAPHY SYSTEM — IBM Plex Sans Arabic
+   Professional, educational-grade RTL typography
+   ============================================= */
+
+/* Base Arabic font + reset typography */
+[dir="rtl"], [dir="rtl"] * {
+  font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, sans-serif !important;
+  letter-spacing: normal !important;
+  word-spacing: 0.05em;
+}
+
+/* Headings — bold, authoritative, well-spaced */
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3 {
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+  word-spacing: 0.02em;
+  text-rendering: optimizeLegibility;
+}
+
+/* Body text — readable, balanced line spacing */
+[dir="rtl"] p, [dir="rtl"] span, [dir="rtl"] li, [dir="rtl"] td, [dir="rtl"] label {
+  font-weight: 500 !important;
+  line-height: 1.8 !important;
+  text-rendering: optimizeLegibility;
+}
+
+/* Improved Typography for "رؤيتنا" (Vision and Section Titles) in BOTH Languages */
+.section-title, .vision-card h3, .section-label, .hero-title {
+  font-weight: 800 !important; /* Ensure it is deeply bold */
+}
+.section-title, .hero-title {
+  font-size: 42px !important; /* Fixed, larger font size for both languages */
+  letter-spacing: normal;
+}
+.vision-card h3 {
+  font-size: 26px !important; /* Fixed, larger font size for both languages */
+}
+.vision-card p {
+  font-size: 16px !important;
+  line-height: 1.8 !important;
+}
+.section-label {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  letter-spacing: normal !important;
+}
+
+/* Buttons — medium weight, clear */
+[dir="rtl"] button, [dir="rtl"] .btn-luxe, [dir="rtl"] .nav-link {
+  font-weight: 500 !important;
+  line-height: 1.3 !important;
+}
+
+/* Nav items — slightly bolder */
+[dir="rtl"] nav *, [dir="rtl"] .navbar * { font-weight: 500 !important; }
+
+/* Ensure RTL text flow throughout */
+[dir="rtl"] .form-body, [dir="rtl"] .luxe-panel, [dir="rtl"] .dashboard-section {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Labels above inputs */
+[dir="rtl"] .form-body label, [dir="rtl"] .input-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-weight: 600 !important;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+/* Input text direction */
+[dir="rtl"] input, [dir="rtl"] textarea, [dir="rtl"] select {
+  text-align: right;
+  direction: rtl;
+  font-family: 'Cairo', sans-serif !important;
+}
+
+/* Placeholder direction */
+[dir="rtl"] input::placeholder, [dir="rtl"] textarea::placeholder {
+  text-align: right;
+  direction: rtl;
 }
 
 body {

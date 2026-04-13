@@ -17,10 +17,6 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
 
       {/* ── HERO SECTION ─────────────────────────────────────── */}
       <div className="hero-section">
-        <div className="hero-badge">
-          <Zap size={14} />
-          <span>{t.poweredBy}</span>
-        </div>
         <h1 className="hero-title">{t.heroTitle}</h1>
         <p className="hero-subtitle">{t.heroSubtitle}</p>
         <div className="hero-buttons">
@@ -88,12 +84,11 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
 
       {/* ── FEATURE CARDS ────────────────────────────────────── */}
       <div className="adaptive-features">
-        <div className="section-label"><Zap size={14} /> Core Engine</div>
         <h2 className="section-title">{t.engineTitle}</h2>
         <div className="luxe-grid">
           {[
             { Icon: BrainCircuit, color: '#60a5fa', bg: 'rgba(59,130,246,0.15)', title: t.feat1Title, desc: t.feat1Desc },
-            { Icon: GitMerge,     color: '#c084fc', bg: 'rgba(147,51,234,0.15)',  title: t.feat2Title, desc: t.feat2Desc },
+            { Icon: GitMerge, color: '#c084fc', bg: 'rgba(147,51,234,0.15)', title: t.feat2Title, desc: t.feat2Desc },
             { Icon: ActivitySquare, color: '#34d399', bg: 'rgba(16,185,129,0.15)', title: t.feat3Title, desc: t.feat3Desc },
           ].map(({ Icon, color, bg, title, desc }, i) => (
             <div className="luxe-card feature-card" key={i}>
@@ -148,11 +143,11 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
                 <div className="team-avatar-fallback">
                   {name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                 </div>
-                <img 
-                  src={img} 
-                  alt={name} 
-                  className="team-avatar" 
-                  onError={(e) => { e.target.style.display = 'none'; }} 
+                <img
+                  src={img}
+                  alt={name}
+                  className="team-avatar"
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
               </div>
               <h4 className="team-name">{name}</h4>
