@@ -132,10 +132,10 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
         <h2 className="section-title">{t.teamTitle}</h2>
         <div className="team-grid">
           {[
-            { name: 'Saeed Abdulrahman Alzahrani', role: t.teamRolePM, img: '/team/saeed.jpg' },
-            { name: 'Mujahid Bandar Alshehri', role: t.teamRoleBackend, img: '/team/mujahid.jpg' },
-            { name: 'Muhaned Mohammed Alhilal', role: t.teamRoleFrontend, img: '/team/muhaned.jpg' },
-            { name: 'Mohammed Tareq Althumairy', role: t.teamRoleFrontend, img: '/team/mohammed.jpg' },
+            { name: 'Saeed Abdulrahman Alzahrani', role: t.teamRolePM, img: '' },
+            { name: 'Mujahid Bandar Alshehri', role: t.teamRoleBackend, img: '' },
+            { name: 'Muhaned Mohammed Alhilal', role: t.teamRoleFrontend, img: '' },
+            { name: 'Mohammed Tareq Althumairy', role: t.teamRoleFrontend, img: '' },
           ].map(({ name, role, img }) => (
             <div className="team-card" key={name}>
               <div className="team-avatar-wrapper">
