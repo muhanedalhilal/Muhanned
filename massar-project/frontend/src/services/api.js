@@ -32,13 +32,11 @@ async function request(endpoint, method, data = null) {
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        // Unauthorized, flush token, kick to home
         console.warn("Session expired or Unauthorized... Cleaning token.");
         localStorage.removeItem('massar_token');
-        // Let App.jsx handle the state through page reload or event listener
-        if (window.location.pathname !== '/') {
-            window.location.reload(); 
-        }
+        localStorage.removeItem('massar_auth'); // Must clear auth state too to force logout!
+        window.location.href = "/?page=auth"; // Instantly force redirect to the front door
+        return { ok: false, message: "Session expired. Please log in again." };
       }
       // Pass the backend error cleanly
       throw new Error(result.detail || result.message || "API request failed");

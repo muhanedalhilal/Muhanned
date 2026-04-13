@@ -14,13 +14,14 @@ def generate_kcs_from_text(text: str) -> list[dict]:
 
     genai.configure(api_key=api_key)
     
-    # We use gemini-1.5-flash as it is fast and suitable for this task
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    # Using gemini-2.5-flash which is the correct current model in the API
+    model = genai.GenerativeModel("gemini-2.5-flash")
     
     prompt = f"""
     You are an expert educational AI. 
     Read the following text extracted from an educational document.
     Extract the core "Knowledge Components" (KCs) - these are the fundamental concepts, definitions, or facts.
+    IMPORTANT: Extract ONLY the top 5 to 7 most critical and important concepts from the text. Do not return more than 7 components.
     Return the result strictly as a JSON array of objects. 
     Each object must have exactly two keys: "topic" and "content".
     Do not wrap the JSON in markdown blocks, just return raw JSON so it can be parsed.
@@ -44,4 +45,43 @@ def generate_kcs_from_text(text: str) -> list[dict]:
         return kcs
     except Exception as e:
         print(f"Error generating KCs: {e}")
+        return []
+
+def generate_quiz_from_text(text: str) -> list[dict]:
+    """
+    Takes combined text from selected KCs and generates 5 Multiple Choice Questions.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return []
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    
+    prompt = f"""
+    You are an expert AI quiz generator.
+    Based strictly on the following text, create 5 multiple choice questions.
+    Return the result strictly as a JSON array of objects.
+    Each object must have:
+    - "question": the question text
+    - "options": an array of exactly 4 string options
+    - "answer": the index (0-3) of the correct option
+    Do not wrap the JSON in markdown blocks, just return raw JSON so it can be parsed.
+
+    Text:
+    {text}
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+            
+        quiz_data = json.loads(response_text)
+        return quiz_data
+    except Exception as e:
+        print(f"Error generating Quiz: {e}")
         return []

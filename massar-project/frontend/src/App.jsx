@@ -7,6 +7,7 @@ import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import Quiz from './pages/Quiz';
 import Footer from './components/Footer';
 import { User, Settings, Menu, X, Globe, ChevronDown, Home as HomeIcon, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
 import { api } from './services/api';
@@ -316,6 +317,7 @@ function App() {
 
   // Dashboard Sub-Routing State
   const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [selectedComponentsForQuiz, setSelectedComponentsForQuiz] = useState([]);
 
   // Restore session from localStorage on app load
   useEffect(() => {
@@ -496,6 +498,9 @@ function App() {
             currentUser={currentUser}
             selectedCourseId={selectedCourseId}
             setSelectedCourseId={setSelectedCourseId}
+            setCurrentPage={setCurrentPage}
+            selectedComponentsForQuiz={selectedComponentsForQuiz}
+            setSelectedComponentsForQuiz={setSelectedComponentsForQuiz}
           />
         )}
 
@@ -503,6 +508,14 @@ function App() {
 
         {currentPage === 'admin' && isLoggedIn && isAdmin && (
           <AdminDashboard t={t} isRtl={isRtl} authToken={authToken} />
+        )}
+
+        {currentPage === 'quiz' && isLoggedIn && (
+          <Quiz 
+            t={t} 
+            setCurrentPage={setCurrentPage} 
+            selectedComponents={selectedComponentsForQuiz}
+          />
         )}
 
       </main>

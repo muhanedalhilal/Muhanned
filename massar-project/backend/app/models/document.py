@@ -13,8 +13,10 @@ class Document(Base):
     
     # Link back to the user who uploaded this document
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=True) # Optional back-link
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     owner = relationship("DBUser", back_populates="documents")
+    course = relationship("Course", back_populates="documents")
     knowledge_components = relationship("KnowledgeComponent", back_populates="document", cascade="all, delete-orphan")

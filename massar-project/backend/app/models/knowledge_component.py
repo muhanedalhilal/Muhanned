@@ -23,9 +23,13 @@ class KnowledgeComponent(Base):
     # Link back to the user to make querying faster (who owns this KC)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     
+    # Link back to the course
+    course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=True)
+    
     # BKT/Spaced repetition fields can be added here later (e.g., mastery_level)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     document = relationship("Document", back_populates="knowledge_components")
     owner = relationship("DBUser", back_populates="knowledge_components")
+    course = relationship("Course", back_populates="knowledge_components")

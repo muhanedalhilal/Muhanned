@@ -1,12 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.api import auth, admin, users, upload
+from app.api import auth, admin, users, upload, courses
 from app.database.database import engine, Base
 import app.models.db_user  # Imported so SQLAlchemy detects the table
-import app.models.document
-import app.models.knowledge_component
 import os
+from app.api import knowledge
+
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,6 +44,10 @@ app.include_router(auth.router)
 app.include_router(admin.router)
 app.include_router(users.router)
 app.include_router(upload.router)
+app.include_router(knowledge.router)
+app.include_router(courses.router)
+from app.api import quiz
+app.include_router(quiz.router)
 
 @app.get("/")
 def read_root():

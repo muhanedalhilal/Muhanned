@@ -3,7 +3,7 @@ import shutil
 import uuid
 import fitz # PyMuPDF
 from pptx import Presentation
-from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, status
+from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, status, Form
 from sqlalchemy.orm import Session
 from app.core.security import get_current_user
 from app.models.db_user import DBUser
@@ -40,6 +40,7 @@ def extract_text_from_file(file_path: str, ext: str) -> str:
 @router.post("/")
 def upload_file(
     file: UploadFile = File(...),
+    course_id: int = Form(None),
     current_user: DBUser = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -85,7 +86,8 @@ def upload_file(
         filename=file.filename,
         file_type=ext.replace('.', ''),
         supabase_path=storage_path,
-        user_id=current_user.id
+        user_id=current_user.id,
+        course_id=course_id
     )
     db.add(new_doc)
     db.commit()
@@ -108,7 +110,8 @@ def upload_file(
                 topic=topic,
                 content=content,
                 document_id=new_doc.id,
-                user_id=current_user.id
+                user_id=current_user.id,
+                course_id=course_id
             )
             db.add(new_kc)
         db.commit()

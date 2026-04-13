@@ -25,7 +25,7 @@ const CustomXAxisTick = ({ x, y, payload }) => {
   );
 };
 
-export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) {
+export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
   const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -33,7 +33,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [splittingResId, setSplittingResId] = useState(null);
+  const [deletingResId, setDeletingResId] = useState(null);
   const [isAddingComponent, setIsAddingComponent] = useState(false);
   const [newComponentName, setNewComponentName] = useState('');
 
@@ -45,14 +45,22 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await api.get('/users/me');
-        if (response.ok) {
-          setDashboardUser(response.data);
+        const [userRes, coursesRes] = await Promise.all([
+          api.get('/users/me'),
+          api.get('/courses/')
+        ]);
+        
+        if (userRes.ok) {
+          setDashboardUser(userRes.data);
         } else {
-          setDashboardError(response.message);
+          setDashboardError(userRes.message);
+        }
+
+        if (coursesRes.ok) {
+          setCourses(coursesRes.data);
         }
       } catch (e) {
-        setDashboardError("Failed to fetch dashboard user data");
+        setDashboardError("Failed to fetch dashboard data");
       } finally {
         setDashboardLoading(false);
       }
@@ -60,30 +68,38 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     fetchUserData();
   }, []);
 
-  const addCourse = (e) => {
+  const addCourse = async (e) => {
     e.preventDefault();
     if (!newCourseName.trim()) return;
     const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-    const newCourse = {
-      id: Date.now(),
+    const payload = {
       name: newCourseName,
       icon: 'book',
-      color: randomColor,
-      resourceList: [],
-      componentList: []
+      color: randomColor
     };
-    setCourses([...courses, newCourse]);
+
+    const res = await api.post('/courses/', payload);
+    if (res.ok) {
+      setCourses([...courses, { ...res.data, resourceList: [], componentList: [] }]);
+      setSelectedCourseId(res.data.id);
+    } else {
+      alert("Failed to create course");
+    }
     setNewCourseName('');
     setIsAdding(false);
-    setSelectedCourseId(newCourse.id);
   };
 
-  const deleteCourse = (id, e) => {
+  const deleteCourse = async (id, e) => {
     e.stopPropagation();
-    setCourses(courses.filter(c => c.id !== id));
-    if (selectedCourseId === id) setSelectedCourseId(null);
+    const res = await api.delete(`/courses/${id}`);
+    if (res.ok) {
+      setCourses(courses.filter(c => c.id !== id));
+      if (selectedCourseId === id) setSelectedCourseId(null);
+    } else {
+      alert("Failed to delete course");
+    }
   };
 
   // Component Handlers
@@ -116,20 +132,40 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("course_id", courseId);
 
     try {
       const response = await api.post('/upload/', formData);
       if (response.ok) {
+        const docId = response.data.document_id;
+        // Fetch KCs generated from the backend
+        let kcsList = [];
+        if (docId) {
+            const kcsResponse = await api.get(`/knowledge/documents/${docId}/kcs`);
+            if (kcsResponse.ok) {
+                 kcsList = kcsResponse.data.map(kc => ({
+                     id: kc.id,
+                     text: kc.topic,
+                     content: kc.content,
+                     progress: 0
+                 }));
+            }
+        }
+        
         setCourses(courses.map(course => {
           if (course.id !== courseId) return course;
           
           const newResource = {
-            id: Date.now(),
-            text: response.data.original_filename,
-            type: response.data.file_type,
+            id: docId || Date.now(),
+            text: file.name,
+            type: extension,
             fileUrl: null // Wait for backend serving later
           };
-          return { ...course, resourceList: [...(course.resourceList || []), newResource] };
+          return { 
+            ...course, 
+            resourceList: [...(course.resourceList || []), newResource],
+            componentList: [...(course.componentList || []), ...kcsList]
+          };
         }));
       } else {
         alert("Upload failed: " + response.message);
@@ -142,14 +178,29 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     }
   };
 
-  const deleteResource = (courseId, resourceId) => {
-    setCourses(courses.map(course => {
-      if (course.id !== courseId) return course;
-      return {
-        ...course,
-        resourceList: (course.resourceList || []).filter(res => res.id !== resourceId)
-      };
-    }));
+  const deleteResource = async (courseId, resourceId) => {
+    if (!window.confirm(t.confirmDeleteResource || "Are you sure you want to delete this resource? All related AI Knowledge Components will also be permanently deleted.")) {
+      return;
+    }
+
+    setDeletingResId(resourceId);
+    try {
+      const res = await api.delete(`/knowledge/documents/${resourceId}`);
+      if (res.ok) {
+        // Refresh courses from backend to accurately sync resources and components
+        const coursesRes = await api.get('/courses/');
+        if (coursesRes.ok) {
+          setCourses(coursesRes.data);
+          // If you were tracking selected components that were just deleted, they will just be filtered implicitly
+        }
+      } else {
+        alert("Failed to delete resource: " + res.message);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingResId(null);
+    }
   };
 
   const deleteComponent = (courseId, compId) => {
@@ -176,27 +227,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     setIsAddingComponent(false);
   };
 
-  const handleSplitResource = (courseId, resource) => {
-    setSplittingResId(resource.id);
-    setTimeout(() => {
-      setCourses(courses.map(course => {
-        if (course.id !== courseId) return course;
 
-        const resName = resource.text.replace(/\.[^/.]+$/, "");
-        const newComponents = [
-          { id: Date.now() + 1, text: `Chap 1: ${resName} Intro`, progress: 0 },
-          { id: Date.now() + 2, text: `Chap 2: ${resName} Core`, progress: 0 },
-          { id: Date.now() + 3, text: `Chap 3: ${resName} Review`, progress: 0 }
-        ];
-
-        return {
-          ...course,
-          componentList: [...(course.componentList || []), ...newComponents]
-        };
-      }));
-      setSplittingResId(null);
-    }, 1500);
-  };
 
   // Render Course Detail View
   if (selectedCourseId) {
@@ -238,7 +269,33 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     }));
 
     return (
-      <div className="dashboard-section command-center">
+      <div className="dashboard-section command-center" style={{ position: 'relative' }}>
+        
+        {/* Full-screen AI Generation Overlay */}
+        {isUploading && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999,
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex', flexDirection: 'column',
+            justifyContent: 'center', alignItems: 'center',
+            borderRadius: '16px',
+            animation: 'fadeIn 0.3s ease-out'
+          }}>
+            <div style={{
+              background: 'white', padding: '30px 40px', borderRadius: '20px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px'
+            }}>
+               <Wand2 size={48} color="#3b82f6" className="spin-icon-slow" style={{ animation: 'spin 3s linear infinite' }} />
+               <h3 style={{ margin: 0, color: '#1e293b', fontSize: '20px' }}>Analyzing Document...</h3>
+               <p style={{ margin: 0, color: '#64748b', fontSize: '14px', maxWidth: '250px', textAlign: 'center' }}>
+                 Extracting and generating AI Knowledge Components. This may take a few seconds.
+               </p>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
           <button className="btn-luxe" onClick={() => { setSelectedCourseId(null); setSelectedComponents([]); }} style={{ background: 'rgba(0,0,0,0.05)', color: 'black', border: '1px solid rgba(0,0,0,0.1)' }}>
             <ArrowLeft size={18} /> {t.backToDashboard}
@@ -310,33 +367,12 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                         </a>
                       )}
                       <button
-                        className="btn-luxe hover-lift"
-                        title="Split into Components"
-                        onClick={() => handleSplitResource(selectedCourse.id, res)}
-                        disabled={splittingResId === res.id}
-                        style={{
-                          padding: '4px 8px',
-                          fontSize: '11px',
-                          background: splittingResId === res.id ? 'transparent' : 'rgba(59, 130, 246, 0.05)',
-                          color: '#3b82f6',
-                          border: '1px solid rgba(59, 130, 246, 0.2)',
-                          borderRadius: '6px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          fontWeight: '700',
-                          opacity: splittingResId === res.id ? 0.7 : 1
-                        }}
-                      >
-                        {splittingResId === res.id ? <Loader2 size={12} className="spin-icon" /> : <Wand2 size={12} color="#3b82f6" />}
-                        {splittingResId === res.id ? (t.generating || 'Gen...') : (t.generateComponents || 'Generate Components')}
-                      </button>
-                      <button
                         className="del-btn"
                         onClick={() => deleteResource(selectedCourse.id, res.id)}
                         style={{ padding: '4px', opacity: 0.6 }}
+                        disabled={deletingResId === res.id}
                       >
-                        <Trash2 size={16} />
+                        {deletingResId === res.id ? <Loader2 size={16} className="spin-icon" color="#ef4444" /> : <Trash2 size={16} />}
                       </button>
                     </div>
                   </div>
@@ -490,6 +526,10 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
             <button 
               className="start-quiz-btn hover-lift"
               disabled={selectedComponents.length === 0}
+              onClick={() => {
+                setSelectedComponentsForQuiz(selectedComponents);
+                setCurrentPage('quiz');
+              }}
               style={{
                 opacity: selectedComponents.length === 0 ? 0.5 : 1,
                 cursor: selectedComponents.length === 0 ? 'not-allowed' : 'pointer',
