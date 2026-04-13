@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from app.api import auth, admin, users, upload
 from app.database.database import engine, Base
 import app.models.db_user  # Imported so SQLAlchemy detects the table
+import app.models.document
+import app.models.knowledge_component
 import os
 
 @asynccontextmanager
