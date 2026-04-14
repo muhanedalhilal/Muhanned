@@ -20,5 +20,5 @@ if not SUPABASE_SERVICE_KEY:
 # Regular client for auth (login, signup, verify token)
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Admin client for privileged operations (update user email/password)
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY or SUPABASE_KEY)
+# Admin client — uses service_role key (required for auth.admin.* operations)
+supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
