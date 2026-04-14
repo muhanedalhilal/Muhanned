@@ -69,7 +69,6 @@ const translations = {
     platform: "Platform",
     mathSubject: "Mathematics",
     csSubject: "Computer Science",
-    historySubject: "World History",
     literatureSubject: "Literature",
     startQuiz: "Start the quiz",
     progressDiagram: "Progress Diagram",
@@ -451,9 +450,7 @@ function App() {
               <button className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <LayoutDashboard size={16} /> {t.dashboard}
               </button>
-              <button className={`nav-link ${currentPage === 'profile' ? 'active' : ''}`} onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
-                <User size={16} /> {t.profile || 'Profile'}
-              </button>
+
               {isAdmin && (
                 <button className={`nav-link ${currentPage === 'admin' ? 'active' : ''}`} onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                   <Settings size={16} /> {t.adminPanel || 'Admin Panel'}
@@ -502,9 +499,7 @@ function App() {
           />
         )}
 
-        {currentPage === 'profile' && isLoggedIn && (
-          <Profile t={t} isRtl={isRtl} onBack={() => setCurrentPage('dashboard')} currentUser={currentUser} setCurrentUser={setCurrentUser} authToken={authToken} />
-        )}
+
 
         {currentPage === 'admin' && isLoggedIn && isAdmin && (
           <AdminDashboard t={t} isRtl={isRtl} authToken={authToken} />

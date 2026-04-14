@@ -26,43 +26,7 @@ const CustomXAxisTick = ({ x, y, payload }) => {
 };
 
 export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) {
-  const [courses, setCourses] = useState([
-    {
-      id: 1, name: 'Mathematics', icon: 'math', color: '#3b82f6',
-      resourceList: [
-        { id: 1001, text: 'Linear Algebra Worksheet', type: 'pdf' },
-        { id: 1002, text: 'Study for Midterm', type: 'pptx' }
-      ],
-      componentList: [
-        { id: 101, text: 'Linear Algebra Core Concepts', progress: 100 },
-        { id: 102, text: 'Midterm Prep', progress: 0 }
-      ]
-    },
-    {
-      id: 2, name: 'Computer Science', icon: 'code', color: '#8b5cf6',
-      resourceList: [
-        { id: 2001, text: 'React Docs.pdf', type: 'pdf' }
-      ],
-      componentList: [
-        { id: 201, text: 'Install React', progress: 100 },
-        { id: 202, text: 'Build API Backend', progress: 50 },
-        { id: 203, text: 'Deploy to Vercel', progress: 0 }
-      ]
-    },
-    {
-      id: 3, name: 'World History', icon: 'globe', color: '#10b981',
-      resourceList: [],
-      componentList: [
-        { id: 301, text: 'Read Chapter 4', progress: 100 },
-        { id: 302, text: 'Essay Outline', progress: 100 }
-      ]
-    },
-    {
-      id: 4, name: 'Literature', icon: 'book', color: '#f59e0b',
-      resourceList: [],
-      componentList: []
-    }
-  ]);
+  const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
@@ -76,6 +40,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
   const [dashboardUser, setDashboardUser] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState(null);
+  const [selectedComponents, setSelectedComponents] = useState([]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -241,6 +206,24 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
       return null;
     }
 
+    const toggleComponentSelection = (compId) => {
+      setSelectedComponents(prev => 
+        prev.includes(compId) ? prev.filter(id => id !== compId) : [...prev, compId]
+      );
+    };
+
+    const isAllSelected = selectedCourse.componentList.length > 0 && 
+                          selectedCourse.componentList.every(c => selectedComponents.includes(c.id));
+
+    const toggleSelectAll = () => {
+      if (isAllSelected) {
+        setSelectedComponents(prev => prev.filter(id => !selectedCourse.componentList.map(c => c.id).includes(id)));
+      } else {
+        const courseCompIds = selectedCourse.componentList.map(c => c.id);
+        setSelectedComponents(prev => [...new Set([...prev, ...courseCompIds])]);
+      }
+    };
+
     const total = selectedCourse.componentList.length;
     const totalProgVal = selectedCourse.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
@@ -257,7 +240,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     return (
       <div className="dashboard-section command-center">
         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
-          <button className="btn-luxe" onClick={() => setSelectedCourseId(null)} style={{ background: 'rgba(0,0,0,0.05)', color: 'black', border: '1px solid rgba(0,0,0,0.1)' }}>
+          <button className="btn-luxe" onClick={() => { setSelectedCourseId(null); setSelectedComponents([]); }} style={{ background: 'rgba(0,0,0,0.05)', color: 'black', border: '1px solid rgba(0,0,0,0.1)' }}>
             <ArrowLeft size={18} /> {t.backToDashboard}
           </button>
         </div>
@@ -362,7 +345,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
             </div>
 
             <div className="add-task-form" style={{ marginTop: '10px' }}>
-              <label className="btn-luxe" style={{ background: '#3b82f6', color: 'white', padding: '14px', flex: 1, justifyItems: 'center', cursor: isUploading ? 'wait' : 'pointer', opacity: isUploading ? 0.7 : 1 }}>
+            <label className="btn-luxe primary">
                 <Plus size={20} style={{ marginLeft: '8px', marginRight: '8px' }} />
                 <span>{isUploading ? (t.addingResource || 'Adding Resource...') : (t.addResources || 'Add Resources (PDF/PPTX) +')}</span>
                 <input
@@ -379,10 +362,20 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
 
           {/* Panel 2: Components Section (With Progress) */}
           <div className="components-section luxe-panel bento-components" style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ color: 'black', marginBottom: '15px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Layers size={22} color="#3b82f6" />
-              {t.components || 'Components'}
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ color: 'black', margin: 0, fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Layers size={22} color="#3b82f6" />
+                {t.components || 'Components'}
+              </h3>
+              {selectedCourse.componentList.length > 0 && (
+                <button 
+                  onClick={toggleSelectAll}
+                  style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  {isAllSelected ? (t.deselectAll || "Deselect All") : (t.selectAll || "Select All")}
+                </button>
+              )}
+            </div>
 
             <div className="task-list custom-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '10px', minHeight: '150px' }}>
               {selectedCourse.componentList.length === 0 ? (
@@ -393,34 +386,45 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                 selectedCourse.componentList.map(comp => (
                   <div
                     key={comp.id}
-                    className={`task-item ${comp.progress === 100 ? 'completed' : ''}`}
-                    style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px', padding: '20px', marginBottom: '15px' }}
+                    className={`task-item ${selectedComponents.includes(comp.id) ? 'active' : ''}`}
+                    onClick={() => toggleComponentSelection(comp.id)}
+                    style={{ 
+                      padding: '18px 20px', 
+                      marginBottom: '12px', 
+                      cursor: 'pointer',
+                      border: selectedComponents.includes(comp.id) ? '2px solid #3b82f6' : '1px solid rgba(0,0,0,0.08)',
+                      background: selectedComponents.includes(comp.id) ? 'rgba(59, 130, 246, 0.03)' : 'transparent',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="task-text" style={{ fontSize: '16px', fontWeight: '600' }}>{comp.text}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: comp.progress === 100 ? selectedCourse.color : '#64748b' }}>
-                          {comp.progress}%
-                        </span>
-                        <button
-                          className="del-btn"
-                          onClick={() => deleteComponent(selectedCourse.id, comp.id)}
-                          style={{ padding: '4px', opacity: 0.6 }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                    <span className="task-text" style={{ fontSize: '16px', fontWeight: '600', color: selectedComponents.includes(comp.id) ? '#3b82f6' : '#1e3a8a' }}>{comp.text}</span>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <button
+                        className="del-btn"
+                        onClick={(e) => { e.stopPropagation(); deleteComponent(selectedCourse.id, comp.id); }}
+                        style={{ padding: '4px', opacity: 0.6, border: 'none', background: 'none' }}
+                      >
+                        <Trash2 size={16} color="#64748b" />
+                      </button>
+                      
+                      <div style={{ 
+                        width: '22px', 
+                        height: '22px', 
+                        borderRadius: '6px', 
+                        border: '2px solid #3b82f6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: selectedComponents.includes(comp.id) ? '#3b82f6' : 'transparent',
+                        transition: '0.2s',
+                        boxShadow: selectedComponents.includes(comp.id) ? '0 0 10px rgba(59, 130, 246, 0.3)' : 'none'
+                      }}>
+                        {selectedComponents.includes(comp.id) && <Check size={14} color="white" strokeWidth={3} />}
                       </div>
                     </div>
-
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={comp.progress}
-                      onChange={(e) => updateProgress(selectedCourse.id, comp.id, parseInt(e.target.value))}
-                      className="styled-slider"
-                      style={{ '--slider-color': selectedCourse.color }}
-                    />
                   </div>
                 ))
               )}
@@ -437,7 +441,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                   placeholder={t.addComponent || 'Component name...'}
                   className="input-luxe"
                   autoFocus
-                  style={{ background: 'rgba(15, 23, 42, 0.5)', width: '100%', marginBottom: '0' }}
+                  style={{ background: '#ffffff', color: '#0f172a', border: '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSaveComponent(selectedCourse.id);
                     if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); }
@@ -445,16 +449,16 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                 />
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
-                    className="btn-luxe hover-lift"
+                    className="btn-luxe primary hover-lift"
                     onClick={() => handleSaveComponent(selectedCourse.id)}
-                    style={{ background: selectedCourse.color, color: 'white', padding: '8px', flex: 1, justifyContent: 'center' }}
+                    style={{ padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
                     {t.save || 'Save'}
                   </button>
                   <button
                     className="btn-luxe hover-lift"
                     onClick={() => { setIsAddingComponent(false); setNewComponentName(''); }}
-                    style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.1)', color: '#1e293b', padding: '8px', flex: 1, justifyContent: 'center' }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
                     {t.cancel || 'Cancel'}
                   </button>
@@ -483,17 +487,19 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
             )}
 
             {/* Start Quiz Button Under Components */}
-            <button className="start-quiz-btn hover-lift" style={{
-              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-              boxShadow: '0 8px 20px -5px rgba(59, 130, 246, 0.4)',
-              marginTop: '15px',
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'center'
-            }}>
+            <button 
+              className="start-quiz-btn hover-lift"
+              disabled={selectedComponents.length === 0}
+              style={{
+                opacity: selectedComponents.length === 0 ? 0.5 : 1,
+                cursor: selectedComponents.length === 0 ? 'not-allowed' : 'pointer',
+                filter: selectedComponents.length === 0 ? 'grayscale(1)' : 'none',
+                marginTop: '15px'
+              }}
+            >
               <PlayCircle size={22} className="quiz-icon" />
               <span>{t.startQuiz || 'Start the quiz'}</span>
-              <div className="btn-glow" style={{ background: '#3b82f6' }}></div>
+              <div className="btn-glow"></div>
             </button>
           </div>
 
@@ -684,7 +690,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
               className="input-luxe"
               autoFocus
             />
-            <button type="submit" className="btn-luxe submit" style={{ background: '#3b82f6' }}>{t.addCourse}</button>
+            <button type="submit" className="btn-luxe submit">{t.addCourse}</button>
           </div>
         </form>
       )}
