@@ -31,7 +31,8 @@ async function request(endpoint, method, data = null) {
     const result = await response.json();
 
     if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
+      const isAuthEndpoint = endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/signup');
+      if ((response.status === 401 || response.status === 403) && !isAuthEndpoint) {
         console.warn("Session expired or Unauthorized... Cleaning token.");
         localStorage.removeItem('massar_token');
         localStorage.removeItem('massar_auth'); // Must clear auth state too to force logout!

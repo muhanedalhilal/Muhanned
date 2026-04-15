@@ -18,7 +18,8 @@ if not SUPABASE_SERVICE_KEY:
     print("Warning: SUPABASE_SERVICE_KEY is missing. Profile email/password updates will not work.")
 
 # Regular client for auth (login, signup, verify token)
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY or "")
 
 # Admin client — uses service_role key (required for auth.admin.* operations)
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+# Fallback to the regular key so the backend DOES NOT CRASH if the service key is missing!
+supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY or SUPABASE_KEY or "")

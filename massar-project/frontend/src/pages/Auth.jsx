@@ -20,6 +20,8 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
         return isRtl ? "يوجد حساب مسجل بهذا البريد الإلكتروني. يرجى تسجيل الدخول بدلاً من ذلك." : "An account with this email address already exists. Please log in instead.";
       case 'auth_failed':
         return isRtl ? "فشلت المصادقة. يرجى التحقق من بياناتك والمحاولة مرة أخرى." : "Authentication failed. Please check your details and try again.";
+      case 'user_not_found':
+        return isRtl ? "البريد الإلكتروني أو كلمة المرور غير صحيحة، أو أن هذا الحساب غير موجود." : "Incorrect email or password, or this account does not exist.";
       case 'server_error':
         return isRtl ? "فشل الاتصال بالخادم." : "Server connection failed.";
       default:
@@ -103,6 +105,8 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
         let errorMsg = response.message || "Authentication failed.";
         if (errorMsg.includes("already exists")) {
           setStatus({ message: 'email_taken', type: 'error' });
+        } else if (errorMsg.toLowerCase().includes("doesn't exist") || errorMsg.toLowerCase().includes("incorrect email") || errorMsg.toLowerCase().includes("invalid login")) {
+          setStatus({ message: 'user_not_found', type: 'error' });
         } else if (errorMsg.includes("failed")) {
           setStatus({ message: 'auth_failed', type: 'error' });
         } else {
