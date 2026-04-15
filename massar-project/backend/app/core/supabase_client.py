@@ -21,5 +21,8 @@ if not SUPABASE_SERVICE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY or "")
 
 # Admin client — uses service_role key (required for auth.admin.* operations)
-# Fallback to the regular key so the backend DOES NOT CRASH if the service key is missing!
-supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY or SUPABASE_KEY or "")
+# Only create with service key if available, otherwise fall back to regular key
+_admin_key = SUPABASE_SERVICE_KEY or SUPABASE_KEY or ""
+if not _admin_key:
+    print("Warning: No valid Supabase key found. Admin client will not work correctly.")
+supabase_admin: Client = create_client(SUPABASE_URL, _admin_key) if _admin_key else supabase
