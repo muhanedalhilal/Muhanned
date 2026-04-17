@@ -1,14 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './index.css';
 
 // Import our beautiful modular components!
 import Home from './pages/Home';
+import About from './pages/About';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import Quiz from './pages/Quiz';
 import Footer from './components/Footer';
-import { User, Settings, Menu, X, Globe, ChevronDown, Home as HomeIcon, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
+import { User, Users, Settings, Menu, X, Globe, ChevronDown, Home as HomeIcon, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
+import { api } from './services/api';
 
 // Centralized Translation Dictionary
 const translations = {
@@ -18,7 +21,7 @@ const translations = {
     dashboard: "Student Dashboard",
     login: "Login",
     logout: "Log Out",
-    heroTitle: "Intelligent Pathways to Mastery",
+    heroTitle: "Massar: Your Best Educational Choice",
     heroSubtitle: "Massar uses advanced Artificial Intelligence to dynamically evaluate your performance and build a customized educational journey just for you.",
     startLearning: "Start Learning Now",
     feat1Title: "Adaptive AI Assessment",
@@ -68,7 +71,6 @@ const translations = {
     platform: "Platform",
     mathSubject: "Mathematics",
     csSubject: "Computer Science",
-    historySubject: "World History",
     literatureSubject: "Literature",
     startQuiz: "Start the quiz",
     progressDiagram: "Progress Diagram",
@@ -110,107 +112,193 @@ const translations = {
     generating: "Generating...",
     saveChanges: "Save Changes",
     noResourcesYet: "No resources added yet. Add a PDF or PPTX to begin.",
-    noMatchesFound: "No matches found..."
+    noMatchesFound: "No matches found...",
+    poweredBy: "Powered by Bayesian Knowledge Tracing (BKT)",
+    visionLabel: "Our Vision",
+    visionTitleMain: "Education That Thinks ",
+    visionTitleHighlight: "With You",
+    visionSubtitle: "We believe every student deserves a learning experience as unique as their mind. Massar was built to eliminate the \"one-size-fits-all\" approach by placing cognitive science and artificial intelligence at the heart of every lesson.",
+    visionCard1Title: "Our Vision",
+    visionCard1Text: "A world where no student is left behind because the system couldn't adapt. We envision AI-powered education as the great equalizer — available to every student, everywhere.",
+    visionCard2Title: "Our Mission",
+    visionCard2Text: "To build the most intelligent adaptive learning engine ever deployed — one that continuously learns how you learn, and builds a curriculum that meets you exactly where you are.",
+    visionCard3Title: "Our Values",
+    visionCard3Text: "Transparency in AI, fairness in assessment, and relentless pursuit of mastery. We measure our success by how far each student travels from where they started.",
+    processLabel: "Process",
+    howItWorksTitle: "How Massar Works",
+    step1Title: "You Start Learning",
+    step1Desc: "Begin any module. Massar silently observes how you interact with content and problems.",
+    step2Title: "AI Builds Your Model",
+    step2Desc: "Our BKT engine calculates your real knowledge probability per topic — not just a score.",
+    step3Title: "Path Adapts Instantly",
+    step3Desc: "Content difficulty, order, and type are dynamically adjusted based on your live model.",
+    step4Title: "Mastery Is Proven",
+    step4Desc: "You advance only when the system is statistically confident you've truly mastered the concept.",
+    peopleLabel: "Our People",
+    teamTitle: "Meet The Team",
+    teamRolePM: "Project Manager",
+    teamRoleBackend: "Backend Infrastructure",
+    teamRoleFrontend: "Frontend Engineering",
+    ctaReady: "Ready to Master Anything?",
+    ctaJoin: "Join thousands of students building real knowledge — not just passing grades.",
+    ctaFree: "Free to start",
+    ctaNoCard: "No credit card required",
+    ctaBilingual: "Bilingual (AR/EN)",
+    adminName: "Name",
+    adminRole: "Role",
+    adminStatus: "Status",
+    adminActions: "Actions",
+    adminSearchEmpty: "No users found matching your search.",
+    adminStudent: "Student",
+    adminTeacher: "Teacher",
+    adminAdmin: "Admin",
+    adminActive: "Active",
+    saveTitle: "Save",
+    cancelTitle: "Cancel",
+    noChartComponents: "Add components to see your progress chart."
   },
   ar: {
     appName: "مسار",
     home: "الرئيسية",
-    dashboard: "لوحة تحكم الطالب",
-    login: "الدخول",
+    dashboard: "لوحة الطالب",
+    login: "تسجيل الدخول",
     logout: "تسجيل الخروج",
-    heroTitle: "مسارات ذكية نحو الإتقان",
-    heroSubtitle: "يستخدم مسار الذكاء الاصطناعي المتقدم لتقييم أدائك ديناميكيًا وبناء رحلة تعليمية مخصصة لك فقط.",
-    startLearning: "ابدأ التعلم الآن",
-    feat1Title: "التقييم الذكي المستمر",
-    feat1Desc: "يقوم محركنا الذكي بتقييم مستوى مهاراتك بشكل مستمر لتحديد فجوات المعرفة بدقة.",
-    feat2Title: "مسارات المهارات الديناميكية",
-    feat2Desc: "تعيد مسارات التعلم هيكلة نفسها ديناميكيًا في الوقت الفعلي بناءً على تطور مستواك.",
-    feat3Title: "تتبع الإتقان المباشر",
-    feat3Desc: "تصور نموك المعرفي بالكامل باستخدام مقاييس متقدمة ومخططات أداء دقيقة.",
+    heroTitle: "مسار خيارك التعليمي الأفضل",
+    heroSubtitle: "تُحلّل المنصة أداءك باستمرار وتبني لك مساراً تعليمياً مخصصاً يتناسب مع قدراتك ويواكب طريقتك الفريدة في التعلم.",
+    startLearning: "ابدأ رحلتك التعليمية",
+    feat1Title: "التقييم الذكي التكيّفي",
+    feat1Desc: "يرصد الذكاء الاصطناعي مستوى إتقانك لكل مهارة ويحدد بدقة المجالات التي تحتاج إلى تطوير.",
+    feat2Title: "مسارات تعلّم ديناميكية",
+    feat2Desc: "تتكيّف مسارات التعلم تلقائياً بحسب مستوى تقدمك، لتضمن أن كل خطوة تبني على ما سبقها.",
+    feat3Title: "تتبّع الإتقان في الوقت الفعلي",
+    feat3Desc: "استعرض تطوّرك المعرفي بيانياً، وراقب إتقانك الدقيق في شتى المواضيع.",
     engineTitle: "مدعوم بالذكاء الاصطناعي المعرفي",
-    welcomeBack: "مرحباً بعودتك",
+    welcomeBack: "أهلاً بك",
     joinSystem: "انضم إلى مسار",
-    authSubLogin: "قم بتسجيل الدخول للوصول إلى ملف التعلم المخصص الخاص بك.",
-    authSubSignup: "أكمل ملفك الشخصي لتبدأ التعلم.",
+    authSubLogin: "سجّل الدخول للوصول إلى بيئتك التعليمية المخصصة.",
+    authSubSignup: "أنشئ حسابك وابدأ التعلم الآن.",
     fullName: "الاسم الكامل",
     email: "البريد الإلكتروني",
     password: "كلمة المرور",
-    signIn: "تسجيل الدخول",
+    signIn: "دخول",
     signUp: "إنشاء حساب",
     noAccount: "ليس لديك حساب؟ ",
     haveAccount: "لديك حساب بالفعل؟ ",
-    clickSignUp: "سجل من هنا",
-    clickSignIn: "سجل دخولك هنا",
-    dashWelcome: "مرحباً بك في ملفك الشخصي الشامل",
-    dashSub: ".تحليلات التعلم المباشرة الخاصة بك محمية بأمان تام",
-    statMastery: "إتقان المعرفة الشامل",
-    statCourses: "الوحدات النشطة",
-    statTasks: "التقييمات المعلقة",
-    commandCenter: "مركز قيادة التعلم",
-    manageCourses: "تنظيم وتتبع تقدمك في التعلم.",
-    addCourse: "إضافة مقرر جديد",
+    clickSignUp: "أنشئ حساباً",
+    clickSignIn: "سجّل دخولك",
+    dashWelcome: "مرحباً بك في لوحة تحكمك الذكية",
+    dashSub: "بيانات تعلّمك محفوظة وآمنة للوصول السريع.",
+    statMastery: "مستوى الإتقان الكلي",
+    statCourses: "المقررات النشطة",
+    statTasks: "المهام المستحقة",
+    commandCenter: "مركز إدارة التعلم",
+    manageCourses: "نظّم مقرراتك وتتبّع تقدمك بسهولة.",
+    addCourse: "إضافة مقرر",
     courseName: "اسم المقرر",
-    componentsCompleted: "مكوّن منجز",
-    noCourses: "لم يتم إضافة مقررات بعد. ابدأ بإضافة واحد!",
-    activeCourses: "المقررات النشطة",
-    completedCourses: "المقررات المكتملة",
-    searchPlaceholder: "ابحث عن المقررات...",
-    backToDashboard: "العودة لمركز القيادة",
+    componentsCompleted: "عنصر مكتمل",
+    noCourses: "لا توجد مسارات بعد. ابدأ مسارك الأول!",
+    activeCourses: "المسارات القائمة",
+    completedCourses: "المسارات المكتملة",
+    searchPlaceholder: "البحث في المقررات...",
+    backToDashboard: "رجوع للوحة الرئيسية",
     addTask: "إضافة مهمة جديدة...",
-    noTasksYet: "لم يتم إضافة مهام بعد.",
-    addComponent: "إضافة مكوّن جديد...",
-    noComponentsYet: "لم يتم إضافة مكوّنات بعد.",
-    mastery: "إتقان",
-    growthTimeline: "الجدول الزمني للنمو المعرفي",
-    masteredTask: "تم إنجاز",
-    joinedPlatform: "انضم إلى مسار",
-    masteredLinearAlgebra: "تم إنجاز: ورقة عمل الجبر الخطي",
-    platform: "المنصة",
-    mathSubject: "رياضيات",
+    noTasksYet: "لا توجد مهام مسندة حالياً.",
+    addComponent: "إضافة عنصر جديد...",
+    noComponentsYet: "لم يتم تكوين أي عناصر حتى الآن.",
+    mastery: "نسبة الإتقان",
+    growthTimeline: "المسار الزمني لتطورك",
+    masteredTask: "منجزة:",
+    joinedPlatform: "سنة الانضمام",
+    masteredLinearAlgebra: "إتقان مفاهيم الجبر الخطي",
+    platform: "النظام التعليمي",
+    mathSubject: "الرياضيات",
     csSubject: "علوم الحاسب",
-    historySubject: "تاريخ العالم",
+    historySubject: "التاريخ",
     literatureSubject: "الأدب",
-    startQuiz: "ابدأ الاختبار",
-    progressDiagram: "مخطط التقدم",
-    resourcesLearningAssets: "الموارد والأصول التعليمية",
-    addResources: "إضافة موارد (PDF/PPTX)",
-    addingResource: "جاري إضافة المورد...",
-    open: "فتح",
-    profile: "إدارة الملف الشخصي",
-    profileSub: "أدر تفاصيل حسابك الشخصي بأمان.",
-    authArtSubtitle: "محرك التعلم المعتمد على الذكاء الاصطناعي التكيفي الذي يقيم تقدمك المعرفي باستمرار.",
-    neuralEngineOnline: "محرك الذكاء الاصطناعي (نشط)",
-    profileSaved: "تم تحديث الملف الشخصي بنجاح!",
-    adminPanel: "لوحة تحكم المشرف",
-    platformAnalytics: "تحليلات المنصة",
-    platformAnalyticsSub: "مراقبة التفاعل والاتجاهات العامة للمنصة.",
-    totalUsers: "إجمالي المستخدمين",
-    systemHealth: "صحة النظام",
-    userAdmin: "إدارة المستخدمين",
-    manageUsers: "إدارة الحسابات",
-    searchUsers: "البحث عن مستخدمين...",
-    n1: "تحليلات البيانات الفورية",
-    n1Desc: "نكتشف كيف تتعلم بشكل أفضل.",
-    n2: "تتبع المعرفة الدقيق",
-    n2Desc: "إنشاء خارطة طريق شخصية لك.",
-    n3: "المسار التعليمي التكيفي",
-    n3Desc: "محتوى ينمو معك ويتطور بتطورك.",
-    n4: "تقييم مستوى الإتقان",
-    n4Desc: "إثبات مهاراتك الجديدة بدقة.",
-    footerTagline: "تمكين المستقبل من خلال الذكاء الاصطناعي التعليمي التكيفي.",
-    footerSupport: "الدعم",
-    footerDocumentation: "التوثيق",
+    startQuiz: "تقييم المستوى",
+    progressDiagram: "رسم بياني للتقدم",
+    resourcesLearningAssets: "المكتبة المعرفية",
+    addResources: "إرفاق مصادر (PDF/PPTX)",
+    addingResource: "جاري المعالجة والإرفاق...",
+    open: "عرض",
+    profile: "إعدادات الحساب",
+    profileSub: "أدر بياناتك الشخصية وحافظ على أمان حسابك.",
+    authArtSubtitle: "منظومة تعلم تحليلية تواكب نموك المعرفي لحظة بلحظة.",
+    neuralEngineOnline: "المحرك الذكي: متصل",
+    profileSaved: "تم تحديث البيانات بنجاح.",
+    adminPanel: "لوحة التحكم المركزية",
+    platformAnalytics: "الإحصاءات والتحليلات",
+    platformAnalyticsSub: "نظرة شمولية لأداء النظام وتفاعل المستخدمين.",
+    totalUsers: "عدد المستفيدين",
+    systemHealth: "كفاءة المنصة",
+    userAdmin: "إدارة الأعضاء",
+    manageUsers: "الصلاحيات والحسابات",
+    searchUsers: "البحث بالاسم أو البريد...",
+    n1: "التحليل السلوكي المستمر",
+    n1Desc: "ندرس طريقة استيعابك لنلائم المحتوى معها.",
+    n2: "خارطة الفهم الدقيقة",
+    n2Desc: "نبني تصوراً واضحاً لمواطن القوة وفرص التحسين.",
+    n3: "المنهج التفاعلي المتجدد",
+    n3Desc: "لا نعتمد منهجاً جامداً، فكل درس يتكيف لخدمتك.",
+    n4: "التقييم المستند إلى الإتقان",
+    n4Desc: "تتخطى المرحلة متى ما ثبُت استيعابك التام للمفاهيم.",
+    footerTagline: "نرسخ دعائم المستقبل عبر بيئة تعليمية حية تستجيب لكل عقل.",
+    footerSupport: "الدعم الفني",
+    footerDocumentation: "مكتبة الإرشادات",
     footerSupportCenter: "مركز المساعدة",
-    footerCompany: "الشركة",
-    footerAboutUs: "من نحن",
-    footerContactUs: "تواصل معنا",
-    rightsReserved: "جميع الحقوق محفوظة. © 2026 مسار",
-    components: "المكونات",
-    generateComponents: "توليد المكونات",
-    generating: "جاري التوليد...",
-    saveChanges: "حفظ التغييرات",
-    noResourcesYet: "لم يتم إضافة موارد بعد. أضف PDF أو PPTX للبدء.",
-    noMatchesFound: "لم يتم العثور على نتائج..."
+    footerCompany: "منظومة مسار",
+    footerAboutUs: "رؤيتنا ورسالتنا",
+    footerContactUs: "للتواصل بشؤون المستفيدين",
+    rightsReserved: "مسار © 2026. كافة الحقوق التقنية محفوظة.",
+    components: "الأقسام",
+    generateComponents: "البناء الآلي للأقسام",
+    generating: "جاري المعالجة...",
+    saveChanges: "تأكيد الحفظ",
+    noResourcesYet: "لا توجد ملفات مرفقة. نرحب بالصيغ المعيارية كالـ PDF.",
+    noMatchesFound: "لم نتمكن من إيجاد شيء مطابق.",
+    poweredBy: "مدعوم بتقنية (BKT) المعرفية",
+    visionLabel: "رؤيتنا",
+    visionTitleMain: "تعليم يواكب ",
+    visionTitleHighlight: "تفكيرك",
+    visionSubtitle: "نصمم تجربة تعليمية استثنائية لكل طالب، حيث تتضافر الخوارزميات الذكية مع العلوم المعرفية لبناء منهج حي يستجيب لقدراتك بشكل فوري.",
+    visionCard1Title: "رؤيتنا",
+    visionCard1Text: "نسعى جاهدين لعالم لا يتخلف فيه طموح مستعلم عن الركب. نرى في التعلم الآلي فرصة ذهبية لخلق تكافؤ حقيقي في جودة التعليم المكتسب.",
+    visionCard2Title: "الرسالة",
+    visionCard2Text: "نصمم أذكى منظومة تحليلية تعليمية، وظيفتها الأساسية أن تتعرف وتتكيف بسرعة بالغة مع قدرات من يتفاعل معها.",
+    visionCard3Title: "روابطنا القيمية",
+    visionCard3Text: "ترتكز المنصة على عدالة التقييم، شفافية عمل الآلة، وتسليط الضوء على الإنجاز الفردي. مقياسنا الأول للنجاح هو حجم القفزة المعرفية لك.",
+    processLabel: "الآلية المتبعة",
+    howItWorksTitle: "كيف تدير مسار رحلتك؟",
+    step1Title: "التفاعل البدئي",
+    step1Desc: "عند بدئك بأي مهمة، يقوم النظام آلياً باستقراء جودة التفاعل وسرعة الاستجابة بصمت.",
+    step2Title: "مرحلة التوصيف الدقيق",
+    step2Desc: "خوارزمياتنا تبني نموذجاً لمدى استيعابك الحقيقي متجاوزةً فكرة الاختبارات التقليدية.",
+    step3Title: "التكيّف اللحظي",
+    step3Desc: "يتم ترتيب الوحدات الجديدة ومستوى تعقيدها فوراً لتسد الثغرات وتتحدى قدراتك.",
+    step4Title: "منح شارة الإتقان",
+    step4Desc: "لا تُجتاز المهام المركزية إلا عند تحقيق نسبة ثقة إحصائية عالية بأن المفهوم قد رُسخ تماماً.",
+    peopleLabel: "فريقنا",
+    teamTitle: "تعرف على الفريق",
+    teamRolePM: "إدارة وقيادة المنتج",
+    teamRoleBackend: "هندسة النظم والخوادم",
+    teamRoleFrontend: "هندسة وتصميم واجهات المستخدم",
+    ctaReady: "هل أنت مستعد لتجربة تعليمية مختلفة؟",
+    ctaJoin: "ليست مجرد درجات عابرة بل هي بنية معرفية أصيلة تبقى معك.",
+    ctaFree: "دخول تجريبي",
+    ctaNoCard: "لا يلزم توفر بطاقة مصرفية",
+    ctaBilingual: "منصة مزدوجة اللغة (عربي / إنجليزي)",
+    adminName: "الاسم",
+    adminRole: "الدور",
+    adminStatus: "الحالة",
+    adminActions: "إجراءات",
+    adminSearchEmpty: "لا توجد نتائج مطابقة لبحثك.",
+    adminStudent: "طالب",
+    adminTeacher: "معلم",
+    adminAdmin: "مشرف",
+    adminActive: "نشط",
+    saveTitle: "حفظ",
+    cancelTitle: "إلغاء",
+    noChartComponents: "أضف بعض الأقسام لعرض رسم التقدم البياني الخاص بك."
   }
 };
 
@@ -218,9 +306,6 @@ function App() {
   // Global State
   const [language, setLanguage] = useState('en');
   const t = translations[language];
-
-  // Routing State
-  const [currentPage, setCurrentPage] = useState('home');
 
   // Security State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -230,16 +315,101 @@ function App() {
   const [authToken, setAuthToken] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Determine initial page based on session restoration
+  const [currentPage, setCurrentPage] = useState('home');
+
   // Dashboard Sub-Routing State
   const [selectedCourseId, setSelectedCourseId] = useState(null);
+  const [selectedComponentsForQuiz, setSelectedComponentsForQuiz] = useState([]);
+
+  // Restore session from localStorage on app load
+  useEffect(() => {
+    const savedSession = localStorage.getItem('massar_auth');
+    if (savedSession) {
+      try {
+        const sessionData = JSON.parse(savedSession);
+        setIsLoggedIn(true);
+        setAuthToken(sessionData.token);
+        setCurrentUser({ name: sessionData.name, email: sessionData.email });
+        setIsAdmin(sessionData.role === 'admin');
+        setCurrentPage('dashboard');
+      } catch (error) {
+        console.error("Failed to parse session", error);
+        localStorage.removeItem('massar_auth');
+      }
+    } else {
+      // If ?page=auth is in URL, open the login page (useful for email confirmations)
+      if (window.location.search.includes('page=auth')) {
+        setCurrentPage('auth');
+        setIsLoginView(true);
+      }
+    }
+  }, []);
 
   // App-level handlers
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Handle OAuth Redirects from Supabase (e.g. Google Sign in)
+  useEffect(() => {
+    // Supabase redirects with a hash like #access_token=...&refresh_token=...&type=signup
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      if (accessToken) {
+        localStorage.setItem('massar_token', accessToken);
+        // Clear the hash so it doesn't stay in the URL
+        window.history.replaceState(null, '', window.location.pathname);
+        
+        // Fetch real profile from backend
+        const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        fetch(`${API_URL}/users/me`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        }).then(res => res.json())
+          .then(meData => {
+            handleSecureLogin(meData.email, meData.name, accessToken, meData.user_role || 'student');
+          })
+          .catch(() => {
+            handleSecureLogin('', '', accessToken, 'student');
+          });
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const initAuth = async () => {
+      // Don't init auto-login if URL has hash with access_token, the OAuth effect will handle it
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+         setIsInitializing(false);
+         return;
+      }
+      
+      const token = localStorage.getItem('massar_token');
+      if (token) {
+        const response = await api.get('/users/me');
+        if (response.ok) {
+          handleSecureLogin(response.data.email, response.data.name, token, response.data.role);
+        } else {
+          // Token is invalid/expired — clear and go to login
+          localStorage.removeItem('massar_token');
+          localStorage.removeItem('massar_auth');
+          setCurrentPage('auth');
+          setIsLoginView(true);
+        }
+      }
+      setIsInitializing(false);
+    };
+    initAuth();
+  }, []);
+
   const handleLogout = () => {
+    localStorage.removeItem('massar_token');
     setIsLoggedIn(false);
     setIsAdmin(false);
     setAuthToken(null);
     setCurrentUser({ name: 'Student User', email: '' });
     setCurrentPage('home');
+    localStorage.removeItem('massar_auth');
   };
 
   const handleSecureLogin = (email = '', name = '', token = null, role = 'student') => {
@@ -256,6 +426,14 @@ function App() {
     // Use the actual role from the backend instead of guessing from email
     setIsAdmin(role === 'admin');
     setCurrentPage('dashboard');
+
+    // Save to local storage to persist session
+    localStorage.setItem('massar_auth', JSON.stringify({
+      token: token,
+      name: defaultName,
+      email: email || 'student@massar.edu',
+      role: role
+    }));
   };
 
   const goSignUp = () => {
@@ -269,6 +447,10 @@ function App() {
   };
 
   const isRtl = language === 'ar';
+
+  if (isInitializing) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: 'white' }}>Loading System...</div>;
+  }
 
   return (
     <div className="app-container" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -310,9 +492,7 @@ function App() {
               <button className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                 <LayoutDashboard size={16} /> {t.dashboard}
               </button>
-              <button className={`nav-link ${currentPage === 'profile' ? 'active' : ''}`} onClick={() => { setCurrentPage('profile'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
-                <User size={16} /> {t.profile || 'Profile'}
-              </button>
+
               {isAdmin && (
                 <button className={`nav-link ${currentPage === 'admin' ? 'active' : ''}`} onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                   <Settings size={16} /> {t.adminPanel || 'Admin Panel'}
@@ -341,6 +521,10 @@ function App() {
           <Home t={t} goSignUp={goSignUp} isLoggedIn={isLoggedIn} setCurrentPage={setCurrentPage} />
         )}
 
+        {currentPage === 'about' && (
+          <About t={t} />
+        )}
+
         {currentPage === 'auth' && !isLoggedIn && (
           <Auth
             t={t}
@@ -354,22 +538,33 @@ function App() {
         {currentPage === 'dashboard' && isLoggedIn && (
           <Dashboard
             t={t}
+            isRtl={isRtl}
+            currentUser={currentUser}
             selectedCourseId={selectedCourseId}
             setSelectedCourseId={setSelectedCourseId}
+            setCurrentPage={setCurrentPage}
+            selectedComponentsForQuiz={selectedComponentsForQuiz}
+            setSelectedComponentsForQuiz={setSelectedComponentsForQuiz}
           />
         )}
 
-        {currentPage === 'profile' && isLoggedIn && (
-          <Profile t={t} onBack={() => setCurrentPage('dashboard')} currentUser={currentUser} setCurrentUser={setCurrentUser} authToken={authToken} />
-        )}
+
 
         {currentPage === 'admin' && isLoggedIn && isAdmin && (
-          <AdminDashboard t={t} authToken={authToken} />
+          <AdminDashboard t={t} isRtl={isRtl} authToken={authToken} />
+        )}
+
+        {currentPage === 'quiz' && isLoggedIn && (
+          <Quiz 
+            t={t} 
+            setCurrentPage={setCurrentPage} 
+            selectedComponents={selectedComponentsForQuiz}
+          />
         )}
 
       </main>
 
-      <Footer t={t} key={currentPage} />
+      <Footer t={t} isRtl={isRtl} setCurrentPage={setCurrentPage} key={currentPage} />
 
     </div>
   );

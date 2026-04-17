@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from app.database.database import get_db
 from app.models.db_user import DBUser
 from app.core.security import require_admin
+from app.core.supabase_client import supabase_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -97,24 +98,36 @@ def delete_user(
     admin: DBUser = Depends(require_admin)
 ):
     """
-    Permanently removes a user from the PostgreSQL database.
-    Note: This does NOT automatically delete them from Supabase Auth.
+    CRITICAL SYNC: Permanently removes a user from BOTH PostgreSQL and Supabase Auth.
+    This ensures that deleted users can NEVER log in again.
     """
     user = db.query(DBUser).filter(DBUser.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
 
-    # Prevent an admin from deleting themselves
     if user.id == admin.id:
-        raise HTTPException(
-            status_code=400,
-            detail="You cannot delete your own admin account."
-        )
+        raise HTTPException(status_code=400, detail="You cannot delete yourself.")
 
+    # 1. ATTEMPT SUPABASE AUTH DELETION FIRST
+    # We use the service_role client to wipe the identity from the Auth table
+    try:
+        auth_response = supabase_admin.auth.admin.delete_user(user.supabase_auth_id)
+        # Note: If user doesn't exist in Supabase anymore, we still proceed to clean DB
+    except Exception as e:
+        # If there's a serious network/API error, we stop to prevent ghost records
+        print(f"Supabase Admin Error: {str(e)}")
+        # We only stop if it's a 'real' error, not a 'user not found' error
+        if "not found" not in str(e).lower():
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Sync Error: Failed to remove user from Auth table. ({str(e)})"
+            )
+
+    # 2. DELETE FROM POSTGRESQL
     db.delete(user)
     db.commit()
 
-    return {"message": f"User {user_id} ({user.email}) has been deleted."}
+    return {"message": f"Identity {user.email} has been completely wiped from all systems."}
 
 
 # ──────────────────────────────────────────────

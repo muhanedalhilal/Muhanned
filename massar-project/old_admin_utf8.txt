@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Users, Activity, BookOpen, CheckCircle, Trash2, Edit2, Search, Check, X } from 'lucide-react';
 
 export default function AdminDashboard({ t, authToken }) {

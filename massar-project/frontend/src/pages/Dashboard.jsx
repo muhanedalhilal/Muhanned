@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { api } from '../services/api';
 
 const availableIcons = {
   book: <BookOpen size={24} />,
@@ -24,78 +25,81 @@ const CustomXAxisTick = ({ x, y, payload }) => {
   );
 };
 
-export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) {
-  const [courses, setCourses] = useState([
-    {
-      id: 1, name: 'Mathematics', icon: 'math', color: '#3b82f6',
-      resourceList: [
-        { id: 1001, text: 'Linear Algebra Worksheet', type: 'pdf' },
-        { id: 1002, text: 'Study for Midterm', type: 'pptx' }
-      ],
-      componentList: [
-        { id: 101, text: 'Linear Algebra Core Concepts', progress: 100 },
-        { id: 102, text: 'Midterm Prep', progress: 0 }
-      ]
-    },
-    {
-      id: 2, name: 'Computer Science', icon: 'code', color: '#8b5cf6',
-      resourceList: [
-        { id: 2001, text: 'React Docs.pdf', type: 'pdf' }
-      ],
-      componentList: [
-        { id: 201, text: 'Install React', progress: 100 },
-        { id: 202, text: 'Build API Backend', progress: 50 },
-        { id: 203, text: 'Deploy to Vercel', progress: 0 }
-      ]
-    },
-    {
-      id: 3, name: 'World History', icon: 'globe', color: '#10b981',
-      resourceList: [],
-      componentList: [
-        { id: 301, text: 'Read Chapter 4', progress: 100 },
-        { id: 302, text: 'Essay Outline', progress: 100 }
-      ]
-    },
-    {
-      id: 4, name: 'Literature', icon: 'book', color: '#f59e0b',
-      resourceList: [],
-      componentList: []
-    }
-  ]);
+export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
+  const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [splittingResId, setSplittingResId] = useState(null);
+  const [deletingResId, setDeletingResId] = useState(null);
   const [isAddingComponent, setIsAddingComponent] = useState(false);
   const [newComponentName, setNewComponentName] = useState('');
 
-  const addCourse = (e) => {
+  const [dashboardUser, setDashboardUser] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [dashboardError, setDashboardError] = useState(null);
+  const [selectedComponents, setSelectedComponents] = useState([]);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const [userRes, coursesRes] = await Promise.all([
+          api.get('/users/me'),
+          api.get('/courses/')
+        ]);
+
+        if (userRes.ok) {
+          setDashboardUser(userRes.data);
+        } else {
+          setDashboardError(userRes.message);
+        }
+
+        if (coursesRes.ok) {
+          setCourses(coursesRes.data);
+        }
+      } catch (e) {
+        setDashboardError("Failed to fetch dashboard data");
+      } finally {
+        setDashboardLoading(false);
+      }
+    };
+    fetchUserData();
+  }, []);
+
+  const addCourse = async (e) => {
     e.preventDefault();
     if (!newCourseName.trim()) return;
     const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
-    const newCourse = {
-      id: Date.now(),
+    const payload = {
       name: newCourseName,
       icon: 'book',
-      color: randomColor,
-      resourceList: [],
-      componentList: []
+      color: randomColor
     };
-    setCourses([...courses, newCourse]);
+
+    const res = await api.post('/courses/', payload);
+    if (res.ok) {
+      setCourses([...courses, { ...res.data, resourceList: [], componentList: [] }]);
+      setSelectedCourseId(res.data.id);
+    } else {
+      alert("Failed to create course");
+    }
     setNewCourseName('');
     setIsAdding(false);
-    setSelectedCourseId(newCourse.id);
   };
 
-  const deleteCourse = (id, e) => {
+  const deleteCourse = async (id, e) => {
     e.stopPropagation();
-    setCourses(courses.filter(c => c.id !== id));
-    if (selectedCourseId === id) setSelectedCourseId(null);
+    const res = await api.delete(`/courses/${id}`);
+    if (res.ok) {
+      setCourses(courses.filter(c => c.id !== id));
+      if (selectedCourseId === id) setSelectedCourseId(null);
+    } else {
+      alert("Failed to delete course");
+    }
   };
 
   // Component Handlers
@@ -112,38 +116,91 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     }));
   };
 
-  const handleResourceSelect = (e, courseId) => {
+  const handleResourceSelect = async (e, courseId) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const validExts = ['pdf', 'ppt', 'pptx'];
+    const extension = file.name.split('.').pop().toLowerCase();
+    if (!validExts.includes(extension)) {
+      alert("Invalid file type! Only PDF, PPT, and PPTX are allowed.");
+      e.target.value = '';
+      return;
+    }
+
     setIsUploading(true);
 
-    // Simulate "Real" addition (since we can't touch backend)
-    setTimeout(() => {
-      setCourses(courses.map(course => {
-        if (course.id !== courseId) return course;
-        const extension = file.name.split('.').pop().toLowerCase();
-        const newResource = {
-          id: Date.now(),
-          text: file.name,
-          type: extension,
-          fileUrl: URL.createObjectURL(file)
-        };
-        return { ...course, resourceList: [...(course.resourceList || []), newResource] };
-      }));
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("course_id", courseId);
+
+    try {
+      const response = await api.post('/upload/', formData);
+      if (response.ok) {
+        const docId = response.data.document_id;
+        // Fetch KCs generated from the backend
+        let kcsList = [];
+        if (docId) {
+          const kcsResponse = await api.get(`/knowledge/documents/${docId}/kcs`);
+          if (kcsResponse.ok) {
+            kcsList = kcsResponse.data.map(kc => ({
+              id: kc.id,
+              text: kc.topic,
+              content: kc.content,
+              progress: 0
+            }));
+          }
+        }
+
+        setCourses(courses.map(course => {
+          if (course.id !== courseId) return course;
+
+          const newResource = {
+            id: docId || Date.now(),
+            text: file.name,
+            type: extension,
+            fileUrl: null // Wait for backend serving later
+          };
+          return {
+            ...course,
+            resourceList: [...(course.resourceList || []), newResource],
+            componentList: [...(course.componentList || []), ...kcsList]
+          };
+        }));
+      } else {
+        alert("Upload failed: " + response.message);
+      }
+    } catch (err) {
+      alert("Error parsing upload: " + err.message);
+    } finally {
       setIsUploading(false);
       e.target.value = '';
-    }, 800);
+    }
   };
 
-  const deleteResource = (courseId, resourceId) => {
-    setCourses(courses.map(course => {
-      if (course.id !== courseId) return course;
-      return {
-        ...course,
-        resourceList: (course.resourceList || []).filter(res => res.id !== resourceId)
-      };
-    }));
+  const deleteResource = async (courseId, resourceId) => {
+    if (!window.confirm(t.confirmDeleteResource || "Are you sure you want to delete this resource? All related AI Knowledge Components will also be permanently deleted.")) {
+      return;
+    }
+
+    setDeletingResId(resourceId);
+    try {
+      const res = await api.delete(`/knowledge/documents/${resourceId}`);
+      if (res.ok) {
+        // Refresh courses from backend to accurately sync resources and components
+        const coursesRes = await api.get('/courses/');
+        if (coursesRes.ok) {
+          setCourses(coursesRes.data);
+          // If you were tracking selected components that were just deleted, they will just be filtered implicitly
+        }
+      } else {
+        alert("Failed to delete resource: " + res.message);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingResId(null);
+    }
   };
 
   const deleteComponent = (courseId, compId) => {
@@ -170,27 +227,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     setIsAddingComponent(false);
   };
 
-  const handleSplitResource = (courseId, resource) => {
-    setSplittingResId(resource.id);
-    setTimeout(() => {
-      setCourses(courses.map(course => {
-        if (course.id !== courseId) return course;
 
-        const resName = resource.text.replace(/\.[^/.]+$/, "");
-        const newComponents = [
-          { id: Date.now() + 1, text: `Chap 1: ${resName} Intro`, progress: 0 },
-          { id: Date.now() + 2, text: `Chap 2: ${resName} Core`, progress: 0 },
-          { id: Date.now() + 3, text: `Chap 3: ${resName} Review`, progress: 0 }
-        ];
-
-        return {
-          ...course,
-          componentList: [...(course.componentList || []), ...newComponents]
-        };
-      }));
-      setSplittingResId(null);
-    }, 1500);
-  };
 
   // Render Course Detail View
   if (selectedCourseId) {
@@ -199,6 +236,24 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
       setSelectedCourseId(null);
       return null;
     }
+
+    const toggleComponentSelection = (compId) => {
+      setSelectedComponents(prev =>
+        prev.includes(compId) ? prev.filter(id => id !== compId) : [...prev, compId]
+      );
+    };
+
+    const isAllSelected = selectedCourse.componentList.length > 0 &&
+      selectedCourse.componentList.every(c => selectedComponents.includes(c.id));
+
+    const toggleSelectAll = () => {
+      if (isAllSelected) {
+        setSelectedComponents(prev => prev.filter(id => !selectedCourse.componentList.map(c => c.id).includes(id)));
+      } else {
+        const courseCompIds = selectedCourse.componentList.map(c => c.id);
+        setSelectedComponents(prev => [...new Set([...prev, ...courseCompIds])]);
+      }
+    };
 
     const total = selectedCourse.componentList.length;
     const totalProgVal = selectedCourse.componentList.reduce((acc, curr) => acc + curr.progress, 0);
@@ -214,9 +269,35 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
     }));
 
     return (
-      <div className="dashboard-section command-center">
+      <div className="dashboard-section command-center" style={{ position: 'relative' }}>
+
+        {/* Full-screen AI Generation Overlay */}
+        {isUploading && (
+          <div style={{
+            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999,
+            background: 'rgba(255, 255, 255, 0.7)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex', flexDirection: 'column',
+            justifyContent: 'center', alignItems: 'center',
+            borderRadius: '16px',
+            animation: 'fadeIn 0.3s ease-out'
+          }}>
+            <div style={{
+              background: 'white', padding: '30px 40px', borderRadius: '20px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px'
+            }}>
+              <Wand2 size={48} color="#3b82f6" className="spin-icon-slow" style={{ animation: 'spin 3s linear infinite' }} />
+              <h3 style={{ margin: 0, color: '#1e293b', fontSize: '20px' }}>Analyzing Document...</h3>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '14px', maxWidth: '250px', textAlign: 'center' }}>
+                Extracting and generating AI Knowledge Components. This may take a few seconds.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
-          <button className="btn-luxe" onClick={() => setSelectedCourseId(null)} style={{ background: 'rgba(0,0,0,0.05)', color: 'black', border: '1px solid rgba(0,0,0,0.1)' }}>
+          <button className="btn-luxe" onClick={() => { setSelectedCourseId(null); setSelectedComponents([]); }} style={{ background: 'rgba(0,0,0,0.05)', color: 'black', border: '1px solid rgba(0,0,0,0.1)' }}>
             <ArrowLeft size={18} /> {t.backToDashboard}
           </button>
         </div>
@@ -295,12 +376,12 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                           {res.text}
                         </a>
                       ) : (
-                        <span 
-                          className="task-text" 
-                          style={{ 
-                            fontSize: '16px', 
-                            fontWeight: '800', 
-                            color: '#1e293b', 
+                        <span
+                          className="task-text"
+                          style={{
+                            fontSize: '16px',
+                            fontWeight: '800',
+                            color: '#1e293b',
                             lineHeight: '1.4',
                             display: 'inline-block',
                             wordBreak: 'break-word'
@@ -313,33 +394,12 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
                       <button
-                        className="btn-luxe hover-lift"
-                        title="Split into Components"
-                        onClick={() => handleSplitResource(selectedCourse.id, res)}
-                        disabled={splittingResId === res.id}
-                        style={{
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          background: splittingResId === res.id ? 'transparent' : 'rgba(59, 130, 246, 0.05)',
-                          color: '#3b82f6',
-                          border: '1px solid rgba(59, 130, 246, 0.2)',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          fontWeight: '700',
-                          opacity: splittingResId === res.id ? 0.7 : 1
-                        }}
-                      >
-                        {splittingResId === res.id ? <Loader2 size={14} className="spin-icon" /> : <Wand2 size={14} color="#3b82f6" />}
-                        {splittingResId === res.id ? (t.generating || 'Gen...') : (t.generateComponents || 'Generate Components')}
-                      </button>
-                      <button
                         className="del-btn"
                         onClick={() => deleteResource(selectedCourse.id, res.id)}
-                        style={{ padding: '6px', opacity: 0.6 }}
+                        style={{ padding: '4px', opacity: 0.6 }}
+                        disabled={deletingResId === res.id}
                       >
-                        <Trash2 size={18} />
+                        {deletingResId === res.id ? <Loader2 size={16} className="spin-icon" color="#ef4444" /> : <Trash2 size={16} />}
                       </button>
                     </div>
                   </div>
@@ -348,7 +408,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
             </div>
 
             <div className="add-task-form" style={{ marginTop: '10px' }}>
-              <label className="btn-luxe" style={{ background: '#3b82f6', color: 'white', padding: '14px', flex: 1, justifyItems: 'center', cursor: isUploading ? 'wait' : 'pointer', opacity: isUploading ? 0.7 : 1 }}>
+              <label className="btn-luxe primary">
                 <Plus size={20} style={{ marginLeft: '8px', marginRight: '8px' }} />
                 <span>{isUploading ? (t.addingResource || 'Adding Resource...') : (t.addResources || 'Add Resources (PDF/PPTX) +')}</span>
                 <input
@@ -365,10 +425,20 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
 
           {/* Panel 2: Components Section (With Progress) */}
           <div className="components-section luxe-panel bento-components" style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ color: 'black', marginBottom: '15px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Layers size={22} color="#3b82f6" />
-              {t.components || 'Components'}
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ color: 'black', margin: 0, fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Layers size={22} color="#3b82f6" />
+                {t.components || 'Components'}
+              </h3>
+              {selectedCourse.componentList.length > 0 && (
+                <button
+                  onClick={toggleSelectAll}
+                  style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}
+                >
+                  {isAllSelected ? (t.deselectAll || "Deselect All") : (t.selectAll || "Select All")}
+                </button>
+              )}
+            </div>
 
             <div className="task-list custom-scrollbar" style={{ flex: 1, overflowY: 'auto', paddingRight: '10px', minHeight: '150px' }}>
               {selectedCourse.componentList.length === 0 ? (
@@ -379,34 +449,45 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                 selectedCourse.componentList.map(comp => (
                   <div
                     key={comp.id}
-                    className={`task-item ${comp.progress === 100 ? 'completed' : ''}`}
-                    style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px', padding: '20px', marginBottom: '15px' }}
+                    className={`task-item ${selectedComponents.includes(comp.id) ? 'active' : ''}`}
+                    onClick={() => toggleComponentSelection(comp.id)}
+                    style={{
+                      padding: '18px 20px',
+                      marginBottom: '12px',
+                      cursor: 'pointer',
+                      border: selectedComponents.includes(comp.id) ? '2px solid #3b82f6' : '1px solid rgba(0,0,0,0.08)',
+                      background: selectedComponents.includes(comp.id) ? 'rgba(59, 130, 246, 0.03)' : 'transparent',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="task-text" style={{ fontSize: '16px', fontWeight: '600' }}>{comp.text}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 'bold', color: comp.progress === 100 ? selectedCourse.color : '#64748b' }}>
-                          {comp.progress}%
-                        </span>
-                        <button
-                          className="del-btn"
-                          onClick={() => deleteComponent(selectedCourse.id, comp.id)}
-                          style={{ padding: '4px', opacity: 0.6 }}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                    <span className="task-text" style={{ fontSize: '16px', fontWeight: '600', color: selectedComponents.includes(comp.id) ? '#3b82f6' : '#1e3a8a' }}>{comp.text}</span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <button
+                        className="del-btn"
+                        onClick={(e) => { e.stopPropagation(); deleteComponent(selectedCourse.id, comp.id); }}
+                        style={{ padding: '4px', opacity: 0.6, border: 'none', background: 'none' }}
+                      >
+                        <Trash2 size={16} color="#64748b" />
+                      </button>
+
+                      <div style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '6px',
+                        border: '2px solid #3b82f6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: selectedComponents.includes(comp.id) ? '#3b82f6' : 'transparent',
+                        transition: '0.2s',
+                        boxShadow: selectedComponents.includes(comp.id) ? '0 0 10px rgba(59, 130, 246, 0.3)' : 'none'
+                      }}>
+                        {selectedComponents.includes(comp.id) && <Check size={14} color="white" strokeWidth={3} />}
                       </div>
                     </div>
-
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={comp.progress}
-                      onChange={(e) => updateProgress(selectedCourse.id, comp.id, parseInt(e.target.value))}
-                      className="styled-slider"
-                      style={{ '--slider-color': selectedCourse.color }}
-                    />
                   </div>
                 ))
               )}
@@ -423,7 +504,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                   placeholder={t.addComponent || 'Component name...'}
                   className="input-luxe"
                   autoFocus
-                  style={{ background: 'rgba(15, 23, 42, 0.5)', width: '100%', marginBottom: '0' }}
+                  style={{ background: '#ffffff', color: '#0f172a', border: '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSaveComponent(selectedCourse.id);
                     if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); }
@@ -431,16 +512,16 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
                 />
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
-                    className="btn-luxe hover-lift"
+                    className="btn-luxe primary hover-lift"
                     onClick={() => handleSaveComponent(selectedCourse.id)}
-                    style={{ background: selectedCourse.color, color: 'white', padding: '8px', flex: 1, justifyContent: 'center' }}
+                    style={{ padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
                     {t.save || 'Save'}
                   </button>
                   <button
                     className="btn-luxe hover-lift"
                     onClick={() => { setIsAddingComponent(false); setNewComponentName(''); }}
-                    style={{ background: 'rgba(0,0,0,0.05)', border: '1px solid rgba(0,0,0,0.1)', color: '#1e293b', padding: '8px', flex: 1, justifyContent: 'center' }}
+                    style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
                     {t.cancel || 'Cancel'}
                   </button>
@@ -469,17 +550,23 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
             )}
 
             {/* Start Quiz Button Under Components */}
-            <button className="start-quiz-btn hover-lift" style={{
-              background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
-              boxShadow: '0 8px 20px -5px rgba(59, 130, 246, 0.4)',
-              marginTop: '15px',
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'center'
-            }}>
+            <button
+              className="start-quiz-btn hover-lift"
+              disabled={selectedComponents.length === 0}
+              onClick={() => {
+                setSelectedComponentsForQuiz(selectedComponents);
+                setCurrentPage('quiz');
+              }}
+              style={{
+                opacity: selectedComponents.length === 0 ? 0.5 : 1,
+                cursor: selectedComponents.length === 0 ? 'not-allowed' : 'pointer',
+                filter: selectedComponents.length === 0 ? 'grayscale(1)' : 'none',
+                marginTop: '15px'
+              }}
+            >
               <PlayCircle size={22} className="quiz-icon" />
               <span>{t.startQuiz || 'Start the quiz'}</span>
-              <div className="btn-glow" style={{ background: '#3b82f6' }}></div>
+              <div className="btn-glow"></div>
             </button>
           </div>
 
@@ -492,7 +579,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
 
             {selectedCourse.componentList.length === 0 ? (
               <div className="empty-state" style={{ padding: '30px', background: 'transparent', border: 'none', flex: 1 }}>
-                <p style={{ color: '#64748b', textAlign: 'center' }}>Add components to see your progress chart.</p>
+                <p style={{ color: '#64748b', textAlign: 'center' }}>{t.noChartComponents || 'Add components to see your progress chart.'}</p>
               </div>
             ) : (
               <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px' }}>
@@ -600,7 +687,10 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
       {/* Premium Header */}
       <div className="command-header-premium">
         <div className="header-text-group">
-          <h1 className="luxe-title">{t.commandCenter}</h1>
+          <h1 className="luxe-title">
+            {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{ display: 'inline', marginRight: '10px' }} />}
+            {dashboardError ? (t.commandCenter || "Learning Command Center") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : t.commandCenter)}
+          </h1>
           <p className="luxe-subtitle">{t.manageCourses}</p>
         </div>
 
@@ -667,7 +757,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId }) 
               className="input-luxe"
               autoFocus
             />
-            <button type="submit" className="btn-luxe submit" style={{ background: '#3b82f6' }}>{t.addCourse}</button>
+            <button type="submit" className="btn-luxe submit">{t.addCourse}</button>
           </div>
         </form>
       )}

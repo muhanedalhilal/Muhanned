@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { Users, Activity, BookOpen, CheckCircle, Trash2, Edit2, Search, Check, X } from 'lucide-react';
 
 export default function AdminDashboard({ t, authToken }) {
@@ -8,20 +8,18 @@ export default function AdminDashboard({ t, authToken }) {
   const [editingUserId, setEditingUserId] = useState(null);
   const [editFormData, setEditFormData] = useState({ name: '', role: '' });
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-
   // Fetch real data on mount if token exists
   useEffect(() => {
     if (!authToken) return;
 
-    fetch(`${API_URL}/admin/stats`, {
+    fetch('http://127.0.0.1:8000/admin/stats', {
       headers: { 'Authorization': `Bearer ${authToken}` }
     })
       .then(res => res.json())
       .then(data => setApiStats(data))
       .catch(e => console.error("Could not load stats.", e));
 
-    fetch(`${API_URL}/admin/users`, {
+    fetch('http://127.0.0.1:8000/admin/users', {
       headers: { 'Authorization': `Bearer ${authToken}` }
     })
       .then(res => res.json())
@@ -48,9 +46,9 @@ export default function AdminDashboard({ t, authToken }) {
 
   const saveEdit = async (id) => {
     try {
-      const res = await fetch(`${API_URL}/admin/users/${id}`, {
+      const res = await fetch(`http://127.0.0.1:8000/admin/users/${id}`, {
         method: 'PUT',
-        headers: {
+        headers: { 
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json'
         },
@@ -69,9 +67,9 @@ export default function AdminDashboard({ t, authToken }) {
   };
 
   const deleteUser = async (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+    if(window.confirm('Are you sure you want to delete this user?')) {
       try {
-        const res = await fetch(`${API_URL}/admin/users/${id}`, {
+        const res = await fetch(`http://127.0.0.1:8000/admin/users/${id}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${authToken}` }
         });
@@ -86,14 +84,14 @@ export default function AdminDashboard({ t, authToken }) {
     }
   };
 
-  const filteredUsers = users.filter(u =>
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredUsers = users.filter(u => 
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     u.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="dashboard-section command-center" style={{ maxWidth: '1200px' }}>
-
+      
       {/* Platform Analytics Section */}
       <div className="command-header-premium" style={{ marginBottom: '0' }}>
         <div className="header-text-group">
@@ -105,7 +103,7 @@ export default function AdminDashboard({ t, authToken }) {
       <div className="dashboard-grid" style={{ paddingTop: '20px', paddingBottom: '30px' }}>
         {platformStats.map((stat, i) => (
           <div key={i} className="glass-panel" style={{ padding: '25px', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '20px', textAlign: 'left' }}>
-            <div className="icon-wrapper" style={{ background: 'rgba(0,0,0,0.03)', padding: '15px' }}>
+            <div className="icon-wrapper" style={{ background: 'rgba(255,255,255,0.05)', padding: '15px' }}>
               {stat.icon}
             </div>
             <div>
@@ -116,22 +114,21 @@ export default function AdminDashboard({ t, authToken }) {
         ))}
       </div>
 
-      <div className="section-divider" style={{ display: 'flex', alignItems: 'center', gap: '20px', margin: '40px 0 20px 0' }}>
-        <span className="divider-text" style={{ color: '#0f172a', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '14px' }}>
-          {t.userAdmin || 'User Administration'}
-        </span>
-        <div className="divider-line" style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.1)' }}></div>
+      {/* User Administration Section */}
+      <div className="section-divider">
+        <span className="divider-text">{t.userAdmin || 'User Administration'}</span>
+        <div className="divider-line"></div>
       </div>
 
       <div className="luxe-panel" style={{ padding: '0', overflow: 'hidden' }}>
-        <div style={{ padding: '20px 30px', borderBottom: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-          <h3 style={{ color: 'black', margin: 0, fontSize: '18px' }}>{t.manageUsers || 'Manage Accounts'}</h3>
-          <div className="search-bar" style={{ padding: '8px 15px', background: 'rgba(0,0,0,0.03)' }}>
-            <Search size={16} color="#64748b" />
-            <input
-              type="text"
-              placeholder={t.searchUsers || 'Search users...'}
-              className="search-input"
+        <div style={{ padding: '20px 30px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+          <h3 style={{ color: 'white', margin: 0, fontSize: '18px' }}>{t.manageUsers || 'Manage Accounts'}</h3>
+          <div className="search-bar" style={{ padding: '8px 15px', background: 'rgba(0,0,0,0.2)' }}>
+            <Search size={16} color="#94a3b8" />
+            <input 
+              type="text" 
+              placeholder={t.searchUsers || 'Search users...'} 
+              className="search-input" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{ fontSize: '14px' }}
@@ -143,50 +140,50 @@ export default function AdminDashboard({ t, authToken }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.02)', color: '#94a3b8', fontSize: '14px' }}>
-                <th style={{ padding: '15px 30px', fontWeight: '500' }}>{t.adminName || 'Name'}</th>
-                <th style={{ padding: '15px 30px', fontWeight: '500' }}>{t.adminRole || 'Role'}</th>
-                <th style={{ padding: '15px 30px', fontWeight: '500' }}>{t.adminStatus || 'Status'}</th>
-                <th style={{ padding: '15px 30px', fontWeight: '500', textAlign: 'right' }}>{t.adminActions || 'Actions'}</th>
+                <th style={{ padding: '15px 30px', fontWeight: '500' }}>Name</th>
+                <th style={{ padding: '15px 30px', fontWeight: '500' }}>Role</th>
+                <th style={{ padding: '15px 30px', fontWeight: '500' }}>Status</th>
+                <th style={{ padding: '15px 30px', fontWeight: '500', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
-                    {t.adminSearchEmpty || 'No users found matching your search.'}
+                    No users found matching your search.
                   </td>
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                  <tr key={user.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)', color: 'black' }}>
+                  <tr key={user.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', color: 'white' }}>
                     {editingUserId === user.id ? (
                       <>
                         <td style={{ padding: '15px 30px' }}>
-                          <input
-                            type="text"
-                            className="input-luxe"
-                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', marginBottom: '4px', backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(59, 130, 246, 0.3)', color: 'black' }}
-                            value={editFormData.name}
-                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                          <input 
+                            type="text" 
+                            className="input-luxe" 
+                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', marginBottom: '4px', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white' }} 
+                            value={editFormData.name} 
+                            onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })} 
                           />
                           <div style={{ fontSize: '13px', color: '#94a3b8', paddingLeft: '8px' }}>{user.email}</div>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
-                          <select
-                            className="input-luxe"
-                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', backgroundColor: 'rgba(0,0,0,0.03)', border: '1px solid rgba(59, 130, 246, 0.3)', color: 'black', cursor: 'pointer' }}
+                          <select 
+                            className="input-luxe" 
+                            style={{ padding: '8px 12px', fontSize: '14px', borderRadius: '8px', width: '100%', backgroundColor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(96, 165, 250, 0.5)', color: 'white', cursor: 'pointer' }}
                             value={editFormData.role}
                             onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
                           >
-                            <option value="student">{t.adminStudent || 'Student'}</option>
-                            <option value="teacher">{t.adminTeacher || 'Teacher'}</option>
-                            <option value="admin">{t.adminAdmin || 'Admin'}</option>
+                            <option value="student" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Student</option>
+                            <option value="teacher" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Teacher</option>
+                            <option value="admin" style={{ background: '#1e293b', color: 'white', padding: '10px' }}>Admin</option>
                           </select>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#10b981' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
-                            {t.adminActive || 'Active'}
+                            Active
                           </span>
                         </td>
                         <td style={{ padding: '15px 30px', textAlign: 'right' }}>
@@ -207,20 +204,20 @@ export default function AdminDashboard({ t, authToken }) {
                           <div style={{ fontSize: '13px', color: '#94a3b8' }}>{user.email}</div>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
-                          <span style={{
-                            padding: '4px 10px',
-                            borderRadius: '20px',
-                            fontSize: '12px',
-                            background: user.role === 'admin' || user.role === 'Admin' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(0,0,0,0.03)',
-                            color: user.role === 'admin' || user.role === 'Admin' ? '#3b82f6' : '#475569'
+                          <span style={{ 
+                            padding: '4px 10px', 
+                            borderRadius: '20px', 
+                            fontSize: '12px', 
+                            background: user.role === 'admin' || user.role === 'Admin' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.1)',
+                            color: user.role === 'admin' || user.role === 'Admin' ? '#60a5fa' : '#e2e8f0'
                           }}>
-                            {user.role === 'admin' || user.role === 'Admin' ? (t.adminAdmin || 'Admin') : user.role === 'student' || user.role === 'Student' ? (t.adminStudent || 'Student') : (t.adminTeacher || 'Teacher')}
+                            {user.role}
                           </span>
                         </td>
                         <td style={{ padding: '15px 30px' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#10b981' }}>
                             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }}></div>
-                            {t.adminActive || 'Active'}
+                            Active
                           </span>
                         </td>
                         <td style={{ padding: '15px 30px', textAlign: 'right' }}>
