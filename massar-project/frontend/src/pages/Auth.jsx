@@ -129,30 +129,11 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
     <div className="auth-wrapper">
       <div className="auth-modern-card">
         
-        {/* Left Art / Branding showcase */}
-        <div className="auth-art-column">
-          <div className="art-overlay-gradient"></div>
-          <div className="art-content">
-            <div className="premium-logo-shield">
-              <div className="shield-border-light"></div>
-              <div className="shield-glass">
-                <img 
-                  src="/logo.png" 
-                  alt="Massar Logo" 
-                  className="shield-logo"
-                  onError={(e) => { e.target.src = 'https://via.placeholder.com/80x80/2b4a8e/ffffff?text=M' }} 
-                />
-              </div>
-            </div>
-            <h2 className="art-title">{t.appName}</h2>
-            <p className="art-subtitle" style={{ color: '#000000', fontSize: '17px', lineHeight: '1.6', fontWeight: '600' }}>{t.authArtSubtitle}</p>
-          </div>
-        </div>
 
         {/* Right Form Card */}
         <div className="auth-form-column card-container-new">
           <h2 className="title" style={{ color: '#000000', fontWeight: '900', fontSize: '30px' }}>{isLoginView ? t.welcomeBack : t.joinSystem}</h2>
-          <p className="subtitle">{isLoginView ? t.authSubLogin : t.authSubSignup}</p>
+          <p className="subtitle" style={{ color: '#111827' }}>{isLoginView ? t.authSubLogin : t.authSubSignup}</p>
           
           <button 
             type="button" 
