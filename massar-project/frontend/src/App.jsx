@@ -3,13 +3,14 @@ import './index.css';
 
 // Import our beautiful modular components!
 import Home from './pages/Home';
+import About from './pages/About';
 import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import Quiz from './pages/Quiz';
 import Footer from './components/Footer';
-import { User, Settings, Menu, X, Globe, ChevronDown, Home as HomeIcon, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
+import { User, Users, Settings, Menu, X, Globe, ChevronDown, Home as HomeIcon, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
 import { api } from './services/api';
 
 // Centralized Translation Dictionary
@@ -153,7 +154,8 @@ const translations = {
     adminAdmin: "Admin",
     adminActive: "Active",
     saveTitle: "Save",
-    cancelTitle: "Cancel"
+    cancelTitle: "Cancel",
+    noChartComponents: "Add components to see your progress chart."
   },
   ar: {
     appName: "مسار",
@@ -275,8 +277,8 @@ const translations = {
     step3Desc: "يتم ترتيب الوحدات الجديدة ومستوى تعقيدها فوراً لتسد الثغرات وتتحدى قدراتك.",
     step4Title: "منح شارة الإتقان",
     step4Desc: "لا تُجتاز المهام المركزية إلا عند تحقيق نسبة ثقة إحصائية عالية بأن المفهوم قد رُسخ تماماً.",
-    peopleLabel: "عقول مسار",
-    teamTitle: "واضعو حجر الأساس",
+    peopleLabel: "فريقنا",
+    teamTitle: "تعرف على الفريق",
     teamRolePM: "إدارة وقيادة المنتج",
     teamRoleBackend: "هندسة النظم والخوادم",
     teamRoleFrontend: "هندسة وتصميم واجهات المستخدم",
@@ -295,7 +297,8 @@ const translations = {
     adminAdmin: "مشرف",
     adminActive: "نشط",
     saveTitle: "حفظ",
-    cancelTitle: "إلغاء"
+    cancelTitle: "إلغاء",
+    noChartComponents: "أضف بعض الأقسام لعرض رسم التقدم البياني الخاص بك."
   }
 };
 
@@ -346,15 +349,52 @@ function App() {
   // App-level handlers
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // Handle OAuth Redirects from Supabase (e.g. Google Sign in)
+  useEffect(() => {
+    // Supabase redirects with a hash like #access_token=...&refresh_token=...&type=signup
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      if (accessToken) {
+        localStorage.setItem('massar_token', accessToken);
+        // Clear the hash so it doesn't stay in the URL
+        window.history.replaceState(null, '', window.location.pathname);
+        
+        // Fetch real profile from backend
+        const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+        fetch(`${API_URL}/users/me`, {
+          headers: { 'Authorization': `Bearer ${accessToken}` }
+        }).then(res => res.json())
+          .then(meData => {
+            handleSecureLogin(meData.email, meData.name, accessToken, meData.user_role || 'student');
+          })
+          .catch(() => {
+            handleSecureLogin('', '', accessToken, 'student');
+          });
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const initAuth = async () => {
+      // Don't init auto-login if URL has hash with access_token, the OAuth effect will handle it
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+         setIsInitializing(false);
+         return;
+      }
+      
       const token = localStorage.getItem('massar_token');
       if (token) {
         const response = await api.get('/users/me');
         if (response.ok) {
           handleSecureLogin(response.data.email, response.data.name, token, response.data.role);
         } else {
+          // Token is invalid/expired — clear and go to login
           localStorage.removeItem('massar_token');
+          localStorage.removeItem('massar_auth');
+          setCurrentPage('auth');
+          setIsLoginView(true);
         }
       }
       setIsInitializing(false);
@@ -481,6 +521,10 @@ function App() {
           <Home t={t} goSignUp={goSignUp} isLoggedIn={isLoggedIn} setCurrentPage={setCurrentPage} />
         )}
 
+        {currentPage === 'about' && (
+          <About t={t} />
+        )}
+
         {currentPage === 'auth' && !isLoggedIn && (
           <Auth
             t={t}
@@ -520,7 +564,7 @@ function App() {
 
       </main>
 
-      <Footer t={t} isRtl={isRtl} key={currentPage} />
+      <Footer t={t} isRtl={isRtl} setCurrentPage={setCurrentPage} key={currentPage} />
 
     </div>
   );

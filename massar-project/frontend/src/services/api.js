@@ -33,11 +33,11 @@ async function request(endpoint, method, data = null) {
     if (!response.ok) {
       const isAuthEndpoint = endpoint.startsWith('/auth/login') || endpoint.startsWith('/auth/signup');
       if ((response.status === 401 || response.status === 403) && !isAuthEndpoint) {
-        console.warn("Session expired or Unauthorized... Cleaning token.");
+        console.warn("Session expired or Unauthorized. Clearing stored token.");
         localStorage.removeItem('massar_token');
-        localStorage.removeItem('massar_auth'); // Must clear auth state too to force logout!
-        window.location.href = "/?page=auth"; // Instantly force redirect to the front door
-        return { ok: false, message: "Session expired. Please log in again." };
+        localStorage.removeItem('massar_auth');
+        // Do NOT hard-redirect here — let the app/component handle it
+        return { ok: false, status: response.status, message: "Session expired. Please log in again." };
       }
       // Pass the backend error cleanly
       throw new Error(result.detail || result.message || "API request failed");

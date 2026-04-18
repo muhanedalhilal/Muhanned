@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from datetime import datetime
@@ -10,6 +10,7 @@ from app.models.course import Course
 from app.models.db_user import DBUser
 from app.models.document import Document
 from app.models.knowledge_component import KnowledgeComponent
+from app.core.supabase_client import supabase
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -31,6 +32,7 @@ class CourseResourceResponse(BaseModel):
     id: int
     text: str
     type: str
+    fileUrl: Optional[str] = None
     
     class Config:
         orm_mode = True
@@ -58,7 +60,16 @@ def get_courses(
     
     result = []
     for c in courses:
-        resources = [{"id": d.id, "text": d.filename, "type": d.file_type} for d in c.documents]
+        resources = []
+        for d in c.documents:
+            file_url = None
+            if d.supabase_path:
+                try:
+                    file_url = supabase.storage.from_("documents").get_public_url(d.supabase_path)
+                except Exception:
+                    pass
+            resources.append({"id": d.id, "text": d.filename, "type": d.file_type, "fileUrl": file_url})
+            
         components = [{"id": k.id, "text": k.topic, "content": k.content, "progress": 0} for k in c.knowledge_components]
         result.append(CourseResponse(
             id=c.id, name=c.name, icon=c.icon, color=c.color, created_at=c.created_at,
@@ -107,7 +118,16 @@ def get_course_resources(
 ):
     # Returns documents linked to this course
     docs = db.query(Document).filter(Document.course_id == course_id, Document.user_id == current_user.id).all()
-    return [{"id": d.id, "text": d.filename, "type": d.file_type} for d in docs]
+    res = []
+    for d in docs:
+        file_url = None
+        if d.supabase_path:
+            try:
+                file_url = supabase.storage.from_("documents").get_public_url(d.supabase_path)
+            except Exception:
+                pass
+        res.append({"id": d.id, "text": d.filename, "type": d.file_type, "fileUrl": file_url})
+    return res
 
 @router.get("/{course_id}/components")
 def get_course_components(

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrainCircuit, Globe, Mail, MessageSquare } from 'lucide-react';
 
-export default function Footer({ t }) {
+export default function Footer({ t, setCurrentPage }) {
   const [isVisible, setIsVisible] = useState(false);
   const footerRef = useRef(null);
 
@@ -61,7 +61,20 @@ export default function Footer({ t }) {
           <div className="footer-column">
             <h4>{t.footerCompany}</h4>
             <ul>
-              <li><a href="#about">{t.footerAboutUs}</a></li>
+              <li>
+                <a 
+                  href="#about"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if(setCurrentPage) {
+                      setCurrentPage('about');
+                      window.scrollTo(0, 0);
+                    }
+                  }}
+                >
+                  {t.footerAboutUs}
+                </a>
+              </li>
               <li><a href="#contact">{t.footerContactUs}</a></li>
             </ul>
           </div>

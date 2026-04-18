@@ -14,9 +14,9 @@ async def lifespan(app: FastAPI):
     # Try to Create PostgreSQL Tables if they don't exist yet
     try:
         Base.metadata.create_all(bind=engine)
-        print("✅ Database metadata synchronized.")
+        print("Database metadata synchronized.")
     except Exception as e:
-        print(f"⚠️ Warning: Could not connect to Database on startup. Supabase might be offline. Error: {e}")
+        print(f"Warning: Could not connect to Database on startup. Supabase might be offline. Error: {e}")
     
     yield
     # Cleanup on shutdown (if needed)

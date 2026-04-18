@@ -49,7 +49,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
           api.get('/users/me'),
           api.get('/courses/')
         ]);
-        
+
         if (userRes.ok) {
           setDashboardUser(userRes.data);
         } else {
@@ -123,9 +123,9 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     const validExts = ['pdf', 'ppt', 'pptx'];
     const extension = file.name.split('.').pop().toLowerCase();
     if (!validExts.includes(extension)) {
-        alert("Invalid file type! Only PDF, PPT, and PPTX are allowed.");
-        e.target.value = '';
-        return;
+      alert("Invalid file type! Only PDF, PPT, and PPTX are allowed.");
+      e.target.value = '';
+      return;
     }
 
     setIsUploading(true);
@@ -141,28 +141,28 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
         // Fetch KCs generated from the backend
         let kcsList = [];
         if (docId) {
-            const kcsResponse = await api.get(`/knowledge/documents/${docId}/kcs`);
-            if (kcsResponse.ok) {
-                 kcsList = kcsResponse.data.map(kc => ({
-                     id: kc.id,
-                     text: kc.topic,
-                     content: kc.content,
-                     progress: 0
-                 }));
-            }
+          const kcsResponse = await api.get(`/knowledge/documents/${docId}/kcs`);
+          if (kcsResponse.ok) {
+            kcsList = kcsResponse.data.map(kc => ({
+              id: kc.id,
+              text: kc.topic,
+              content: kc.content,
+              progress: 0
+            }));
+          }
         }
-        
+
         setCourses(courses.map(course => {
           if (course.id !== courseId) return course;
-          
+
           const newResource = {
             id: docId || Date.now(),
             text: file.name,
             type: extension,
             fileUrl: null // Wait for backend serving later
           };
-          return { 
-            ...course, 
+          return {
+            ...course,
             resourceList: [...(course.resourceList || []), newResource],
             componentList: [...(course.componentList || []), ...kcsList]
           };
@@ -174,7 +174,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
       alert("Error parsing upload: " + err.message);
     } finally {
       setIsUploading(false);
-      e.target.value = ''; 
+      e.target.value = '';
     }
   };
 
@@ -238,13 +238,13 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     }
 
     const toggleComponentSelection = (compId) => {
-      setSelectedComponents(prev => 
+      setSelectedComponents(prev =>
         prev.includes(compId) ? prev.filter(id => id !== compId) : [...prev, compId]
       );
     };
 
-    const isAllSelected = selectedCourse.componentList.length > 0 && 
-                          selectedCourse.componentList.every(c => selectedComponents.includes(c.id));
+    const isAllSelected = selectedCourse.componentList.length > 0 &&
+      selectedCourse.componentList.every(c => selectedComponents.includes(c.id));
 
     const toggleSelectAll = () => {
       if (isAllSelected) {
@@ -270,7 +270,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
 
     return (
       <div className="dashboard-section command-center" style={{ position: 'relative' }}>
-        
+
         {/* Full-screen AI Generation Overlay */}
         {isUploading && (
           <div style={{
@@ -287,11 +287,11 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
               boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px'
             }}>
-               <Wand2 size={48} color="#3b82f6" className="spin-icon-slow" style={{ animation: 'spin 3s linear infinite' }} />
-               <h3 style={{ margin: 0, color: '#1e293b', fontSize: '20px' }}>Analyzing Document...</h3>
-               <p style={{ margin: 0, color: '#64748b', fontSize: '14px', maxWidth: '250px', textAlign: 'center' }}>
-                 Extracting and generating AI Knowledge Components. This may take a few seconds.
-               </p>
+              <Wand2 size={48} color="#3b82f6" className="spin-icon-slow" style={{ animation: 'spin 3s linear infinite' }} />
+              <h3 style={{ margin: 0, color: '#1e293b', fontSize: '20px' }}>Analyzing Document...</h3>
+              <p style={{ margin: 0, color: '#64748b', fontSize: '14px', maxWidth: '250px', textAlign: 'center' }}>
+                Extracting and generating AI Knowledge Components. This may take a few seconds.
+              </p>
             </div>
           </div>
         )}
@@ -350,22 +350,49 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
                   <div
                     key={res.id}
                     className="task-item"
-                    style={{ padding: '15px 20px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}
+                    style={{ padding: '18px 20px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '15px' }}
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0, paddingRight: '25px' }}>
-                      <span className="task-text" style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', lineHeight: '1.4' }}>{res.text}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                      {res.fileUrl && (
+                    <div style={{ width: '100%' }}>
+                      {res.fileUrl ? (
                         <a
                           href={res.fileUrl}
                           target="_blank"
                           rel="noreferrer"
-                          style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '700', textDecoration: 'underline' }}
+                          className="task-text"
+                          title={res.text}
+                          style={{
+                            fontSize: '16px',
+                            fontWeight: '800',
+                            color: '#1e293b',
+                            lineHeight: '1.4',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                            display: 'inline-block',
+                            wordBreak: 'break-word'
+                          }}
+                          onMouseOver={(e) => e.currentTarget.style.color = '#3b82f6'}
+                          onMouseOut={(e) => e.currentTarget.style.color = '#1e293b'}
                         >
-                          {t.open || 'Open'}
+                          {res.text}
                         </a>
+                      ) : (
+                        <span
+                          className="task-text"
+                          style={{
+                            fontSize: '16px',
+                            fontWeight: '800',
+                            color: '#1e293b',
+                            lineHeight: '1.4',
+                            display: 'inline-block',
+                            wordBreak: 'break-word'
+                          }}
+                        >
+                          {res.text}
+                        </span>
                       )}
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
                       <button
                         className="del-btn"
                         onClick={() => deleteResource(selectedCourse.id, res.id)}
@@ -381,7 +408,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
             </div>
 
             <div className="add-task-form" style={{ marginTop: '10px' }}>
-            <label className="btn-luxe primary">
+              <label className="btn-luxe primary">
                 <Plus size={20} style={{ marginLeft: '8px', marginRight: '8px' }} />
                 <span>{isUploading ? (t.addingResource || 'Adding Resource...') : (t.addResources || 'Add Resources (PDF/PPTX) +')}</span>
                 <input
@@ -404,7 +431,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
                 {t.components || 'Components'}
               </h3>
               {selectedCourse.componentList.length > 0 && (
-                <button 
+                <button
                   onClick={toggleSelectAll}
                   style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}
                 >
@@ -424,9 +451,9 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
                     key={comp.id}
                     className={`task-item ${selectedComponents.includes(comp.id) ? 'active' : ''}`}
                     onClick={() => toggleComponentSelection(comp.id)}
-                    style={{ 
-                      padding: '18px 20px', 
-                      marginBottom: '12px', 
+                    style={{
+                      padding: '18px 20px',
+                      marginBottom: '12px',
                       cursor: 'pointer',
                       border: selectedComponents.includes(comp.id) ? '2px solid #3b82f6' : '1px solid rgba(0,0,0,0.08)',
                       background: selectedComponents.includes(comp.id) ? 'rgba(59, 130, 246, 0.03)' : 'transparent',
@@ -436,7 +463,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
                     }}
                   >
                     <span className="task-text" style={{ fontSize: '16px', fontWeight: '600', color: selectedComponents.includes(comp.id) ? '#3b82f6' : '#1e3a8a' }}>{comp.text}</span>
-                    
+
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                       <button
                         className="del-btn"
@@ -445,11 +472,11 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
                       >
                         <Trash2 size={16} color="#64748b" />
                       </button>
-                      
-                      <div style={{ 
-                        width: '22px', 
-                        height: '22px', 
-                        borderRadius: '6px', 
+
+                      <div style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '6px',
                         border: '2px solid #3b82f6',
                         display: 'flex',
                         alignItems: 'center',
@@ -523,7 +550,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
             )}
 
             {/* Start Quiz Button Under Components */}
-            <button 
+            <button
               className="start-quiz-btn hover-lift"
               disabled={selectedComponents.length === 0}
               onClick={() => {
@@ -552,7 +579,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
 
             {selectedCourse.componentList.length === 0 ? (
               <div className="empty-state" style={{ padding: '30px', background: 'transparent', border: 'none', flex: 1 }}>
-                <p style={{ color: '#64748b', textAlign: 'center' }}>Add components to see your progress chart.</p>
+                <p style={{ color: '#64748b', textAlign: 'center' }}>{t.noChartComponents || 'Add components to see your progress chart.'}</p>
               </div>
             ) : (
               <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px' }}>
@@ -661,7 +688,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
       <div className="command-header-premium">
         <div className="header-text-group">
           <h1 className="luxe-title">
-            {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{display: 'inline', marginRight: '10px'}}/>}
+            {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{ display: 'inline', marginRight: '10px' }} />}
             {dashboardError ? (t.commandCenter || "Learning Command Center") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : t.commandCenter)}
           </h1>
           <p className="luxe-subtitle">{t.manageCourses}</p>
