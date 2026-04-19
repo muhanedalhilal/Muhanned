@@ -559,6 +559,8 @@ function App() {
             t={t} 
             setCurrentPage={setCurrentPage} 
             selectedComponents={selectedComponentsForQuiz}
+            selectedCourseId={selectedCourseId}
+            setSelectedCourseId={setSelectedCourseId}
           />
         )}
 

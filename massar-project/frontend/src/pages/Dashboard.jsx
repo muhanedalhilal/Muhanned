@@ -233,9 +233,13 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
   if (selectedCourseId) {
     const selectedCourse = courses.find(c => c.id === selectedCourseId);
     if (!selectedCourse) {
-      setSelectedCourseId(null);
-      return null;
+      // Courses are still loading — wait before clearing
+      if (!dashboardLoading) {
+        setSelectedCourseId(null);
+      }
+      return null; // show nothing while courses load
     }
+
 
     const toggleComponentSelection = (compId) => {
       setSelectedComponents(prev =>
@@ -274,27 +278,68 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
         {/* Full-screen AI Generation Overlay */}
         {isUploading && (
           <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999,
-            background: 'rgba(255, 255, 255, 0.7)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex', flexDirection: 'column',
-            justifyContent: 'center', alignItems: 'center',
-            borderRadius: '16px',
-            animation: 'fadeIn 0.3s ease-out'
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'fadeIn 0.3s ease'
           }}>
             <div style={{
-              background: 'white', padding: '30px 40px', borderRadius: '20px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px'
+              background: 'white', borderRadius: '20px', padding: '40px 36px',
+              maxWidth: '340px', width: '90%', textAlign: 'center',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07), 0 20px 60px rgba(0,0,0,0.08)',
+              border: '1px solid #f1f5f9'
             }}>
-              <Wand2 size={48} color="#3b82f6" className="spin-icon-slow" style={{ animation: 'spin 3s linear infinite' }} />
-              <h3 style={{ margin: 0, color: '#1e293b', fontSize: '20px' }}>Analyzing Document...</h3>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '14px', maxWidth: '250px', textAlign: 'center' }}>
-                Extracting and generating AI Knowledge Components. This may take a few seconds.
+              {/* Icon */}
+              <div style={{
+                width: '56px', height: '56px', borderRadius: '16px', margin: '0 auto 20px',
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(79,70,229,0.3)', fontSize: '24px'
+              }}>
+                📄
+              </div>
+
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
+                Analyzing document
+              </h3>
+              <p style={{ margin: '0 0 24px 0', color: '#94a3b8', fontSize: '13px' }}>
+                AI is reading your file and building knowledge components
               </p>
+
+              {/* Shimmer progress bar */}
+              <div style={{ height: '5px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden', marginBottom: '24px' }}>
+                <div style={{
+                  height: '100%', borderRadius: '5px', width: '45%',
+                  background: 'linear-gradient(90deg, #4f46e5, #7c3aed)',
+                  animation: 'uploadSweep 1.8s ease-in-out infinite'
+                }} />
+              </div>
+
+              {/* Steps */}
+              {[
+                { label: 'Uploading file', done: true },
+                { label: 'Extracting text content', done: false },
+                { label: 'Generating AI components', done: false },
+              ].map((step, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '8px 0', borderBottom: i < 2 ? '1px solid #f8fafc' : 'none'
+                }}>
+                  <div style={{
+                    width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
+                    background: '#4f46e5',
+                    animation: `uploadDot 1.2s ease-in-out infinite`,
+                    animationDelay: `${i * 0.3}s`
+                  }} />
+                  <span style={{ fontSize: '13px', color: '#475569', fontWeight: '500', textAlign: 'left' }}>{step.label}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
+
 
         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
           <button className="btn-luxe" onClick={() => { setSelectedCourseId(null); setSelectedComponents([]); }} style={{ background: 'rgba(0,0,0,0.05)', color: 'black', border: '1px solid rgba(0,0,0,0.1)' }}>
@@ -550,24 +595,50 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
             )}
 
             {/* Start Quiz Button Under Components */}
-            <button
-              className="start-quiz-btn hover-lift"
-              disabled={selectedComponents.length === 0}
-              onClick={() => {
-                setSelectedComponentsForQuiz(selectedComponents);
-                setCurrentPage('quiz');
-              }}
-              style={{
-                opacity: selectedComponents.length === 0 ? 0.5 : 1,
-                cursor: selectedComponents.length === 0 ? 'not-allowed' : 'pointer',
-                filter: selectedComponents.length === 0 ? 'grayscale(1)' : 'none',
-                marginTop: '15px'
-              }}
-            >
-              <PlayCircle size={22} className="quiz-icon" />
-              <span>{t.startQuiz || 'Start the quiz'}</span>
-              <div className="btn-glow"></div>
-            </button>
+            <div style={{ marginTop: '15px', position: 'relative' }}>
+              {selectedComponents.length > 0 && (
+                <div style={{
+                  position: 'absolute', inset: '-3px', borderRadius: '16px',
+                  background: 'linear-gradient(135deg, #3b82f6, #8b5cf6, #3b82f6)',
+                  backgroundSize: '200% 200%',
+                  animation: 'quizGradientShift 3s ease infinite',
+                  filter: 'blur(8px)', opacity: 0.5, zIndex: 0
+                }} />
+              )}
+              <button
+                className="start-quiz-btn hover-lift"
+                disabled={selectedComponents.length === 0}
+                onClick={() => {
+                  setSelectedComponentsForQuiz(selectedComponents);
+                  setCurrentPage('quiz');
+                }}
+                style={{
+                  opacity: selectedComponents.length === 0 ? 0.45 : 1,
+                  cursor: selectedComponents.length === 0 ? 'not-allowed' : 'pointer',
+                  filter: selectedComponents.length === 0 ? 'grayscale(1)' : 'none',
+                  position: 'relative', zIndex: 1,
+                  background: selectedComponents.length > 0 ? 'linear-gradient(135deg, #2563eb, #7c3aed)' : undefined,
+                  border: 'none',
+                  boxShadow: selectedComponents.length > 0 ? '0 8px 25px rgba(59,130,246,0.45)' : undefined,
+                  transform: selectedComponents.length > 0 ? 'scale(1)' : undefined,
+                  transition: 'all 0.3s ease',
+                  width: '100%',
+                  padding: '14px 20px',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  letterSpacing: '0.3px',
+                }}
+              >
+                <PlayCircle size={22} className="quiz-icon" style={{ animation: selectedComponents.length > 0 ? 'quizIconPulse 1.5s ease-in-out infinite' : 'none' }} />
+                <span>
+                  {selectedComponents.length === 0
+                    ? (t.startQuiz || 'Start the quiz')
+                    : `${t.startQuiz || 'Start Quiz'} (${selectedComponents.length} topic${selectedComponents.length !== 1 ? 's' : ''})`
+                  }
+                </span>
+                <div className="btn-glow"></div>
+              </button>
+            </div>
           </div>
 
           {/* Panel 3: Progress Chart ONLY */}

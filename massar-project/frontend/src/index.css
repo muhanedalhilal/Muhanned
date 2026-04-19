@@ -4323,4 +4323,67 @@ body {
 .delay-100 { transition-delay: 100ms; }
 .delay-200 { transition-delay: 200ms; }
 .delay-300 { transition-delay: 300ms; }
-.delay-400 { transition-delay: 400ms; }
+.delay-400 { transition-delay: 400ms; }
+
+/* =============================================
+   Upload Overlay & Quiz Enhancement Animations
+   ============================================= */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes uploadRing {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes uploadDot {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%       { opacity: 1;   transform: scale(1.2); }
+}
+
+@keyframes uploadProgress {
+  0%   { width: 0%;    margin-left: 0%; }
+  50%  { width: 60%;   margin-left: 20%; }
+  100% { width: 0%;    margin-left: 100%; }
+}
+
+@keyframes wandWiggle {
+  0%, 100% { transform: rotate(-10deg); }
+  50%       { transform: rotate(10deg); }
+}
+
+@keyframes pulseOrb {
+  0%, 100% { transform: scale(1);    opacity: 0.6; }
+  50%       { transform: scale(1.2); opacity: 0.9; }
+}
+
+@keyframes quizGradientShift {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+@keyframes quizIconPulse {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%       { transform: scale(1.08); opacity: 0.9; }
+}
+
+@keyframes orbitDot {
+  from { transform: rotate(var(--start-deg, 0deg)) translateX(55px); }
+  to   { transform: rotate(calc(var(--start-deg, 0deg) + 360deg)) translateX(55px); }
+}
+
+@keyframes uploadSweep {
+  0%   { margin-left: -50%; width: 45%; }
+  100% { margin-left: 110%; width: 45%; }
+}
+
+@keyframes quizBar {
+  0%   { transform: scaleY(0.3); }
+  100% { transform: scaleY(1); }
+}
+
+
