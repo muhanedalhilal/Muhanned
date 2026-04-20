@@ -8,6 +8,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
   const navigateBack = () => {
     setCurrentPage('dashboard');
     // selectedCourseId stays set → Dashboard will show the course view
+    window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
   const [questions, setQuestions] = useState([]);
@@ -111,23 +112,12 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
           maxWidth: '380px', width: '100%', textAlign: 'center'
         }}>
-          {/* Clean icon — no emoji */}
-          <div style={{
-            width: '56px', height: '56px', borderRadius: '50%',
-            background: '#fef2f2', border: '2px solid #fecaca',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <XCircle size={28} color="#ef4444" strokeWidth={1.8} />
-          </div>
-
-          <div>
-            <h2 style={{ color: '#0B1F3A', fontSize: '19px', fontWeight: '700', margin: '0 0 8px 0', letterSpacing: '-0.2px' }}>
+          <h2 style={{ color: '#0B1F3A', fontSize: '19px', fontWeight: '700', margin: '0 0 8px 0', letterSpacing: '-0.2px' }}>
               Quiz generation failed
             </h2>
-            <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: 0, lineHeight: '1.6' }}>
+            <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: '0 0 4px 0', lineHeight: '1.6' }}>
               {error}
             </p>
-          </div>
 
           <button onClick={navigateBack} style={{
             display: 'flex', alignItems: 'center', gap: '8px',
@@ -151,8 +141,6 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
   ───────────────────────────────────────── */
   if (quizFinished) {
     const pct = Math.round((score / questions.length) * 100);
-    const isGreat = pct >= 80;
-    const emoji = pct >= 80 ? '🏆' : pct >= 50 ? '💪' : '📖';
     const msg = pct >= 80 ? 'Excellent work!' : pct >= 50 ? 'Good effort — keep going!' : 'Keep studying, you\'ll get there!';
     const accent = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
 
@@ -164,7 +152,14 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07), 0 20px 60px rgba(0,0,0,0.06)',
           border: '1px solid #f1f5f9'
         }}>
-          <div style={{ fontSize: '52px', marginBottom: '16px' }}>{emoji}</div>
+          {/* No emoji — clean accent icon */}
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 16px',
+            background: `${accent}18`, border: `2px solid ${accent}55`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <CheckCircle2 size={28} color={accent} strokeWidth={1.8} />
+          </div>
           <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px 0' }}>Quiz Complete</h1>
           <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 32px 0' }}>{msg}</p>
 
@@ -366,8 +361,9 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
 
       {/* Score pill */}
       <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500' }}>
-          ✓ {score} correct so far
+        <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+          <CheckCircle2 size={13} color="#10b981" />
+          {score} correct so far
         </span>
       </div>
 
