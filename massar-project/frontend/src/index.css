@@ -4334,6 +4334,11 @@ body {
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes spinCircle {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 @keyframes uploadRing {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }

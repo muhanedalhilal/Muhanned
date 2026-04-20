@@ -233,11 +233,30 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
   if (selectedCourseId) {
     const selectedCourse = courses.find(c => c.id === selectedCourseId);
     if (!selectedCourse) {
-      // Courses are still loading — wait before clearing
+      // Courses are still loading — show a spinner instead of a blank page
       if (!dashboardLoading) {
         setSelectedCourseId(null);
       }
-      return null; // show nothing while courses load
+      return (
+        <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{
+            background: 'white', borderRadius: '20px', padding: '48px 40px',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.06), 0 20px 50px rgba(0,0,0,0.07)',
+            border: '1px solid #e2e8f0',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
+            minWidth: '260px'
+          }}>
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '50%',
+              border: '4px solid #e2e8f0', borderTopColor: '#3b82f6',
+              animation: 'spinCircle 0.8s linear infinite'
+            }} />
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: '#0B1F3A' }}>
+              Loading course...
+            </p>
+          </div>
+        </div>
+      );
     }
 
 
@@ -279,63 +298,29 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
         {isUploading && (
           <div style={{
             position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
+            background: 'rgba(255, 255, 255, 0.75)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: 'fadeIn 0.3s ease'
+            animation: 'fadeIn 0.25s ease'
           }}>
             <div style={{
-              background: 'white', borderRadius: '20px', padding: '40px 36px',
-              maxWidth: '340px', width: '90%', textAlign: 'center',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07), 0 20px 60px rgba(0,0,0,0.08)',
-              border: '1px solid #f1f5f9'
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px'
             }}>
-              {/* Icon */}
+              {/* Circle spinner */}
               <div style={{
-                width: '56px', height: '56px', borderRadius: '16px', margin: '0 auto 20px',
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 8px 24px rgba(79,70,229,0.3)', fontSize: '24px'
+                width: '52px', height: '52px',
+                borderRadius: '50%',
+                border: '4px solid #e2e8f0',
+                borderTopColor: '#3b82f6',
+                animation: 'spinCircle 0.8s linear infinite'
+              }} />
+              <span style={{
+                fontSize: '15px', fontWeight: '600',
+                color: '#0B1F3A', letterSpacing: '0.2px'
               }}>
-                📄
-              </div>
-
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>
-                Analyzing document
-              </h3>
-              <p style={{ margin: '0 0 24px 0', color: '#94a3b8', fontSize: '13px' }}>
-                AI is reading your file and building knowledge components
-              </p>
-
-              {/* Shimmer progress bar */}
-              <div style={{ height: '5px', background: '#f1f5f9', borderRadius: '5px', overflow: 'hidden', marginBottom: '24px' }}>
-                <div style={{
-                  height: '100%', borderRadius: '5px', width: '45%',
-                  background: 'linear-gradient(90deg, #4f46e5, #7c3aed)',
-                  animation: 'uploadSweep 1.8s ease-in-out infinite'
-                }} />
-              </div>
-
-              {/* Steps */}
-              {[
-                { label: 'Uploading file', done: true },
-                { label: 'Extracting text content', done: false },
-                { label: 'Generating AI components', done: false },
-              ].map((step, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '8px 0', borderBottom: i < 2 ? '1px solid #f8fafc' : 'none'
-                }}>
-                  <div style={{
-                    width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-                    background: '#4f46e5',
-                    animation: `uploadDot 1.2s ease-in-out infinite`,
-                    animationDelay: `${i * 0.3}s`
-                  }} />
-                  <span style={{ fontSize: '13px', color: '#475569', fontWeight: '500', textAlign: 'left' }}>{step.label}</span>
-                </div>
-              ))}
+                Generating components
+              </span>
             </div>
           </div>
         )}

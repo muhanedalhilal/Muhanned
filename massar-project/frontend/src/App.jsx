@@ -535,20 +535,21 @@ function App() {
           />
         )}
 
-        {currentPage === 'dashboard' && isLoggedIn && (
-          <Dashboard
-            t={t}
-            isRtl={isRtl}
-            currentUser={currentUser}
-            selectedCourseId={selectedCourseId}
-            setSelectedCourseId={setSelectedCourseId}
-            setCurrentPage={setCurrentPage}
-            selectedComponentsForQuiz={selectedComponentsForQuiz}
-            setSelectedComponentsForQuiz={setSelectedComponentsForQuiz}
-          />
+        {/* Dashboard stays mounted to preserve courses state — hidden via CSS when not active */}
+        {isLoggedIn && (
+          <div style={{ display: (currentPage === 'dashboard') ? 'contents' : 'none' }}>
+            <Dashboard
+              t={t}
+              isRtl={isRtl}
+              currentUser={currentUser}
+              selectedCourseId={selectedCourseId}
+              setSelectedCourseId={setSelectedCourseId}
+              setCurrentPage={setCurrentPage}
+              selectedComponentsForQuiz={selectedComponentsForQuiz}
+              setSelectedComponentsForQuiz={setSelectedComponentsForQuiz}
+            />
+          </div>
         )}
-
-
 
         {currentPage === 'admin' && isLoggedIn && isAdmin && (
           <AdminDashboard t={t} isRtl={isRtl} authToken={authToken} />

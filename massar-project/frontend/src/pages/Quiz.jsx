@@ -61,51 +61,39 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
   };
 
   /* ─────────────────────────────────────────
-     LOADING  — Duolingo-style bar animation
+     LOADING  — clean spinner card
   ───────────────────────────────────────── */
   if (loading) {
     return (
       <div style={{
-        minHeight: '80vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '40px',
+        minHeight: '80vh', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
         padding: '20px'
       }}>
-
-        {/* Icon block */}
         <div style={{
-          width: '72px', height: '72px', borderRadius: '20px',
-          background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 12px 40px rgba(79,70,229,0.35)',
-          fontSize: '32px'
+          background: 'white',
+          borderRadius: '20px',
+          padding: '48px 40px',
+          textAlign: 'center',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.06), 0 20px 50px rgba(0,0,0,0.07)',
+          border: '1px solid #e2e8f0',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
+          minWidth: '260px'
         }}>
-          🧠
-        </div>
+          {/* Circle spinner */}
+          <div style={{
+            width: '52px', height: '52px',
+            borderRadius: '50%',
+            border: '4px solid #e2e8f0',
+            borderTopColor: '#3b82f6',
+            animation: 'spinCircle 0.8s linear infinite'
+          }} />
 
-        {/* Text */}
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ color: '#0f172a', fontSize: '22px', fontWeight: '800', margin: '0 0 6px 0', letterSpacing: '-0.3px' }}>
-            Building your quiz
-          </h2>
-          <p style={{ color: '#94a3b8', fontSize: '14px', margin: 0 }}>
-            AI is crafting questions from {selectedComponents.length} topic{selectedComponents.length !== 1 ? 's' : ''}
+          {/* Label */}
+          <p style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0B1F3A' }}>
+            Generating quiz
           </p>
         </div>
-
-        {/* Animated equalizer bars */}
-        <div style={{ display: 'flex', gap: '5px', alignItems: 'flex-end', height: '36px' }}>
-          {[1, 0.5, 0.8, 0.3, 1, 0.6, 0.9, 0.4, 0.7, 1].map((h, i) => (
-            <div key={i} style={{
-              width: '5px',
-              borderRadius: '3px',
-              background: `hsl(${240 + i * 8}, 70%, 60%)`,
-              animation: `quizBar 0.9s ease-in-out infinite alternate`,
-              animationDelay: `${i * 0.09}s`,
-              height: `${h * 36}px`,
-            }} />
-          ))}
-        </div>
-
       </div>
     );
   }
@@ -115,20 +103,45 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
   ───────────────────────────────────────── */
   if (error || questions.length === 0) {
     return (
-      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', padding: '20px' }}>
-        <div style={{ fontSize: '48px' }}>😕</div>
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ color: '#0f172a', fontSize: '20px', fontWeight: '800', margin: '0 0 8px 0' }}>Quiz generation failed</h2>
-          <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 24px 0', maxWidth: '320px' }}>{error}</p>
-        </div>
-        <button onClick={navigateBack} style={{
-          display: 'flex', alignItems: 'center', gap: '8px',
-          padding: '10px 22px', borderRadius: '10px',
-          background: '#f1f5f9', border: '1px solid #e2e8f0',
-          color: '#1e293b', fontSize: '14px', fontWeight: '600', cursor: 'pointer'
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{
+          background: 'white', borderRadius: '20px', padding: '48px 40px',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.06), 0 20px 50px rgba(0,0,0,0.07)',
+          border: '1px solid #e2e8f0',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
+          maxWidth: '380px', width: '100%', textAlign: 'center'
         }}>
-          <ArrowLeft size={16} /> Back to Course
-        </button>
+          {/* Clean icon — no emoji */}
+          <div style={{
+            width: '56px', height: '56px', borderRadius: '50%',
+            background: '#fef2f2', border: '2px solid #fecaca',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <XCircle size={28} color="#ef4444" strokeWidth={1.8} />
+          </div>
+
+          <div>
+            <h2 style={{ color: '#0B1F3A', fontSize: '19px', fontWeight: '700', margin: '0 0 8px 0', letterSpacing: '-0.2px' }}>
+              Quiz generation failed
+            </h2>
+            <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: 0, lineHeight: '1.6' }}>
+              {error}
+            </p>
+          </div>
+
+          <button onClick={navigateBack} style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '11px 24px', borderRadius: '10px',
+            background: '#0B1F3A', border: 'none',
+            color: 'white', fontSize: '14px', fontWeight: '600',
+            cursor: 'pointer', letterSpacing: '0.1px', transition: 'opacity 0.2s'
+          }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            <ArrowLeft size={15} /> Back to Course
+          </button>
+        </div>
       </div>
     );
   }
