@@ -1,0 +1,28 @@
+# Environments
+venv/
+.venv/
+env/
+.env
+
+# Node
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Firebase Secrets - DO NOT COMMIT!
+serviceAccountKey.json
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
