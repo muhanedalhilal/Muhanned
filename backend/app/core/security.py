@@ -1,42 +1,103 @@
+import os
+import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.db_user import DBUser
-from app.core.supabase_client import supabase
+
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
 # This forces the requester to present an "Authorization: Bearer <token>" header
 security = HTTPBearer()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     """
-    Supabase 'Bouncer'. Blocks unauthorized requests automatically.
+    Validates the Supabase JWT via a direct HTTP call (bypasses supabase-py session issues).
+    If the user is found in Supabase but missing from PostgreSQL, auto-creates them.
     """
     token = credentials.credentials
     try:
-        # 1. Provide the token to Supabase and ask "Who is this?"
-        response = supabase.auth.get_user(token)
-        
-        if not response or not response.user:
-            raise Exception("Invalid Supabase token")
+        # 1. Verify the JWT directly via Supabase REST API
+        response = httpx.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "apikey": SUPABASE_KEY,
+            },
+            timeout=10.0
+        )
 
-        uid = response.user.id
-
-        # 2. Ask PostgreSQL: "Do we have this valid user stored in our database?"
-        user = db.query(DBUser).filter(DBUser.supabase_auth_id == uid).first()
-        
-        if not user:
+        if response.status_code != 200:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="User found in Supabase but completely missing from our PostgreSQL 'users' table!"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"Invalid or expired token (Supabase status {response.status_code})."
             )
-            
-        # 3. Success! Return the full SQL user!
+
+        sb_user = response.json()
+        uid = sb_user.get("id")
+        if not uid:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not extract user ID from token."
+            )
+
+        # 2. Look up the user in our PostgreSQL database by Supabase UID
+        user = db.query(DBUser).filter(DBUser.supabase_auth_id == uid).first()
+
+        # 3. Auto-provision: if valid in Supabase but missing from PostgreSQL, create or fix now
+        if not user:
+            email = sb_user.get("email", "")
+            metadata = sb_user.get("user_metadata") or {}
+            name = metadata.get("name") or email.split("@")[0].capitalize()
+
+            # Check if a record already exists by email (uid mismatch from re-signup)
+            existing_by_email = db.query(DBUser).filter(DBUser.email == email).first()
+            if existing_by_email:
+                print(f"Updating supabase_auth_id for existing user: {email}")
+                existing_by_email.supabase_auth_id = uid
+                try:
+                    db.commit()
+                    db.refresh(existing_by_email)
+                    user = existing_by_email
+                except Exception as db_err:
+                    db.rollback()
+                    print(f"DB update error: {db_err}")
+                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update user record.")
+            else:
+                print(f"Auto-provisioning new PostgreSQL record for Supabase UID: {uid}")
+                user = DBUser(supabase_auth_id=uid, name=name, email=email, role="student")
+                db.add(user)
+                try:
+                    db.commit()
+                    db.refresh(user)
+                    print(f"Auto-provisioned user: {email}")
+                except Exception as db_err:
+                    db.rollback()
+                    print(f"Auto-provision DB error: {db_err}")
+                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create user record in database.")
+
         return user
 
+    except HTTPException:
+        raise
     except Exception as e:
-        # Faked, expired, or invalid token gets instantly rejected
+        print(f"Authentication error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid or Expired Authentication Token. ({str(e)})"
+            detail=f"Authentication failed: {str(e)}"
         )
+
+
+def require_admin(current_user: DBUser = Depends(get_current_user)):
+    """
+    Admin-only gate. Any route that depends on this will
+    automatically reject non-admin users with a 403 Forbidden.
+    """
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Admin privileges required."
+        )
+    return current_user

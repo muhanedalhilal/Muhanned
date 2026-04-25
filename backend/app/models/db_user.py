@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.orm import relationship
 from app.database.database import Base
 from datetime import datetime
 
@@ -19,3 +20,7 @@ class DBUser(Base):
     # We can add BKT-specific data later, like 'mastery_score', 'role', etc.
     role = Column(String, default="student") 
     created_at = Column(DateTime, default=datetime.utcnow)
+# Relationships
+    courses = relationship("Course", back_populates="owner", cascade="all, delete-orphan")
+    documents = relationship("Document", back_populates="owner", cascade="all, delete-orphan")
+    knowledge_components = relationship("KnowledgeComponent", back_populates="owner", cascade="all, delete-orphan")
