@@ -113,11 +113,11 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
           maxWidth: '380px', width: '100%', textAlign: 'center'
         }}>
           <h2 style={{ color: '#0B1F3A', fontSize: '19px', fontWeight: '700', margin: '0 0 8px 0', letterSpacing: '-0.2px' }}>
-              Quiz generation failed
-            </h2>
-            <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: '0 0 4px 0', lineHeight: '1.6' }}>
-              {error}
-            </p>
+            Quiz generation failed
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: '0 0 4px 0', lineHeight: '1.6' }}>
+            {error}
+          </p>
 
           <button onClick={navigateBack} style={{
             display: 'flex', alignItems: 'center', gap: '8px',
