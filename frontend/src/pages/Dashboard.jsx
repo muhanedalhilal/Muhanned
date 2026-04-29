@@ -901,7 +901,7 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
         <div className="header-text-group">
           <h1 className="luxe-title">
             {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{ display: 'inline', marginRight: '10px' }} />}
-            {dashboardError ? (t.commandCenter || "Learning Command Center") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : t.commandCenter)}
+            {dashboardError ? (t.dashboard || "Student Dashboard") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : (t.dashboard || "Student Dashboard"))}
           </h1>
           <p className="luxe-subtitle">{t.manageCourses}</p>
         </div>

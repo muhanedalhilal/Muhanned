@@ -16,8 +16,8 @@ export default function Home({ t, goSignUp, isLoggedIn, setCurrentPage }) {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add('is-visible');
-          // Unobserve to trigger only once
-          observer.unobserve(entry.target);
+        } else {
+          entry.target.classList.remove('is-visible');
         }
       });
     }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
