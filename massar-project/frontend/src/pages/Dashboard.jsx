@@ -25,7 +25,7 @@ const CustomXAxisTick = ({ x, y, payload }) => {
   );
 };
 
-export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
+export default function Dashboard({ t, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
   const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -71,6 +71,14 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     };
     fetchUserData();
   }, []);
+
+  useEffect(() => {
+    if (currentPage === 'dashboard') {
+      api.get('/courses/').then(res => {
+        if (res.ok) setCourses(res.data);
+      });
+    }
+  }, [currentPage]);
 
   const addCourse = async (e) => {
     e.preventDefault();
@@ -342,14 +350,14 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     const total = selectedCourse.componentList.length;
     const totalProgVal = selectedCourse.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
-    const completedCount = selectedCourse.componentList.filter(c => c.progress === 100).length;
+    const completedCount = selectedCourse.componentList.filter(c => c.progress >= 90).length;
 
     // Chart Data Preparation
     const chartData = selectedCourse.componentList.map((comp) => ({
       name: comp.text,
       fullName: comp.text,
       progress: comp.progress,
-      fill: comp.progress === 100 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
+      fill: comp.progress >= 90 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
     }));
 
     return (
@@ -774,20 +782,19 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
             </div>
           </div>
 
-          {/* Panel 3: Progress Chart ONLY (Hidden until mastery tracking) */}
-          {false && (
-            <div className="luxe-panel bento-chart">
-              <h3 style={{ color: 'black', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <BarChart3 size={22} color="#3b82f6" />
-                {t.progressDiagram || 'Progress Diagram'}
-              </h3>
+          {/* Panel 3: Progress Chart ONLY (Mastery Tracking Enabled) */}
+          <div className="luxe-panel bento-chart">
+            <h3 style={{ color: 'black', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <BarChart3 size={22} color="#3b82f6" />
+              {t.progressDiagram || 'Progress Diagram'}
+            </h3>
 
-              {selectedCourse.componentList.length === 0 ? (
-                <div className="empty-state" style={{ padding: '30px', background: 'transparent', border: 'none', flex: 1 }}>
-                  <p style={{ color: '#64748b', textAlign: 'center' }}>{t.noChartComponents || 'Add components to see your progress chart.'}</p>
-                </div>
-              ) : (
-                <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px' }}>
+            {selectedCourse.componentList.length === 0 ? (
+              <div className="empty-state" style={{ padding: '30px', background: 'transparent', border: 'none', flex: 1 }}>
+                <p style={{ color: '#64748b', textAlign: 'center' }}>{t.noChartComponents || 'Add components to see your progress chart.'}</p>
+              </div>
+            ) : (
+              <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
@@ -821,7 +828,6 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
                 </div>
               )}
             </div>
-          )}
         </div>
       </div>
     );
@@ -834,7 +840,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     const total = course.componentList.length;
     const totalProgVal = course.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
-    const completedCount = course.componentList.filter(c => c.progress === 100).length;
+    const completedCount = course.componentList.filter(c => c.progress >= 90).length;
     return { total, done: completedCount, prog };
   };
 
@@ -895,7 +901,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
         <div className="header-text-group">
           <h1 className="luxe-title">
             {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{ display: 'inline', marginRight: '10px' }} />}
-            {dashboardError ? (t.commandCenter || "Learning Command Center") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : t.commandCenter)}
+            {dashboardError ? (t.dashboard || "Student Dashboard") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : (t.dashboard || "Student Dashboard"))}
           </h1>
           <p className="luxe-subtitle">{t.manageCourses}</p>
         </div>

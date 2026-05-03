@@ -31,6 +31,13 @@ def migrate():
             print("Added course_id to knowledge_components.")
         except Exception as e:
             print(f"Warning (might already exist): {e}")
+
+        # 4. Add mastery_prob to knowledge_components
+        try:
+            conn.execute(text("ALTER TABLE knowledge_components ADD COLUMN mastery_prob FLOAT DEFAULT 0.1;"))
+            print("Added mastery_prob to knowledge_components.")
+        except Exception as e:
+            print(f"Warning: mastery_prob might already exist: {e}")
             
         conn.commit()
     print("Migration complete.")

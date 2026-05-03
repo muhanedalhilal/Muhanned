@@ -71,7 +71,7 @@ def get_courses(
                     pass
             resources.append({"id": d.id, "text": d.filename, "type": d.file_type, "fileUrl": file_url})
             
-        components = [{"id": k.id, "text": k.topic, "content": k.content, "progress": 0} for k in c.knowledge_components]
+        components = [{"id": k.id, "text": k.topic, "content": k.content, "progress": int((k.mastery_prob or 0.1) * 100)} for k in c.knowledge_components]
         result.append(CourseResponse(
             id=c.id, name=c.name, icon=c.icon, color=c.color, created_at=c.created_at,
             resourceList=resources, componentList=components
@@ -137,8 +137,8 @@ def get_course_components(
     db: Session = Depends(get_db)
 ):
     # Returns KCs linked to this course
-    kcs = db.query(KnowledgeComponent).filter(KnowledgeComponent.course_id == course_id, KnowledgeComponent.user_id == current_user.id).all()
-    return [{"id": k.id, "text": k.topic, "content": k.content, "progress": 0} for k in kcs]
+    kcs = db.query(KnowledgeComponent).filter(KnowledgeComponent.course_id == course_id, KnowledgeComponent.user_id == current_user.id).order_by(KnowledgeComponent.id).all()
+    return [{"id": k.id, "text": k.topic, "content": k.content, "progress": int((k.mastery_prob or 0.1) * 100)} for k in kcs]
 
 
 class SuggestComponentsRequest(BaseModel):
@@ -232,4 +232,4 @@ def add_manual_component(
     db.commit()
     db.refresh(new_kc)
 
-    return {"id": new_kc.id, "text": new_kc.topic, "content": new_kc.content, "progress": 0}
+    return {"id": new_kc.id, "text": new_kc.topic, "content": new_kc.content, "progress": int((new_kc.mastery_prob or 0.1) * 100)}

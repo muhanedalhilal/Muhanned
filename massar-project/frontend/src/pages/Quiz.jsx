@@ -19,7 +19,13 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
   const [selectedOption, setSelectedOption] = useState(null);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
+  const [answers, setAnswers] = useState([]); // Total record
   const [quizFinished, setQuizFinished] = useState(false);
+  const [totalAnswered, setTotalAnswered] = useState(0);
+  const [isMasteryReached, setIsMasteryReached] = useState(false);
+  const [averageMastery, setAverageMastery] = useState(0);
+  const [kcMasteryMap, setKcMasteryMap] = useState({});
+  const [isPrefetching, setIsPrefetching] = useState(false);
 
   useEffect(() => {
     if (selectedComponents.length === 0) {
@@ -29,11 +35,25 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
     }
     const fetchQuiz = async () => {
       try {
-        const response = await api.post('/quiz/generate', { kc_ids: selectedComponents });
-        if (response.ok && response.data && response.data.length > 0) {
-          setQuestions(response.data);
+        const [compRes, quizRes] = await Promise.all([
+          api.get(`/courses/${selectedCourseId}/components`),
+          api.post('/quiz/generate', { kc_ids: selectedComponents })
+        ]);
+
+        if (compRes.ok && compRes.data) {
+           const selected = compRes.data.filter(c => selectedComponents.includes(c.id));
+           const sum = selected.reduce((acc, curr) => acc + curr.progress, 0);
+           setAverageMastery(selected.length > 0 ? (sum / selected.length) : 0);
+           
+           const initialMap = {};
+           selected.forEach(c => initialMap[c.id] = (c.progress || 10) / 100);
+           setKcMasteryMap(initialMap);
+        }
+
+        if (quizRes.ok && quizRes.data && quizRes.data.length > 0) {
+          setQuestions(quizRes.data);
         } else {
-          setError(response.message || 'Could not generate quiz.');
+          setError(quizRes.message || 'Could not generate quiz.');
         }
       } catch (err) {
         setError(err.message || 'Failed to connect to the quiz engine.');
@@ -44,21 +64,110 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
     fetchQuiz();
   }, [selectedComponents]);
 
-  const handleSelect = (idx) => {
+  const handleSelect = async (idx) => {
     if (showResult) return;
+    const isCorrect = idx === questions[currentIdx].answer;
     setSelectedOption(idx);
     setShowResult(true);
-    if (idx === questions[currentIdx].answer) setScore(s => s + 1);
+    if (isCorrect) setScore(s => s + 1);
+    
+    const ansRcd = {
+      kc_id: questions[currentIdx].kc_id,
+      is_correct: isCorrect
+    };
+
+    setAnswers(prev => [...prev, ansRcd]);
+    setTotalAnswered(prev => prev + 1);
+
+    // --- Optimistic BKT Update (Instant UI Feedback) ---
+    const kcId = questions[currentIdx].kc_id;
+    const p_prev = kcMasteryMap[kcId] || 0.1;
+    const P_GUESS = 0.25;
+    const P_SLIP = 0.1;
+    const P_TRANSIT = 0.1;
+    
+    let p_obs;
+    if (isCorrect) {
+        p_obs = (p_prev * (1 - P_SLIP)) / ((p_prev * (1 - P_SLIP)) + ((1 - p_prev) * P_GUESS));
+    } else {
+        p_obs = (p_prev * P_SLIP) / ((p_prev * P_SLIP) + ((1 - p_prev) * (1 - P_GUESS)));
+    }
+    
+    let p_new = p_obs + ((1 - p_obs) * P_TRANSIT);
+    if (p_new > 0.99) p_new = 0.99;
+    if (p_new < 0.01) p_new = 0.01;
+
+    const updatedMap = { ...kcMasteryMap, [kcId]: p_new };
+    setKcMasteryMap(updatedMap);
+    
+    const sumMastery = selectedComponents.reduce((acc, id) => acc + (updatedMap[id] || 0.1), 0);
+    const avgMastery = sumMastery / selectedComponents.length;
+    setAverageMastery(avgMastery * 100);
+
+    // --- Fire and forget submission to natively sync with DB ---
+    try {
+      const res = await api.post('/quiz/submit', { 
+        answers: [ansRcd],
+        selected_kc_ids: selectedComponents 
+      });
+      if (res.ok && res.data && res.data.kcs) {
+         // Backend returned authoritative values, optionally sync if needed (though math matches)
+         const allMastered = res.data.kcs.every(kc => kc.mastery_prob >= 0.90);
+         if (allMastered) {
+             setIsMasteryReached(true);
+         } else if (questions.length - currentIdx <= 4 && !isPrefetching) {
+             // Silently prefetch the next batch in the background to ensure fluent UX
+             setIsPrefetching(true);
+             api.post('/quiz/generate', { kc_ids: selectedComponents }).then(nextBatch => {
+                 if (nextBatch.ok && nextBatch.data && nextBatch.data.length > 0) {
+                     setQuestions(prev => [...prev, ...nextBatch.data]);
+                 }
+                 setIsPrefetching(false);
+             });
+         }
+      }
+    } catch(e) {
+      console.error("Single answer sync failed", e);
+    }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (isMasteryReached) {
+       setQuizFinished(true); // Complete automatically if we hit peak mastery!
+       return;
+    }
+
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(i => i + 1);
       setSelectedOption(null);
       setShowResult(false);
     } else {
-      setQuizFinished(true);
+      // Edge case: they answered so incredibly fast that the background prefetch hasn't finished yet.
+      if (isPrefetching) return; // Do nothing, let the inline button block it temporarily
+      
+      // Fallback: If prefetch failed or didn't trigger, fetch once more synchronously
+      setIsPrefetching(true);
+      try {
+        const nextBatch = await api.post('/quiz/generate', { kc_ids: selectedComponents });
+        if (nextBatch.ok && nextBatch.data && nextBatch.data.length > 0) {
+           setQuestions(prev => [...prev, ...nextBatch.data]);
+           setCurrentIdx(i => i + 1);
+           setSelectedOption(null);
+           setShowResult(false);
+        } else {
+           setQuizFinished(true); // Fallback if no questions
+        }
+      } catch (err) {
+        console.error("Failed to generate more quiz questions:", err);
+        setQuizFinished(true);
+      } finally {
+        setIsPrefetching(false);
+      }
     }
+  };
+
+  const handleManualEnd = () => {
+    setQuizFinished(true);
   };
 
   /* ─────────────────────────────────────────
@@ -92,7 +201,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
 
           {/* Label */}
           <p style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0B1F3A' }}>
-            Generating quiz
+            {t.quizGenerating || 'Generating quiz'}
           </p>
         </div>
       </div>
@@ -113,7 +222,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
           maxWidth: '380px', width: '100%', textAlign: 'center'
         }}>
           <h2 style={{ color: '#0B1F3A', fontSize: '19px', fontWeight: '700', margin: '0 0 8px 0', letterSpacing: '-0.2px' }}>
-            Quiz generation failed
+            {t.quizFailed || 'Quiz generation failed'}
           </h2>
           <p style={{ color: '#94a3b8', fontSize: '13.5px', margin: '0 0 4px 0', lineHeight: '1.6' }}>
             {error}
@@ -129,7 +238,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
             onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            <ArrowLeft size={15} /> Back to Course
+            <ArrowLeft size={15} /> {t.quizBackToCourse || 'Back to Course'}
           </button>
         </div>
       </div>
@@ -140,7 +249,8 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
      RESULTS  — clean scorecard
   ───────────────────────────────────────── */
   if (quizFinished) {
-    const pct = Math.round((score / questions.length) * 100);
+    const actTotal = Math.max(totalAnswered, 1); // Avoid division by zero
+    const pct = Math.round((score / actTotal) * 100);
     const msg = pct >= 80 ? 'Excellent work!' : pct >= 50 ? 'Good effort — keep going!' : 'Keep studying, you\'ll get there!';
     const accent = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
 
@@ -160,7 +270,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
           }}>
             <CheckCircle2 size={28} color={accent} strokeWidth={1.8} />
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px 0' }}>Quiz Complete</h1>
+          <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px 0' }}>{t.quizComplete || 'Quiz Complete'}</h1>
           <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 32px 0' }}>{msg}</p>
 
           {/* Score circle */}
@@ -175,16 +285,16 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
             }}>
               <span style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', lineHeight: 1 }}>{pct}%</span>
-              <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginTop: '2px' }}>score</span>
+              <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginTop: '2px' }}>{t.quizScore || 'score'}</span>
             </div>
           </div>
 
           {/* Stats */}
           <div style={{ display: 'flex', gap: '12px', marginBottom: '32px' }}>
             {[
-              { label: 'Correct', val: score, color: '#10b981', bg: '#f0fdf4' },
-              { label: 'Wrong', val: questions.length - score, color: '#ef4444', bg: '#fef2f2' },
-              { label: 'Total', val: questions.length, color: '#3b82f6', bg: '#eff6ff' },
+              { label: t.quizCorrect || 'Correct', val: score, color: '#10b981', bg: '#f0fdf4' },
+              { label: t.quizWrong || 'Wrong', val: totalAnswered - score, color: '#ef4444', bg: '#fef2f2' },
+              { label: t.quizTotal || 'Total', val: totalAnswered, color: '#3b82f6', bg: '#eff6ff' },
             ].map((s, i) => (
               <div key={i} style={{ flex: 1, padding: '14px 8px', borderRadius: '14px', background: s.bg }}>
                 <div style={{ fontSize: '22px', fontWeight: '900', color: s.color }}>{s.val}</div>
@@ -203,7 +313,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
             onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            <ArrowLeft size={16} /> Return to Course
+            <ArrowLeft size={16} /> {t.quizReturn || 'Return to Course'}
           </button>
         </div>
       </div>
@@ -214,38 +324,37 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
      ACTIVE QUIZ — clean card design
   ───────────────────────────────────────── */
   const currentQ = questions[currentIdx];
-  const progress = (currentIdx / questions.length) * 100;
   const LETTERS = ['A', 'B', 'C', 'D'];
 
   return (
     <div style={{ maxWidth: '680px', margin: '0 auto', padding: '0 16px 40px', animation: 'fadeIn 0.3s ease' }}>
 
-      {/* Top bar */}
+       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px', paddingTop: '8px' }}>
-        <button onClick={navigateBack} style={{
+        <button onClick={handleManualEnd} style={{
           display: 'flex', alignItems: 'center', gap: '6px',
           padding: '8px 14px', borderRadius: '10px',
           background: 'white', border: '1px solid #e2e8f0',
           color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)', flexShrink: 0
         }}>
-          <ArrowLeft size={15} /> End
+          <ArrowLeft size={15} /> {t.quizEnd || 'End'}
         </button>
 
-        {/* Progress bar */}
-        <div style={{ flex: 1, height: '8px', background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden' }}>
+        {/* Dynamic Mastery Progress bar */}
+        <div style={{ flex: 1, height: '8px', background: '#f1f5f9', borderRadius: '8px', overflow: 'hidden', position: 'relative' }}>
           <div style={{
             height: '100%', borderRadius: '8px',
-            background: 'linear-gradient(90deg, #4f46e5, #7c3aed)',
-            width: `${progress}%`, transition: 'width 0.5s ease'
+            background: 'linear-gradient(90deg, #10b981, #059669)',
+            width: `${Math.min(Math.max(averageMastery, 0), 100)}%`, transition: 'width 0.5s ease'
           }} />
         </div>
 
         <span style={{
-          fontSize: '13px', fontWeight: '700', color: '#4f46e5',
-          background: '#eef2ff', padding: '5px 12px', borderRadius: '20px', flexShrink: 0
+          fontSize: '13px', fontWeight: '700', color: '#059669',
+          background: '#ecfdf5', padding: '5px 12px', borderRadius: '20px', flexShrink: 0
         }}>
-          {currentIdx + 1}/{questions.length}
+          {Math.round(averageMastery)}% {t.quizMastery || 'Mastery'}
         </span>
       </div>
 
@@ -259,7 +368,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
         {/* Question header */}
         <div style={{ padding: '28px 32px', borderBottom: '1px solid #f8fafc' }}>
           <div style={{ display: 'inline-block', padding: '3px 10px', borderRadius: '6px', background: '#eef2ff', color: '#4f46e5', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '14px' }}>
-            Question {currentIdx + 1}
+            {t.quizQuestion || 'Question'} {currentIdx + 1}
           </div>
           <p style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#0f172a', lineHeight: '1.55' }}>
             {currentQ.question}
@@ -338,23 +447,44 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
               }
               <span style={{ fontSize: '13px', fontWeight: '600', color: selectedOption === currentQ.answer ? '#166534' : '#991b1b', lineHeight: '1.5' }}>
                 {selectedOption === currentQ.answer
-                  ? 'Correct! Great job.'
-                  : `Incorrect. The correct answer is: ${currentQ.options[currentQ.answer]}`
+                  ? (t.quizCorrectTitle || 'Correct! Great job.')
+                  : `${t.quizIncorrectTitle || 'Incorrect. The correct answer is: '}${currentQ.options[currentQ.answer]}`
                 }
               </span>
             </div>
 
-            <button onClick={handleNext} style={{
+            <button onClick={handleNext} disabled={isPrefetching && currentIdx === questions.length - 1} style={{
               width: '100%', padding: '13px', borderRadius: '12px',
-              background: '#4f46e5', color: 'white',
+              background: (isPrefetching && currentIdx === questions.length - 1) ? '#94a3b8' : '#4f46e5', color: 'white',
               border: 'none', fontSize: '15px', fontWeight: '700',
-              cursor: 'pointer', transition: 'opacity 0.2s'
+              cursor: (isPrefetching && currentIdx === questions.length - 1) ? 'default' : 'pointer', transition: 'opacity 0.2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
             }}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              onMouseEnter={e => { if (!(isPrefetching && currentIdx === questions.length - 1)) e.currentTarget.style.opacity = '0.88'; }}
+              onMouseLeave={e => { if (!(isPrefetching && currentIdx === questions.length - 1)) e.currentTarget.style.opacity = '1'; }}
             >
-              {currentIdx < questions.length - 1 ? 'Next Question →' : 'View Results →'}
+              {isPrefetching && currentIdx === questions.length - 1 ? (
+                <>
+                  <div style={{ width: '16px', height: '16px', border: '2px solid white', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spinCircle 0.8s linear infinite' }} />
+                  {t.quizLoading || 'Loading...'}
+                </>
+              ) : ((currentIdx < questions.length - 1 || !isMasteryReached) ? (t.quizNextBtn || 'Next Question →') : (t.quizResultsBtn || 'View Results →'))}
             </button>
+            
+            {(!isMasteryReached && currentIdx < questions.length) && (
+              <button onClick={handleManualEnd} style={{
+                width: '100%', padding: '13px', borderRadius: '12px',
+                background: 'transparent', color: '#64748b',
+                border: '1px solid #e2e8f0', fontSize: '14px', fontWeight: '600',
+                cursor: 'pointer', transition: 'all 0.2s', marginTop: '10px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+              }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#0f172a'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
+              >
+                {t.quizEndResultsBtn || 'End Quiz and View Results'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -363,7 +493,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
       <div style={{ textAlign: 'center', marginTop: '20px' }}>
         <span style={{ fontSize: '13px', color: '#94a3b8', fontWeight: '500', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
           <CheckCircle2 size={13} color="#10b981" />
-          {score} correct so far
+          {score} {t.quizCorrectSoFar || 'correct so far'}
         </span>
       </div>
 

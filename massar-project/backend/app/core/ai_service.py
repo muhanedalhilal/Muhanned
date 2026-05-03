@@ -47,9 +47,10 @@ def generate_kcs_from_text(text: str) -> list[dict]:
         print(f"Error generating KCs: {e}")
         return []
 
-def generate_quiz_from_text(text: str) -> list[dict]:
+def generate_quiz_from_kcs(kcs: list[dict]) -> list[dict]:
     """
-    Takes combined text from selected KCs and generates 5 Multiple Choice Questions.
+    Takes a list of Knowledge Components and generates 5 Multiple Choice Questions.
+    Each question must be explicitly linked to one of the provided kc_ids.
     """
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
@@ -58,18 +59,26 @@ def generate_quiz_from_text(text: str) -> list[dict]:
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel("gemini-2.5-flash")
     
+    # Format KCs for the prompt
+    kcs_text = "\n\n".join([f"ID: {kc['id']}\nTopic: {kc['topic']}\nContent: {kc['content']}\nMastery Probability: {kc['mastery_prob']}" for kc in kcs])
+
     prompt = f"""
     You are an expert AI quiz generator.
-    Based strictly on the following text, create 5 multiple choice questions.
+    Based strictly on the following knowledge components, create 5 multiple choice questions.
+    IMPORTANT: The 'Mastery Probability' (0.0 to 1.0) indicates how well the student understands the topic. 
+    - If Mastery Probability is low (e.g., < 0.4), generate questions that test fundamental, easy concepts.
+    - If Mastery Probability is medium (e.g., 0.4 to 0.7), generate moderately difficult questions.
+    - If Mastery Probability is high (e.g., > 0.7), generate hard, advanced questions requiring deep critical thinking.
+    
     Return the result strictly as a JSON array of objects.
     Each object must have:
     - "question": the question text
     - "options": an array of exactly 4 string options
     - "answer": the index (0-3) of the correct option
-    Do not wrap the JSON in markdown blocks, just return raw JSON so it can be parsed.
+    - "kc_id": the integer ID of the knowledge component this question tests
 
-    Text:
-    {text}
+    Knowledge Components:
+    {kcs_text}
     """
 
     try:
