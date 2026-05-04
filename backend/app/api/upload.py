@@ -1,7 +1,7 @@
 import os
 import shutil
 import uuid
-import fitz # PyMuPDF
+import PyPDF2
 from pptx import Presentation
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, status, Form
 from sqlalchemy.orm import Session
@@ -24,9 +24,10 @@ def extract_text_from_file(file_path: str, ext: str) -> str:
     text = ""
     try:
         if ext == ".pdf":
-            doc = fitz.open(file_path)
-            for page in doc:
-                text += page.get_text() + "\n"
+            with open(file_path, 'rb') as f:
+                reader = PyPDF2.PdfReader(f)
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
         elif ext in [".ppt", ".pptx"]:
             prs = Presentation(file_path)
             for slide in prs.slides:
