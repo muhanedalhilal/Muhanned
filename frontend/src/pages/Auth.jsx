@@ -149,7 +149,7 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
             });
             if (meRes.ok) {
               const meData = await meRes.json();
-              onSecureLogin(meData.email || formData.email, meData.name, data.access_token, meData.user_role || 'student');
+              onSecureLogin(meData.email || formData.email, meData.name, data.access_token, meData.role || 'student');
             } else {
               onSecureLogin(formData.email, '', data.access_token, 'student');
             }

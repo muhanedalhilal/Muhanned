@@ -60,7 +60,7 @@ const translations = {
     activeCourses: "Active Courses",
     completedCourses: "Completed Courses",
     searchPlaceholder: "Search courses...",
-    backToDashboard: "Back to Command Center",
+    backToDashboard: "Back to Student Dashboard",
     addTask: "Add new task...",
     noTasksYet: "No tasks added yet.",
     addComponent: "Add new component...",
@@ -162,7 +162,30 @@ const translations = {
     optionalField: "Optional",
     addResourcesOptional: "Add Resources (PDF/PPTX) — Optional",
     aiImageNotice: "AI will automatically generate a cover image for this course",
-    creatingCourse: "Creating..."
+    creatingCourse: "Creating...",
+    // Quiz Translations
+    quizEnd: "End",
+    quizMastery: "Mastery",
+    quizQuestion: "Question",
+    quizCorrectTitle: "Correct! Great job.",
+    quizIncorrectTitle: "Incorrect. The correct answer is: ",
+    quizNextBtn: "Next Question →",
+    quizResultsBtn: "View Results →",
+    quizEndResultsBtn: "End Quiz and View Results",
+    quizLoading: "Loading...",
+    quizGenerating: "Generating quiz",
+    quizFailed: "Quiz generation failed",
+    quizBackToCourse: "Back to Course",
+    quizComplete: "Quiz Complete",
+    quizMsgExcellent: "Excellent work!",
+    quizMsgGood: "Good effort — keep going!",
+    quizMsgKeep: "Keep studying, you'll get there!",
+    quizScore: "score",
+    quizCorrect: "Correct",
+    quizWrong: "Wrong",
+    quizTotal: "Total",
+    quizReturn: "Return to Course",
+    quizCorrectSoFar: "correct so far"
   },
   ar: {
     appName: "مسار",
@@ -196,17 +219,17 @@ const translations = {
     dashWelcome: "مرحباً بك في لوحة تحكمك الذكية",
     dashSub: "بيانات تعلّمك محفوظة وآمنة للوصول السريع.",
     statMastery: "مستوى الإتقان الكلي",
-    statCourses: "المقررات النشطة",
+    statCourses: "المواد النشطة",
     statTasks: "المهام المستحقة",
     commandCenter: "مركز إدارة التعلم",
-    manageCourses: "نظّم مقرراتك وتتبّع تقدمك بسهولة.",
-    addCourse: "إضافة مقرر",
-    courseName: "اسم المقرر",
+    manageCourses: "نظّم موادك وتتبّع تقدمك بسهولة.",
+    addCourse: "إضافة مادة",
+    courseName: "اسم المادة",
     componentsCompleted: "عنصر مكتمل",
     noCourses: "لا توجد مسارات بعد. ابدأ مسارك الأول!",
     activeCourses: "المواد الحالية",
     completedCourses: "المواد المكتملة",
-    searchPlaceholder: "البحث في المقررات...",
+    searchPlaceholder: "البحث في المواد...",
     backToDashboard: "رجوع للوحة الرئيسية",
     addTask: "إضافة مهمة جديدة...",
     noTasksYet: "لا توجد مهام مسندة حالياً.",
@@ -310,14 +333,41 @@ const translations = {
     optionalField: "اختياري",
     addResourcesOptional: "إرفاق مصادر (PDF/PPTX) — اختياري",
     aiImageNotice: "سيقوم الذكاء الاصطناعي بإنشاء صورة غلاف تلقائياً لهذا المقرر",
-    creatingCourse: "جاري الإنشاء..."
+    creatingCourse: "جاري الإنشاء...",
+    // Quiz Translations
+    quizEnd: "إنهاء",
+    quizMastery: "مستوى الإتقان",
+    quizQuestion: "السؤال",
+    quizCorrectTitle: "إجابة صحيحة! أحسنت.",
+    quizIncorrectTitle: "إجابة خاطئة. الإجابة الصحيحة هي: ",
+    quizNextBtn: "السؤال التالي ←",
+    quizResultsBtn: "عرض النتائج ←",
+    quizEndResultsBtn: "إنهاء وعرض النتائج",
+    quizLoading: "جاري التحميل...",
+    quizGenerating: "جاري إنشاء الاختبار",
+    quizFailed: "فشل إنشاء الاختبار",
+    quizBackToCourse: "العودة للمادة",
+    quizComplete: "اكتمل الاختبار",
+    quizMsgExcellent: "عمل ممتاز!",
+    quizMsgGood: "مجهود جيد - استمر!",
+    quizMsgKeep: "استمر في التعلم، ستصل لهدفك!",
+    quizScore: "النتيجة",
+    quizCorrect: "صحيحة",
+    quizWrong: "خاطئة",
+    quizTotal: "المجموع",
+    quizReturn: "العودة للمادة",
+    quizCorrectSoFar: "إجابات صحيحة حتى الآن"
   }
 };
 
 function App() {
   // Global State
-  const [language, setLanguage] = useState('en');
+  const [language, setLanguage] = useState(() => localStorage.getItem('massar_lang') || 'en');
   const t = translations[language];
+
+  useEffect(() => {
+    localStorage.setItem('massar_lang', language);
+  }, [language]);
 
   // Security State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -344,7 +394,7 @@ function App() {
         setAuthToken(sessionData.token);
         setCurrentUser({ name: sessionData.name, email: sessionData.email });
         setIsAdmin(sessionData.role === 'admin');
-        setCurrentPage('dashboard');
+        setCurrentPage(sessionData.role === 'admin' ? 'admin' : 'dashboard');
       } catch (error) {
         console.error("Failed to parse session", error);
         localStorage.removeItem('massar_auth');
@@ -383,7 +433,7 @@ function App() {
           headers: { 'Authorization': `Bearer ${accessToken}` }
         }).then(res => res.json())
           .then(meData => {
-            handleSecureLogin(meData.email, meData.name, accessToken, meData.user_role || 'student');
+            handleSecureLogin(meData.email, meData.name, accessToken, meData.role || 'student');
           })
           .catch(() => {
             handleSecureLogin('', '', accessToken, 'student');
@@ -441,7 +491,7 @@ function App() {
     setCurrentUser({ name: defaultName, email: email || 'student@massar.edu' });
     // Use the actual role from the backend instead of guessing from email
     setIsAdmin(role === 'admin');
-    setCurrentPage('dashboard');
+    setCurrentPage(role === 'admin' ? 'admin' : 'dashboard');
 
     // Save to local storage to persist session
     localStorage.setItem('massar_auth', JSON.stringify({
@@ -465,7 +515,15 @@ function App() {
   const isRtl = language === 'ar';
 
   if (isInitializing) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: 'white' }}>Loading System...</div>;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#f8fafc' }}>
+        <div style={{
+          width: '36px', height: '36px', borderRadius: '50%',
+          border: '3px solid rgba(59, 130, 246, 0.15)', borderTopColor: '#3b82f6',
+          animation: 'spinCircle 0.8s linear infinite'
+        }} />
+      </div>
+    );
   }
 
   return (
@@ -505,9 +563,11 @@ function App() {
 
           {isLoggedIn && (
             <>
-              <button className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
-                <LayoutDashboard size={16} /> {t.dashboard}
-              </button>
+              {!isAdmin && (
+                <button className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                  <LayoutDashboard size={16} /> {t.dashboard}
+                </button>
+              )}
 
               {isAdmin && (
                 <button className={`nav-link ${currentPage === 'admin' ? 'active' : ''}`} onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
@@ -570,12 +630,13 @@ function App() {
         )}
 
         {/* Dashboard stays mounted to preserve courses state — hidden via CSS when not active */}
-        {isLoggedIn && (
+        {isLoggedIn && !isAdmin && (
           <div style={{ display: (currentPage === 'dashboard') ? 'contents' : 'none' }}>
             <Dashboard
               t={t}
               isRtl={isRtl}
               currentUser={currentUser}
+              currentPage={currentPage}
               selectedCourseId={selectedCourseId}
               setSelectedCourseId={setSelectedCourseId}
               setCurrentPage={setCurrentPage}

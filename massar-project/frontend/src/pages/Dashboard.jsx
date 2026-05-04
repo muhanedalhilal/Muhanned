@@ -25,7 +25,7 @@ const CustomXAxisTick = ({ x, y, payload }) => {
   );
 };
 
-export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
+export default function Dashboard({ t, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
   const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -39,6 +39,10 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
   const [deletingResId, setDeletingResId] = useState(null);
   const [isAddingComponent, setIsAddingComponent] = useState(false);
   const [newComponentName, setNewComponentName] = useState('');
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const [isSavingComponent, setIsSavingComponent] = useState(false);
+  const [componentValidationError, setComponentValidationError] = useState('');
 
   const [dashboardUser, setDashboardUser] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -100,6 +104,14 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     };
     fetchUserData();
   }, []);
+
+  useEffect(() => {
+    if (currentPage === 'dashboard') {
+      api.get('/courses/').then(res => {
+        if (res.ok) setCourses(res.data);
+      });
+    }
+  }, [currentPage]);
 
   const addCourse = async (e) => {
     e.preventDefault();
@@ -270,20 +282,77 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     }));
   };
 
-  const handleSaveComponent = (courseId) => {
-    if (newComponentName && newComponentName.trim()) {
-      setCourses(courses.map(course => {
-        if (course.id !== courseId) return course;
-        return {
-          ...course,
-          componentList: [...(course.componentList || []), { id: Date.now(), text: newComponentName.trim(), progress: 0 }]
-        };
-      }));
-    }
+  const openAddComponent = async (courseId, componentList) => {
+    setIsAddingComponent(true);
     setNewComponentName('');
-    setIsAddingComponent(false);
+    setComponentValidationError('');
+    setAiSuggestions([]);
+    setIsFetchingSuggestions(true);
+    try {
+      const existingTopics = (componentList || []).map(c => c.text);
+      const res = await api.post(`/courses/${courseId}/suggest-components`, { existing_topics: existingTopics });
+      if (res.ok && res.data.suggestions) {
+        setAiSuggestions(res.data.suggestions);
+      }
+    } catch (_) {}
+    setIsFetchingSuggestions(false);
   };
 
+  const handleSaveManualComponent = async (courseId) => {
+    const topic = newComponentName.trim();
+    if (!topic) return;
+    setIsSavingComponent(true);
+    setComponentValidationError('');
+    try {
+      const res = await api.post(`/courses/${courseId}/add-manual-component`, { topic });
+      if (res.ok) {
+        setCourses(courses.map(course => {
+          if (course.id !== courseId) return course;
+          return {
+            ...course,
+            componentList: [...(course.componentList || []), { id: res.data.id, text: res.data.text, content: res.data.content, progress: 0 }]
+          };
+        }));
+        setNewComponentName('');
+        setIsAddingComponent(false);
+        setAiSuggestions([]);
+        setComponentValidationError('');
+      } else {
+        // 422 → detail is the validation error reason
+        const reason = res.data?.detail || res.message || 'This topic does not seem related to this course.';
+        setComponentValidationError(reason);
+      }
+    } catch (err) {
+      setComponentValidationError('Something went wrong. Please try again.');
+    }
+    setIsSavingComponent(false);
+  };
+
+  const handlePickSuggestion = async (courseId, suggestion) => {
+    // Suggestions are already AI-validated; directly add via manual endpoint so they get saved to DB
+    setIsSavingComponent(true);
+    setComponentValidationError('');
+    try {
+      const res = await api.post(`/courses/${courseId}/add-manual-component`, { topic: suggestion.topic });
+      if (res.ok) {
+        setCourses(courses.map(course => {
+          if (course.id !== courseId) return course;
+          return {
+            ...course,
+            componentList: [...(course.componentList || []), { id: res.data.id, text: res.data.text, content: res.data.content, progress: 0 }]
+          };
+        }));
+        setIsAddingComponent(false);
+        setAiSuggestions([]);
+        setNewComponentName('');
+      } else {
+        setComponentValidationError(res.data?.detail || 'Failed to add suggestion.');
+      }
+    } catch (err) {
+      setComponentValidationError('Something went wrong.');
+    }
+    setIsSavingComponent(false);
+  };
 
 
   // Render Course Detail View
@@ -338,14 +407,14 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     const total = selectedCourse.componentList.length;
     const totalProgVal = selectedCourse.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
-    const completedCount = selectedCourse.componentList.filter(c => c.progress === 100).length;
+    const completedCount = selectedCourse.componentList.filter(c => c.progress >= 90).length;
 
     // Chart Data Preparation
     const chartData = selectedCourse.componentList.map((comp) => ({
       name: comp.text,
       fullName: comp.text,
       progress: comp.progress,
-      fill: comp.progress === 100 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
+      fill: comp.progress >= 90 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
     }));
 
     return (
@@ -635,33 +704,120 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
             </div>
 
 
-            {/* Add Component Button OR Input */}
+            {/* Add Component Button OR AI-Powered Input */}
             {isAddingComponent ? (
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
+              <div style={{
+                marginTop: '10px',
+                background: 'rgba(59,130,246,0.03)',
+                padding: '18px',
+                borderRadius: '14px',
+                border: '1px solid rgba(59,130,246,0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px'
+              }}>
+
+                {/* AI Suggestions */}
+                <div>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                    AI Suggestions
+                  </p>
+                  {isFetchingSuggestions ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '18px 0' }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        border: '3px solid rgba(59,130,246,0.15)',
+                        borderTopColor: '#3b82f6',
+                        animation: 'spinCircle 0.75s linear infinite'
+                      }} />
+                    </div>
+                  ) : aiSuggestions.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {aiSuggestions.map((s, i) => (
+                        <button
+                          key={i}
+                          disabled={isSavingComponent}
+                          onClick={() => handlePickSuggestion(selectedCourse.id, s)}
+                          style={{
+                            background: 'rgba(59,130,246,0.05)',
+                            border: '1px solid rgba(59,130,246,0.2)',
+                            borderRadius: '10px',
+                            padding: '10px 16px',
+                            cursor: isSavingComponent ? 'not-allowed' : 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.2s ease',
+                            width: '100%',
+                          }}
+                          onMouseOver={e => { if (!isSavingComponent) { e.currentTarget.style.background = 'rgba(59,130,246,0.1)'; e.currentTarget.style.borderColor = '#3b82f6'; } }}
+                          onMouseOut={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.05)'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)'; }}
+                        >
+                          <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e3a8a' }}>{s.topic}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>No suggestions available. Type a topic below.</p>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.08)' }} />
+                  <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>or type your own</span>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.08)' }} />
+                </div>
+
+                {/* Manual Input */}
                 <input
                   type="text"
                   value={newComponentName}
-                  onChange={(e) => setNewComponentName(e.target.value)}
+                  onChange={(e) => { setNewComponentName(e.target.value); setComponentValidationError(''); }}
                   placeholder={t.addComponent || 'Component name...'}
                   className="input-luxe"
                   autoFocus
-                  style={{ background: '#ffffff', color: '#0f172a', border: '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
+                  disabled={isSavingComponent}
+                  style={{ background: '#ffffff', color: '#0f172a', border: componentValidationError ? '1.5px solid #ef4444' : '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveComponent(selectedCourse.id);
-                    if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); }
+                    if (e.key === 'Enter') handleSaveManualComponent(selectedCourse.id);
+                    if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); setAiSuggestions([]); setComponentValidationError(''); }
                   }}
                 />
+
+                {/* Validation Error */}
+                {componentValidationError && (
+                  <div style={{
+                    background: 'rgba(239,68,68,0.06)',
+                    border: '1px solid rgba(239,68,68,0.25)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px'
+                  }}>
+                    <span style={{ fontSize: '15px', marginTop: '1px' }}>⚠️</span>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#dc2626', fontWeight: '500' }}>
+                      {componentValidationError}
+                    </p>
+                  </div>
+                )}
+
+                {/* Action buttons */}
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     className="btn-luxe primary hover-lift"
-                    onClick={() => handleSaveComponent(selectedCourse.id)}
-                    style={{ padding: '8px', flex: 1, justifyContent: 'center' }}
+                    onClick={() => handleSaveManualComponent(selectedCourse.id)}
+                    disabled={isSavingComponent || !newComponentName.trim()}
+                    style={{ padding: '8px', flex: 1, justifyContent: 'center', opacity: (!newComponentName.trim() || isSavingComponent) ? 0.5 : 1 }}
                   >
-                    {t.save || 'Save'}
+                    {isSavingComponent ? <Loader2 size={16} className="spin-icon" style={{ marginRight: '6px' }} /> : null}
+                    {isSavingComponent ? 'Checking...' : (t.save || 'Save')}
                   </button>
                   <button
                     className="btn-luxe hover-lift"
-                    onClick={() => { setIsAddingComponent(false); setNewComponentName(''); }}
+                    onClick={() => { setIsAddingComponent(false); setNewComponentName(''); setAiSuggestions([]); setComponentValidationError(''); }}
+                    disabled={isSavingComponent}
                     style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
                     {t.cancel || 'Cancel'}
@@ -671,7 +827,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
             ) : (
               <button
                 className="btn-luxe hover-lift"
-                onClick={() => setIsAddingComponent(true)}
+                onClick={() => openAddComponent(selectedCourse.id, selectedCourse.componentList)}
                 style={{
                   background: 'rgba(0, 0, 0, 0.03)',
                   border: '1px dashed rgba(0, 0, 0, 0.15)',
@@ -737,7 +893,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
             </div>
           </div>
 
-          {/* Panel 3: Progress Chart ONLY */}
+          {/* Panel 3: Progress Chart ONLY (Mastery Tracking Enabled) */}
           <div className="luxe-panel bento-chart">
             <h3 style={{ color: 'black', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <BarChart3 size={22} color="#3b82f6" />
@@ -750,39 +906,39 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
               </div>
             ) : (
               <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                    <XAxis
-                      dataKey="name"
-                      stroke="#94a3b8"
-                      interval={0}
-                      height={60}
-                      tick={<CustomXAxisTick />}
-                    />
-                    <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} tickFormatter={(val) => `${val}%`} />
-                    <Tooltip
-                      cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-                              <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p>
-                              <p style={{ margin: 0, color: payload[0].payload.fill }}>
-                                Progress: {payload[0].value}%
-                              </p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar dataKey="progress" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-          </div>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        stroke="#94a3b8"
+                        interval={0}
+                        height={60}
+                        tick={<CustomXAxisTick />}
+                      />
+                      <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} tickFormatter={(val) => `${val}%`} />
+                      <Tooltip
+                        cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                                <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p>
+                                <p style={{ margin: 0, color: payload[0].payload.fill }}>
+                                  Progress: {payload[0].value}%
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="progress" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
         </div>
       </div>
     );
@@ -795,7 +951,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
     const total = course.componentList.length;
     const totalProgVal = course.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
-    const completedCount = course.componentList.filter(c => c.progress === 100).length;
+    const completedCount = course.componentList.filter(c => c.progress >= 90).length;
     return { total, done: completedCount, prog };
   };
 
@@ -870,7 +1026,7 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
         <div className="header-text-group">
           <h1 className="luxe-title">
             {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{ display: 'inline', marginRight: '10px' }} />}
-            {dashboardError ? (t.commandCenter || "Learning Command Center") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : t.commandCenter)}
+            {dashboardError ? (t.dashboard || "Student Dashboard") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : (t.dashboard || "Student Dashboard"))}
           </h1>
           <p className="luxe-subtitle">{t.manageCourses}</p>
         </div>

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database.database import Base
@@ -26,7 +26,9 @@ class KnowledgeComponent(Base):
     # Link back to the course
     course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=True)
     
-    # BKT/Spaced repetition fields can be added here later (e.g., mastery_level)
+    # BKT mastery level, range 0.0 to 1.0. Starts at 0.1
+    mastery_prob = Column(Float, default=0.1)
+
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
