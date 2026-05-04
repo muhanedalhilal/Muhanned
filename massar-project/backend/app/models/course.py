@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database.database import Base
@@ -8,8 +8,10 @@ class Course(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
+    description = Column(Text, nullable=True, default="")
     icon = Column(String, default="book")
     color = Column(String, default="#3b82f6")
+    image_url = Column(Text, nullable=True)
     
     # Link back to the user who created this course
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)

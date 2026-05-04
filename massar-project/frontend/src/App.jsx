@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import Quiz from './pages/Quiz';
+import ResetPassword from './pages/ResetPassword';
+import ForgotPassword from './pages/ForgotPassword';
 import Footer from './components/Footer';
 import { User, Users, Settings, Menu, X, Globe, ChevronDown, Home as HomeIcon, LayoutDashboard, LogOut, LogIn } from 'lucide-react';
 import { api } from './services/api';
@@ -155,7 +157,12 @@ const translations = {
     adminActive: "Active",
     saveTitle: "Save",
     cancelTitle: "Cancel",
-    noChartComponents: "Add components to see your progress chart."
+    noChartComponents: "Add components to see your progress chart.",
+    courseDescriptionPlaceholder: "Description of the course (optional)",
+    optionalField: "Optional",
+    addResourcesOptional: "Add Resources (PDF/PPTX) — Optional",
+    aiImageNotice: "AI will automatically generate a cover image for this course",
+    creatingCourse: "Creating..."
   },
   ar: {
     appName: "مسار",
@@ -298,7 +305,12 @@ const translations = {
     adminActive: "نشط",
     saveTitle: "حفظ",
     cancelTitle: "إلغاء",
-    noChartComponents: "أضف بعض الأقسام لعرض رسم التقدم البياني الخاص بك."
+    noChartComponents: "أضف بعض الأقسام لعرض رسم التقدم البياني الخاص بك.",
+    courseDescriptionPlaceholder: "وصف المقرر (اختياري)",
+    optionalField: "اختياري",
+    addResourcesOptional: "إرفاق مصادر (PDF/PPTX) — اختياري",
+    aiImageNotice: "سيقوم الذكاء الاصطناعي بإنشاء صورة غلاف تلقائياً لهذا المقرر",
+    creatingCourse: "جاري الإنشاء..."
   }
 };
 
@@ -343,6 +355,10 @@ function App() {
         setCurrentPage('auth');
         setIsLoginView(true);
       }
+      // If ?page=reset-password is in URL, open the reset password page
+      if (window.location.search.includes('page=reset-password')) {
+        setCurrentPage('reset-password');
+      }
     }
   }, []);
 
@@ -360,7 +376,7 @@ function App() {
         localStorage.setItem('massar_token', accessToken);
         // Clear the hash so it doesn't stay in the URL
         window.history.replaceState(null, '', window.location.pathname);
-        
+
         // Fetch real profile from backend
         const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
         fetch(`${API_URL}/users/me`, {
@@ -380,10 +396,10 @@ function App() {
     const initAuth = async () => {
       // Don't init auto-login if URL has hash with access_token, the OAuth effect will handle it
       if (window.location.hash && window.location.hash.includes('access_token')) {
-         setIsInitializing(false);
-         return;
+        setIsInitializing(false);
+        return;
       }
-      
+
       const token = localStorage.getItem('massar_token');
       if (token) {
         const response = await api.get('/users/me');
@@ -532,6 +548,24 @@ function App() {
             setIsLoginView={setIsLoginView}
             onSecureLogin={handleSecureLogin}
             isRtl={isRtl}
+            setCurrentPage={setCurrentPage}
+          />
+        )}
+
+        {currentPage === 'forgot-password' && (
+          <ForgotPassword setCurrentPage={setCurrentPage} />
+        )}
+
+        {currentPage === 'reset-password' && (
+          <ResetPassword
+            t={t}
+            isRtl={isRtl}
+            onComplete={() => {
+              // Clear the URL param and go to login
+              window.history.replaceState(null, '', window.location.pathname);
+              setCurrentPage('auth');
+              setIsLoginView(true);
+            }}
           />
         )}
 
@@ -556,9 +590,9 @@ function App() {
         )}
 
         {currentPage === 'quiz' && isLoggedIn && (
-          <Quiz 
-            t={t} 
-            setCurrentPage={setCurrentPage} 
+          <Quiz
+            t={t}
+            setCurrentPage={setCurrentPage}
             selectedComponents={selectedComponentsForQuiz}
             selectedCourseId={selectedCourseId}
             setSelectedCourseId={setSelectedCourseId}

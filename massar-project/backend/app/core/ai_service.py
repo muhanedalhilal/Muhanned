@@ -85,3 +85,53 @@ def generate_quiz_from_text(text: str) -> list[dict]:
     except Exception as e:
         print(f"Error generating Quiz: {e}")
         return []
+
+
+def generate_course_image(course_name: str, description: str = "") -> bytes | None:
+    """
+    Generates an AI cover image for a course using Google Imagen.
+    Returns raw image bytes (JPEG) on success, None on failure.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("Warning: GEMINI_API_KEY not found. Cannot generate course image.")
+        return None
+
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=api_key)
+
+        # Build a rich prompt for the course cover
+        desc_hint = f" The course focuses on: {description}." if description else ""
+        prompt = (
+            f"Create a beautiful, modern, professional educational cover illustration for a course titled '{course_name}'.{desc_hint} "
+            f"The image must NOT contain any people, humans, faces, hands, or characters. "
+            f"Instead, use abstract icons, symbols, tools, objects, and visual elements that represent the subject. "
+            f"Use a modern flat design style with soft gradients, no text or letters in the image. "
+            f"Suitable as a course thumbnail or banner. High quality, 16:9 aspect ratio."
+        )
+
+        response = client.models.generate_images(
+            model="imagen-4.0-fast-generate-001",
+            prompt=prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio="16:9",
+                output_mime_type="image/jpeg",
+            ),
+        )
+
+        if response.generated_images and len(response.generated_images) > 0:
+            image_bytes = response.generated_images[0].image.image_bytes
+            print(f"Successfully generated image for course: {course_name}")
+            return image_bytes
+        else:
+            print(f"No image generated for course: {course_name}")
+            return None
+
+    except Exception as e:
+        print(f"Error generating course image: {e}")
+        return None
+

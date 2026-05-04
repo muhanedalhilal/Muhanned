@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle, AlertTriangle, CloudOff, BrainCircuit } from 'lucide-react';
+import { CheckCircle, AlertTriangle, CloudOff, BrainCircuit, ArrowLeft, Mail } from 'lucide-react';
 import { api } from '../services/api';
 import { supabase } from '../services/supabase';
 
@@ -8,6 +8,11 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
   const [fieldErrors, setFieldErrors] = useState({ password: '', confirmPassword: '' });
   const [status, setStatus] = useState({ message: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetStatus, setResetStatus] = useState({ message: '', type: '' });
+  const [isResetLoading, setIsResetLoading] = useState(false);
+  const [devResetLink, setDevResetLink] = useState('');
 
   const getMsg = (key) => {
     switch (key) {
@@ -25,6 +30,10 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
         return isRtl ? "البريد الإلكتروني أو كلمة المرور غير صحيحة، أو أن هذا الحساب غير موجود." : "Incorrect email or password, or this account does not exist.";
       case 'server_error':
         return isRtl ? "فشل الاتصال بالخادم." : "Server connection failed.";
+      case 'reset_sent':
+        return isRtl ? "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد." : "Password reset link sent to your email. Please check your inbox.";
+      case 'reset_error':
+        return isRtl ? "فشل إرسال رابط إعادة التعيين. يرجى التحقق من البريد الإلكتروني والمحاولة مرة أخرى." : "Failed to send reset link. Please check your email and try again.";
       default:
         return key;
     }
@@ -56,6 +65,53 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
     setFieldErrors(errors);
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+
+    const email = resetEmail.trim();
+
+    if (!email) return;
+
+    setIsResetLoading(true);
+    setResetStatus({ message: "", type: "" });
+    setDevResetLink(""); // Clear previous link
+
+    try {
+      const redirectUrl = `${window.location.origin}/?page=reset-password`;
+
+      const response = await api.post('/auth/forgot-password', {
+        email: email,
+        redirect_url: redirectUrl,
+      });
+
+      if (!response.ok) {
+        setResetStatus({
+          message: response.message || "reset_error",
+          type: "error",
+        });
+        return;
+      }
+
+      if (response.data && response.data.reset_link) {
+        setDevResetLink(response.data.reset_link);
+      }
+
+      setResetStatus({
+        message: "reset_sent",
+        type: "success",
+      });
+    } catch (err) {
+      console.log("Reset password catch error:", err);
+
+      setResetStatus({
+        message: "reset_error",
+        type: "error",
+      });
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -80,31 +136,31 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
     try {
       const payload = isLoginView ? { email: formData.email, password: formData.password } : formData;
       const response = await api.post(endpointUrl, payload);
-      
+
       if (response.ok) {
         const data = response.data;
         if (isLoginView && data.access_token) {
-           localStorage.setItem('massar_token', data.access_token);
-           try {
-             // Fetch real profile from backend — pass token directly to avoid race condition
-             const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
-             const meRes = await fetch(`${API_URL}/users/me`, {
-               headers: { 'Authorization': `Bearer ${data.access_token}` }
-             });
-             if (meRes.ok) {
-               const meData = await meRes.json();
-               onSecureLogin(meData.email || formData.email, meData.name, data.access_token, meData.user_role || 'student');
-             } else {
-               onSecureLogin(formData.email, '', data.access_token, 'student');
-             }
-           } catch {
-             onSecureLogin(formData.email, '', data.access_token, 'student');
-           }
+          localStorage.setItem('massar_token', data.access_token);
+          try {
+            // Fetch real profile from backend — pass token directly to avoid race condition
+            const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+            const meRes = await fetch(`${API_URL}/users/me`, {
+              headers: { 'Authorization': `Bearer ${data.access_token}` }
+            });
+            if (meRes.ok) {
+              const meData = await meRes.json();
+              onSecureLogin(meData.email || formData.email, meData.name, data.access_token, meData.user_role || 'student');
+            } else {
+              onSecureLogin(formData.email, '', data.access_token, 'student');
+            }
+          } catch {
+            onSecureLogin(formData.email, '', data.access_token, 'student');
+          }
         } else {
-           setStatus({ message: 'success_signup', type: 'success' });
-           setFormData({ name: '', email: '', password: '', confirmPassword: '' });
-           setFieldErrors({ password: '', confirmPassword: '' });
-           setTimeout(() => setIsLoginView(true), 2000);
+          setStatus({ message: 'success_signup', type: 'success' });
+          setFormData({ name: '', email: '', password: '', confirmPassword: '' });
+          setFieldErrors({ password: '', confirmPassword: '' });
+          setTimeout(() => setIsLoginView(true), 2000);
         }
       } else {
         let errorMsg = response.message || "Authentication failed.";
@@ -119,39 +175,39 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
         }
       }
     } catch (error) {
-       setStatus({ message: 'server_error', type: 'error' });
+      setStatus({ message: 'server_error', type: 'error' });
     } finally {
-       setIsLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="auth-wrapper">
       <div className="auth-modern-card">
-        
+
 
         {/* Right Form Card */}
         <div className="auth-form-column card-container-new">
           <h2 className="title" style={{ color: '#000000', fontWeight: '900', fontSize: '30px' }}>{isLoginView ? t.welcomeBack : t.joinSystem}</h2>
           <p className="subtitle" style={{ color: '#111827' }}>{isLoginView ? t.authSubLogin : t.authSubSignup}</p>
-          
-          <button 
-            type="button" 
-            className="google-btn" 
+
+          <button
+            type="button"
+            className="google-btn"
             onClick={async () => {
               const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
               if (error) setStatus({ message: 'auth_failed', type: 'error' });
             }}
           >
             <svg viewBox="0 0 24 24" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
             </svg>
             {isLoginView ? (isRtl ? 'المتابعة باستخدام جوجل' : 'Continue with Google') : (isRtl ? 'التسجيل باستخدام جوجل' : 'Sign up with Google')}
           </button>
-          
+
           <div style={{ display: 'flex', alignItems: 'center', margin: '0 0 20px', color: '#94a3b8', fontSize: '13px' }}>
             <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
             <span style={{ padding: '0 10px' }}>{isRtl ? 'أو' : 'or'}</span>
@@ -161,40 +217,40 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
           <form onSubmit={handleAuthSubmit} className="auth-form">
             {!isLoginView && (
               <div className="input-group">
-                <input 
-                  type="text" 
-                  placeholder={t.fullName} 
-                  required 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                <input
+                  type="text"
+                  placeholder={t.fullName}
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 />
               </div>
             )}
             <div className="input-group">
-              <input 
-                type="email" 
-                placeholder={t.email} 
-                required 
-                value={formData.email} 
-                onChange={(e) => setFormData({...formData, email: e.target.value})} 
+              <input
+                type="email"
+                placeholder={t.email}
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 style={{ textAlign: formData.email ? 'left' : 'start', direction: formData.email ? 'ltr' : 'inherit' }}
               />
             </div>
             <div className="input-group" style={{ marginBottom: (!isLoginView && fieldErrors.password) ? '25px' : '15px' }}>
-              <input 
-                type="password" 
-                placeholder={t.password} 
-                required 
-                value={formData.password} 
+              <input
+                type="password"
+                placeholder={t.password}
+                required
+                value={formData.password}
                 onBlur={() => handleBlur('password')}
                 onChange={(e) => {
-                  setFormData({...formData, password: e.target.value});
-                  if (fieldErrors.password) setFieldErrors({...fieldErrors, password: ''});
-                }} 
-                style={{ 
-                  textAlign: formData.password ? 'left' : 'start', 
+                  setFormData({ ...formData, password: e.target.value });
+                  if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: '' });
+                }}
+                style={{
+                  textAlign: formData.password ? 'left' : 'start',
                   direction: formData.password ? 'ltr' : 'inherit',
-                  borderColor: (!isLoginView && fieldErrors.password) ? '#ef4444' : undefined 
+                  borderColor: (!isLoginView && fieldErrors.password) ? '#ef4444' : undefined
                 }}
               />
               {!isLoginView && fieldErrors.password && (
@@ -203,20 +259,35 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
                 </div>
               )}
             </div>
+            {isLoginView && (
+              <div style={{ textAlign: isRtl ? 'right' : 'left', marginTop: '-8px', marginBottom: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgotPassword(true); setResetEmail(formData.email || ''); setResetStatus({ message: '', type: '' }); }}
+                  style={{
+                    background: 'none', border: 'none', padding: 0,
+                    color: '#3b82f6', fontSize: '13px', fontWeight: '600',
+                    cursor: 'pointer', textDecoration: 'underline'
+                  }}
+                >
+                  {isRtl ? 'نسيت كلمة المرور؟' : 'Forgot Password?'}
+                </button>
+              </div>
+            )}
             {!isLoginView && (
               <div className="input-group" style={{ marginBottom: fieldErrors.confirmPassword ? '20px' : '15px' }}>
-                <input 
-                  type="password" 
-                  placeholder={t.confirmPassword || (isRtl ? "تأكيد كلمة المرور" : "Confirm Password")} 
-                  required 
-                  value={formData.confirmPassword} 
+                <input
+                  type="password"
+                  placeholder={t.confirmPassword || (isRtl ? "تأكيد كلمة المرور" : "Confirm Password")}
+                  required
+                  value={formData.confirmPassword}
                   onBlur={() => handleBlur('confirmPassword')}
                   onChange={(e) => {
-                    setFormData({...formData, confirmPassword: e.target.value});
-                    if (fieldErrors.confirmPassword) setFieldErrors({...fieldErrors, confirmPassword: ''});
-                  }} 
-                  style={{ 
-                    textAlign: formData.confirmPassword ? 'left' : 'start', 
+                    setFormData({ ...formData, confirmPassword: e.target.value });
+                    if (fieldErrors.confirmPassword) setFieldErrors({ ...fieldErrors, confirmPassword: '' });
+                  }}
+                  style={{
+                    textAlign: formData.confirmPassword ? 'left' : 'start',
                     direction: formData.confirmPassword ? 'ltr' : 'inherit',
                     borderColor: fieldErrors.confirmPassword ? '#ef4444' : undefined
                   }}
@@ -234,15 +305,15 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
           </form>
 
           <div className="toggle-view" style={{ marginTop: '25px', display: 'flex', justifyContent: 'center', gap: '8px' }}>
-              <span className="toggle-text" style={{ color: '#000000', fontWeight: '600' }}>{isLoginView ? t.noAccount : t.haveAccount}</span>
-              <button 
-                type="button" 
-                onClick={() => { setIsLoginView(!isLoginView); setFieldErrors({password: '', confirmPassword: ''}); setStatus({message: '', type: ''}); }} 
-                className="toggle-btn"
-                style={{ color: '#1e40af', fontWeight: '800', textDecoration: 'underline', background: 'none', border: 'none', padding: 0 }}
-              >
-                {isLoginView ? t.clickSignUp : t.clickSignIn}
-              </button>
+            <span className="toggle-text" style={{ color: '#000000', fontWeight: '600' }}>{isLoginView ? t.noAccount : t.haveAccount}</span>
+            <button
+              type="button"
+              onClick={() => { setIsLoginView(!isLoginView); setFieldErrors({ password: '', confirmPassword: '' }); setStatus({ message: '', type: '' }); }}
+              className="toggle-btn"
+              style={{ color: '#1e40af', fontWeight: '800', textDecoration: 'underline', background: 'none', border: 'none', padding: 0 }}
+            >
+              {isLoginView ? t.clickSignUp : t.clickSignIn}
+            </button>
           </div>
 
           {status.message && (
@@ -253,6 +324,113 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
           )}
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 9999
+        }} onClick={() => setShowForgotPassword(false)}>
+          <div style={{
+            background: '#fff', borderRadius: '20px', padding: '36px 32px',
+            maxWidth: '440px', width: '90%', position: 'relative',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.15)'
+          }} onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowForgotPassword(false)}
+              style={{
+                position: 'absolute', top: '16px', left: isRtl ? 'auto' : '16px', right: isRtl ? '16px' : 'auto',
+                background: 'none', border: 'none', cursor: 'pointer', padding: '4px'
+              }}
+            >
+              <ArrowLeft size={22} color="#64748b" />
+            </button>
+
+            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+              <div style={{
+                width: '56px', height: '56px', borderRadius: '16px',
+                background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 16px'
+              }}>
+                <Mail size={28} color="#fff" />
+              </div>
+              <h3 style={{ color: '#0f172a', fontSize: '22px', fontWeight: '800', margin: '0 0 8px' }}>
+                {isRtl ? 'إعادة تعيين كلمة المرور' : 'Reset Password'}
+              </h3>
+              <p style={{ color: '#64748b', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
+                {isRtl ? 'أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين' : 'Enter your email and we\'ll send you a reset link'}
+              </p>
+            </div>
+
+            <form onSubmit={handleForgotPassword}>
+              <div style={{ marginBottom: '16px' }}>
+                <input
+                  type="email"
+                  placeholder={isRtl ? 'البريد الإلكتروني' : 'Email address'}
+                  required
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  style={{
+                    width: '100%', padding: '14px 16px', borderRadius: '12px',
+                    border: '1.5px solid #e2e8f0', fontSize: '15px',
+                    outline: 'none', transition: 'border 0.2s',
+                    direction: 'ltr', textAlign: 'left',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
+                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={isResetLoading || !resetEmail.trim()}
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '12px',
+                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
+                  color: '#fff', border: 'none', fontSize: '15px',
+                  fontWeight: '700', cursor: 'pointer',
+                  opacity: (isResetLoading || !resetEmail.trim()) ? 0.6 : 1,
+                  transition: 'opacity 0.2s'
+                }}
+              >
+                {isResetLoading
+                  ? (isRtl ? 'جاري الإرسال...' : 'Sending...')
+                  : (isRtl ? 'إرسال رابط إعادة التعيين' : 'Send Reset Link')}
+              </button>
+            </form>
+
+            {resetStatus.message && (
+              <div style={{
+                marginTop: '16px', padding: '12px 16px', borderRadius: '10px',
+                background: resetStatus.type === 'success' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+                border: `1px solid ${resetStatus.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                display: 'flex', flexDirection: 'column', gap: '8px',
+                fontSize: '13px', fontWeight: '500',
+                color: resetStatus.type === 'success' ? '#059669' : '#dc2626'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {resetStatus.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+                  {getMsg(resetStatus.message)}
+                </div>
+                {devResetLink && (
+                  <a href={devResetLink} style={{
+                    display: 'block', padding: '10px', textAlign: 'center',
+                    background: '#059669', color: '#fff', borderRadius: '8px',
+                    textDecoration: 'none', fontWeight: '600', width: '100%',
+                    boxSizing: 'border-box', marginTop: '4px'
+                  }}>
+                    {isRtl ? 'رابط الاستعادة (للمطورين) - اضغط هنا' : 'Dev Reset Link - Click Here'}
+                  </a>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

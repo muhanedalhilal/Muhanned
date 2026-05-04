@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2, ImageIcon, FileText, Upload } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api } from '../services/api';
 
@@ -25,26 +25,55 @@ const CustomXAxisTick = ({ x, y, payload }) => {
   );
 };
 
-export default function Dashboard({ t, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
+export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
   const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
+  const [newCourseDescription, setNewCourseDescription] = useState('');
+  const [newCourseFile, setNewCourseFile] = useState(null);
+  const [isCreatingCourse, setIsCreatingCourse] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [deletingResId, setDeletingResId] = useState(null);
   const [isAddingComponent, setIsAddingComponent] = useState(false);
   const [newComponentName, setNewComponentName] = useState('');
-  const [aiSuggestions, setAiSuggestions] = useState([]);
-  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
-  const [isSavingComponent, setIsSavingComponent] = useState(false);
-  const [componentValidationError, setComponentValidationError] = useState('');
 
   const [dashboardUser, setDashboardUser] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedComponents, setSelectedComponents] = useState([]);
+  const imagePollingRef = useRef({});
+
+  // Poll for AI-generated image readiness
+  const pollForImage = useCallback((courseId) => {
+    if (imagePollingRef.current[courseId]) return;
+    let attempts = 0;
+    const maxAttempts = 30; // 30 * 3s = 90s max
+    const intervalId = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await api.get(`/courses/${courseId}/image-status`);
+        if (res.ok && res.data.ready && res.data.image_url) {
+          setCourses(prev => prev.map(c =>
+            c.id === courseId ? { ...c, image_url: res.data.image_url } : c
+          ));
+          clearInterval(intervalId);
+          delete imagePollingRef.current[courseId];
+        } else if (attempts >= maxAttempts) {
+          clearInterval(intervalId);
+          delete imagePollingRef.current[courseId];
+        }
+      } catch {
+        if (attempts >= maxAttempts) {
+          clearInterval(intervalId);
+          delete imagePollingRef.current[courseId];
+        }
+      }
+    }, 3000);
+    imagePollingRef.current[courseId] = intervalId;
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -72,35 +101,51 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
     fetchUserData();
   }, []);
 
-  useEffect(() => {
-    if (currentPage === 'dashboard') {
-      api.get('/courses/').then(res => {
-        if (res.ok) setCourses(res.data);
-      });
-    }
-  }, [currentPage]);
-
   const addCourse = async (e) => {
     e.preventDefault();
     if (!newCourseName.trim()) return;
+    setIsCreatingCourse(true);
     const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
     const payload = {
       name: newCourseName,
+      description: newCourseDescription,
       icon: 'book',
       color: randomColor
     };
 
     const res = await api.post('/courses/', payload);
     if (res.ok) {
-      setCourses([...courses, { ...res.data, resourceList: [], componentList: [] }]);
+      const newCourse = { ...res.data, resourceList: [], componentList: [] };
+      setCourses([...courses, newCourse]);
       setSelectedCourseId(res.data.id);
+
+      // Start polling for the AI-generated image
+      pollForImage(res.data.id);
+
+      // If user attached an optional resource file, upload it now
+      if (newCourseFile) {
+        const formData = new FormData();
+        formData.append('file', newCourseFile);
+        formData.append('course_id', res.data.id);
+        try {
+          await api.post('/upload/', formData);
+          // Refresh courses to get updated resources
+          const coursesRes = await api.get('/courses/');
+          if (coursesRes.ok) setCourses(coursesRes.data);
+        } catch (err) {
+          console.error('Optional file upload failed:', err);
+        }
+      }
     } else {
-      alert("Failed to create course");
+      alert('Failed to create course');
     }
     setNewCourseName('');
+    setNewCourseDescription('');
+    setNewCourseFile(null);
     setIsAdding(false);
+    setIsCreatingCourse(false);
   };
 
   const deleteCourse = async (id, e) => {
@@ -225,77 +270,20 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
     }));
   };
 
-  const openAddComponent = async (courseId, componentList) => {
-    setIsAddingComponent(true);
+  const handleSaveComponent = (courseId) => {
+    if (newComponentName && newComponentName.trim()) {
+      setCourses(courses.map(course => {
+        if (course.id !== courseId) return course;
+        return {
+          ...course,
+          componentList: [...(course.componentList || []), { id: Date.now(), text: newComponentName.trim(), progress: 0 }]
+        };
+      }));
+    }
     setNewComponentName('');
-    setComponentValidationError('');
-    setAiSuggestions([]);
-    setIsFetchingSuggestions(true);
-    try {
-      const existingTopics = (componentList || []).map(c => c.text);
-      const res = await api.post(`/courses/${courseId}/suggest-components`, { existing_topics: existingTopics });
-      if (res.ok && res.data.suggestions) {
-        setAiSuggestions(res.data.suggestions);
-      }
-    } catch (_) {}
-    setIsFetchingSuggestions(false);
+    setIsAddingComponent(false);
   };
 
-  const handleSaveManualComponent = async (courseId) => {
-    const topic = newComponentName.trim();
-    if (!topic) return;
-    setIsSavingComponent(true);
-    setComponentValidationError('');
-    try {
-      const res = await api.post(`/courses/${courseId}/add-manual-component`, { topic });
-      if (res.ok) {
-        setCourses(courses.map(course => {
-          if (course.id !== courseId) return course;
-          return {
-            ...course,
-            componentList: [...(course.componentList || []), { id: res.data.id, text: res.data.text, content: res.data.content, progress: 0 }]
-          };
-        }));
-        setNewComponentName('');
-        setIsAddingComponent(false);
-        setAiSuggestions([]);
-        setComponentValidationError('');
-      } else {
-        // 422 → detail is the validation error reason
-        const reason = res.data?.detail || res.message || 'This topic does not seem related to this course.';
-        setComponentValidationError(reason);
-      }
-    } catch (err) {
-      setComponentValidationError('Something went wrong. Please try again.');
-    }
-    setIsSavingComponent(false);
-  };
-
-  const handlePickSuggestion = async (courseId, suggestion) => {
-    // Suggestions are already AI-validated; directly add via manual endpoint so they get saved to DB
-    setIsSavingComponent(true);
-    setComponentValidationError('');
-    try {
-      const res = await api.post(`/courses/${courseId}/add-manual-component`, { topic: suggestion.topic });
-      if (res.ok) {
-        setCourses(courses.map(course => {
-          if (course.id !== courseId) return course;
-          return {
-            ...course,
-            componentList: [...(course.componentList || []), { id: res.data.id, text: res.data.text, content: res.data.content, progress: 0 }]
-          };
-        }));
-        setIsAddingComponent(false);
-        setAiSuggestions([]);
-        setNewComponentName('');
-      } else {
-        setComponentValidationError(res.data?.detail || 'Failed to add suggestion.');
-      }
-    } catch (err) {
-      setComponentValidationError('Something went wrong.');
-    }
-    setIsSavingComponent(false);
-  };
 
 
   // Render Course Detail View
@@ -350,14 +338,14 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
     const total = selectedCourse.componentList.length;
     const totalProgVal = selectedCourse.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
-    const completedCount = selectedCourse.componentList.filter(c => c.progress >= 90).length;
+    const completedCount = selectedCourse.componentList.filter(c => c.progress === 100).length;
 
     // Chart Data Preparation
     const chartData = selectedCourse.componentList.map((comp) => ({
       name: comp.text,
       fullName: comp.text,
       progress: comp.progress,
-      fill: comp.progress >= 90 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
+      fill: comp.progress === 100 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
     }));
 
     return (
@@ -401,31 +389,85 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
           </button>
         </div>
 
-        {/* Course Hero Panel */}
-        <div className="luxe-panel detail-hero bento-hero">
-          <div className="detail-hero-top" style={{ display: 'flex', alignItems: 'center' }}>
-            <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '15px' }}>
-              <ArrowLeft size={24} color="#1e293b" />
-            </button>
-            <h2 className="luxe-title" style={{ fontSize: '28px', color: 'black' }}>
-              {selectedCourse.name === 'Mathematics' ? t.mathSubject :
-                selectedCourse.name === 'Computer Science' ? (t.csSubject || 'Computer Science') :
-                  selectedCourse.name === 'World History' ? (t.historySubject || 'World History') :
-                    selectedCourse.name === 'Literature' ? (t.literatureSubject || 'Literature') :
-                      selectedCourse.name}
-            </h2>
-          </div>
+        {/* Course Hero Panel with AI Image */}
+        <div className="luxe-panel detail-hero bento-hero" style={{ overflow: 'hidden', position: 'relative' }}>
+          {/* AI Generated Background Image */}
+          {selectedCourse.image_url ? (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundImage: `url(${selectedCourse.image_url})`,
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              opacity: 0.15, zIndex: 0
+            }} />
+          ) : (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: `linear-gradient(135deg, ${selectedCourse.color}15, ${selectedCourse.color}08)`,
+              zIndex: 0
+            }} />
+          )}
 
-          <div className="detail-stats" style={{ marginTop: '30px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#3b82f6' }}>{completedCount} / {total} {t.componentsCompleted || 'Resources Completed'}</span>
-            <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{prog}% {t.mastery || 'Mastery'}</span>
-          </div>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div className="detail-hero-top" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '5px', flexShrink: 0 }}>
+                <ArrowLeft size={24} color="#1e293b" />
+              </button>
 
-          <div className="luxe-progress-bg" style={{ height: '10px' }}>
-            <div
-              className="luxe-progress-fill"
-              style={{ width: `${prog}%`, background: '#3b82f6', boxShadow: `0 0 15px rgba(59, 130, 246, 0.5)` }}
-            ></div>
+              {/* Course Image Thumbnail */}
+              {selectedCourse.image_url ? (
+                <div style={{
+                  width: '72px', height: '72px', borderRadius: '16px',
+                  overflow: 'hidden', flexShrink: 0,
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                  border: '2px solid rgba(59, 130, 246, 0.2)'
+                }}>
+                  <img
+                    src={selectedCourse.image_url}
+                    alt={selectedCourse.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+              ) : (
+                <div style={{
+                  width: '72px', height: '72px', borderRadius: '16px',
+                  background: `linear-gradient(135deg, ${selectedCourse.color}30, ${selectedCourse.color}60)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
+                  position: 'relative', overflow: 'hidden'
+                }}>
+                  {!selectedCourse.image_url && selectedCourse.id && (
+                    <Loader2 size={24} color={selectedCourse.color} style={{ animation: 'spinCircle 1.5s linear infinite', opacity: 0.6 }} />
+                  )}
+                </div>
+              )}
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 className="luxe-title" style={{ fontSize: '28px', color: 'black', margin: 0 }}>
+                  {selectedCourse.name === 'Mathematics' ? t.mathSubject :
+                    selectedCourse.name === 'Computer Science' ? (t.csSubject || 'Computer Science') :
+                      selectedCourse.name === 'World History' ? (t.historySubject || 'World History') :
+                        selectedCourse.name === 'Literature' ? (t.literatureSubject || 'Literature') :
+                          selectedCourse.name}
+                </h2>
+                {selectedCourse.description && (
+                  <p style={{ margin: '6px 0 0', fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+                    {selectedCourse.description}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="detail-stats" style={{ marginTop: '25px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#3b82f6' }}>{completedCount} / {total} {t.componentsCompleted || 'Resources Completed'}</span>
+              <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{prog}% {t.mastery || 'Mastery'}</span>
+            </div>
+
+            <div className="luxe-progress-bg" style={{ height: '10px' }}>
+              <div
+                className="luxe-progress-fill"
+                style={{ width: `${prog}%`, background: '#3b82f6', boxShadow: `0 0 15px rgba(59, 130, 246, 0.5)` }}
+              ></div>
+            </div>
           </div>
         </div>
 
@@ -593,120 +635,33 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
             </div>
 
 
-            {/* Add Component Button OR AI-Powered Input */}
+            {/* Add Component Button OR Input */}
             {isAddingComponent ? (
-              <div style={{
-                marginTop: '10px',
-                background: 'rgba(59,130,246,0.03)',
-                padding: '18px',
-                borderRadius: '14px',
-                border: '1px solid rgba(59,130,246,0.15)',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '14px'
-              }}>
-
-                {/* AI Suggestions */}
-                <div>
-                  <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
-                    AI Suggestions
-                  </p>
-                  {isFetchingSuggestions ? (
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '18px 0' }}>
-                      <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '50%',
-                        border: '3px solid rgba(59,130,246,0.15)',
-                        borderTopColor: '#3b82f6',
-                        animation: 'spinCircle 0.75s linear infinite'
-                      }} />
-                    </div>
-                  ) : aiSuggestions.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {aiSuggestions.map((s, i) => (
-                        <button
-                          key={i}
-                          disabled={isSavingComponent}
-                          onClick={() => handlePickSuggestion(selectedCourse.id, s)}
-                          style={{
-                            background: 'rgba(59,130,246,0.05)',
-                            border: '1px solid rgba(59,130,246,0.2)',
-                            borderRadius: '10px',
-                            padding: '10px 16px',
-                            cursor: isSavingComponent ? 'not-allowed' : 'pointer',
-                            textAlign: 'left',
-                            transition: 'all 0.2s ease',
-                            width: '100%',
-                          }}
-                          onMouseOver={e => { if (!isSavingComponent) { e.currentTarget.style.background = 'rgba(59,130,246,0.1)'; e.currentTarget.style.borderColor = '#3b82f6'; } }}
-                          onMouseOut={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.05)'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)'; }}
-                        >
-                          <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e3a8a' }}>{s.topic}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>No suggestions available. Type a topic below.</p>
-                  )}
-                </div>
-
-                {/* Divider */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.08)' }} />
-                  <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>or type your own</span>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.08)' }} />
-                </div>
-
-                {/* Manual Input */}
+              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
                 <input
                   type="text"
                   value={newComponentName}
-                  onChange={(e) => { setNewComponentName(e.target.value); setComponentValidationError(''); }}
+                  onChange={(e) => setNewComponentName(e.target.value)}
                   placeholder={t.addComponent || 'Component name...'}
                   className="input-luxe"
                   autoFocus
-                  disabled={isSavingComponent}
-                  style={{ background: '#ffffff', color: '#0f172a', border: componentValidationError ? '1.5px solid #ef4444' : '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
+                  style={{ background: '#ffffff', color: '#0f172a', border: '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveManualComponent(selectedCourse.id);
-                    if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); setAiSuggestions([]); setComponentValidationError(''); }
+                    if (e.key === 'Enter') handleSaveComponent(selectedCourse.id);
+                    if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); }
                   }}
                 />
-
-                {/* Validation Error */}
-                {componentValidationError && (
-                  <div style={{
-                    background: 'rgba(239,68,68,0.06)',
-                    border: '1px solid rgba(239,68,68,0.25)',
-                    borderRadius: '8px',
-                    padding: '10px 14px',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '8px'
-                  }}>
-                    <span style={{ fontSize: '15px', marginTop: '1px' }}>⚠️</span>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#dc2626', fontWeight: '500' }}>
-                      {componentValidationError}
-                    </p>
-                  </div>
-                )}
-
-                {/* Action buttons */}
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     className="btn-luxe primary hover-lift"
-                    onClick={() => handleSaveManualComponent(selectedCourse.id)}
-                    disabled={isSavingComponent || !newComponentName.trim()}
-                    style={{ padding: '8px', flex: 1, justifyContent: 'center', opacity: (!newComponentName.trim() || isSavingComponent) ? 0.5 : 1 }}
+                    onClick={() => handleSaveComponent(selectedCourse.id)}
+                    style={{ padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
-                    {isSavingComponent ? <Loader2 size={16} className="spin-icon" style={{ marginRight: '6px' }} /> : null}
-                    {isSavingComponent ? 'Checking...' : (t.save || 'Save')}
+                    {t.save || 'Save'}
                   </button>
                   <button
                     className="btn-luxe hover-lift"
-                    onClick={() => { setIsAddingComponent(false); setNewComponentName(''); setAiSuggestions([]); setComponentValidationError(''); }}
-                    disabled={isSavingComponent}
+                    onClick={() => { setIsAddingComponent(false); setNewComponentName(''); }}
                     style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
                     {t.cancel || 'Cancel'}
@@ -716,7 +671,7 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
             ) : (
               <button
                 className="btn-luxe hover-lift"
-                onClick={() => openAddComponent(selectedCourse.id, selectedCourse.componentList)}
+                onClick={() => setIsAddingComponent(true)}
                 style={{
                   background: 'rgba(0, 0, 0, 0.03)',
                   border: '1px dashed rgba(0, 0, 0, 0.15)',
@@ -782,7 +737,7 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
             </div>
           </div>
 
-          {/* Panel 3: Progress Chart ONLY (Mastery Tracking Enabled) */}
+          {/* Panel 3: Progress Chart ONLY */}
           <div className="luxe-panel bento-chart">
             <h3 style={{ color: 'black', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <BarChart3 size={22} color="#3b82f6" />
@@ -795,39 +750,39 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
               </div>
             ) : (
               <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                      <XAxis
-                        dataKey="name"
-                        stroke="#94a3b8"
-                        interval={0}
-                        height={60}
-                        tick={<CustomXAxisTick />}
-                      />
-                      <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} tickFormatter={(val) => `${val}%`} />
-                      <Tooltip
-                        cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
-                                <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p>
-                                <p style={{ margin: 0, color: payload[0].payload.fill }}>
-                                  Progress: {payload[0].value}%
-                                </p>
-                              </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Bar dataKey="progress" radius={[4, 4, 0, 0]} maxBarSize={50} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      stroke="#94a3b8"
+                      interval={0}
+                      height={60}
+                      tick={<CustomXAxisTick />}
+                    />
+                    <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} tickFormatter={(val) => `${val}%`} />
+                    <Tooltip
+                      cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                              <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p>
+                              <p style={{ margin: 0, color: payload[0].payload.fill }}>
+                                Progress: {payload[0].value}%
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="progress" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -840,7 +795,7 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
     const total = course.componentList.length;
     const totalProgVal = course.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
-    const completedCount = course.componentList.filter(c => c.progress >= 90).length;
+    const completedCount = course.componentList.filter(c => c.progress === 100).length;
     return { total, done: completedCount, prog };
   };
 
@@ -857,7 +812,21 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
   const renderCourseCard = (course) => {
     const { total, done, prog } = getCourseCounts(course);
     return (
-      <div key={course.id} className="luxe-card clickable hover-lift animate-slide-up glass-glow" onClick={() => setSelectedCourseId(course.id)}>
+      <div key={course.id} className="luxe-card clickable hover-lift animate-slide-up glass-glow" onClick={() => setSelectedCourseId(course.id)} style={{ overflow: 'hidden' }}>
+        {/* Course Image Banner */}
+        {course.image_url && (
+          <div style={{
+            width: '100%', height: '100px', marginBottom: '12px',
+            borderRadius: '12px', overflow: 'hidden',
+            background: `linear-gradient(135deg, ${course.color}20, ${course.color}40)`
+          }}>
+            <img
+              src={course.image_url}
+              alt={course.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+        )}
         <div className="card-top" style={{ justifyContent: 'flex-end' }}>
           <button className="del-btn" onClick={(e) => deleteCourse(course.id, e)}>
             <Trash2 size={16} />
@@ -956,11 +925,12 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
 
       {/* Add Course Form */}
       {isAdding && (
-        <form onSubmit={addCourse} className="add-subject-form luxe-panel">
+        <form onSubmit={addCourse} className="add-subject-form luxe-panel" style={{ maxWidth: '550px' }}>
           <div className="form-header">
             <h3 style={{ color: 'black' }}>{t.addCourse}</h3>
           </div>
-          <div className="form-body">
+          <div className="form-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Course Name - Required */}
             <input
               type="text"
               placeholder={t.courseName}
@@ -968,8 +938,92 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
               onChange={(e) => setNewCourseName(e.target.value)}
               className="input-luxe"
               autoFocus
+              required
+              style={{ background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0' }}
             />
-            <button type="submit" className="btn-luxe submit">{t.addCourse}</button>
+
+            {/* Description - Optional */}
+            <div style={{ position: 'relative' }}>
+              <textarea
+                placeholder={t.courseDescriptionPlaceholder || 'Description of the course (optional)'}
+                value={newCourseDescription}
+                onChange={(e) => setNewCourseDescription(e.target.value)}
+                className="input-luxe"
+                rows={3}
+                style={{
+                  background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0',
+                  resize: 'vertical', minHeight: '70px', fontFamily: 'inherit',
+                  width: '100%', padding: '12px 16px', borderRadius: '12px'
+                }}
+              />
+              <span style={{
+                position: 'absolute', top: '-8px', right: '12px',
+                background: '#f8fafc', padding: '0 6px',
+                fontSize: '11px', color: '#94a3b8', fontWeight: '500'
+              }}>
+                {t.optionalField || 'Optional'}
+              </span>
+            </div>
+
+            {/* Add Resources - Optional */}
+            <div style={{ position: 'relative' }}>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '14px 16px', borderRadius: '12px',
+                border: newCourseFile ? '2px solid #3b82f6' : '1px dashed #cbd5e1',
+                background: newCourseFile ? 'rgba(59, 130, 246, 0.04)' : '#fff',
+                cursor: 'pointer', transition: 'all 0.2s'
+              }}>
+                <Upload size={20} color={newCourseFile ? '#3b82f6' : '#94a3b8'} />
+                <span style={{ fontSize: '14px', color: newCourseFile ? '#1e293b' : '#64748b', fontWeight: '500' }}>
+                  {newCourseFile
+                    ? newCourseFile.name
+                    : (t.addResourcesOptional || 'Add Resources (PDF/PPTX) — Optional')}
+                </span>
+                <input
+                  type="file"
+                  accept=".pdf,.pptx"
+                  style={{ display: 'none' }}
+                  onChange={(e) => setNewCourseFile(e.target.files?.[0] || null)}
+                />
+                {newCourseFile && (
+                  <button
+                    type="button"
+                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); setNewCourseFile(null); }}
+                    style={{
+                      marginLeft: 'auto', background: 'none', border: 'none',
+                      color: '#ef4444', cursor: 'pointer', padding: '2px'
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </label>
+              <span style={{
+                position: 'absolute', top: '-8px', right: '12px',
+                background: '#f8fafc', padding: '0 6px',
+                fontSize: '11px', color: '#94a3b8', fontWeight: '500'
+              }}>
+                {t.optionalField || 'Optional'}
+              </span>
+            </div>
+
+
+            <button
+              type="submit"
+              className="btn-luxe submit"
+              disabled={isCreatingCourse || !newCourseName.trim()}
+              style={{
+                opacity: (isCreatingCourse || !newCourseName.trim()) ? 0.6 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+              }}
+            >
+              {isCreatingCourse ? (
+                <><Loader2 size={18} style={{ animation: 'spinCircle 0.8s linear infinite' }} /> {t.creatingCourse || 'Creating...'}</>
+              ) : (
+                t.addCourse
+              )}
+            </button>
           </div>
         </form>
       )}

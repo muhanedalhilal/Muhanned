@@ -26,3 +26,4 @@ _admin_key = SUPABASE_SERVICE_KEY or SUPABASE_KEY or ""
 if not _admin_key:
     print("Warning: No valid Supabase key found. Admin client will not work correctly.")
 supabase_admin: Client = create_client(SUPABASE_URL, _admin_key) if _admin_key else supabase
+

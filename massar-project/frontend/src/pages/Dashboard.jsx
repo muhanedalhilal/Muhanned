@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2, ImageIcon, FileText, Upload } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { api } from '../services/api';
 
@@ -30,6 +30,9 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
 
   const [isAdding, setIsAdding] = useState(false);
   const [newCourseName, setNewCourseName] = useState('');
+  const [newCourseDescription, setNewCourseDescription] = useState('');
+  const [newCourseFile, setNewCourseFile] = useState(null);
+  const [isCreatingCourse, setIsCreatingCourse] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -41,6 +44,36 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedComponents, setSelectedComponents] = useState([]);
+  const imagePollingRef = useRef({});
+
+  // Poll for AI-generated image readiness
+  const pollForImage = useCallback((courseId) => {
+    if (imagePollingRef.current[courseId]) return;
+    let attempts = 0;
+    const maxAttempts = 30; // 30 * 3s = 90s max
+    const intervalId = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await api.get(`/courses/${courseId}/image-status`);
+        if (res.ok && res.data.ready && res.data.image_url) {
+          setCourses(prev => prev.map(c =>
+            c.id === courseId ? { ...c, image_url: res.data.image_url } : c
+          ));
+          clearInterval(intervalId);
+          delete imagePollingRef.current[courseId];
+        } else if (attempts >= maxAttempts) {
+          clearInterval(intervalId);
+          delete imagePollingRef.current[courseId];
+        }
+      } catch {
+        if (attempts >= maxAttempts) {
+          clearInterval(intervalId);
+          delete imagePollingRef.current[courseId];
+        }
+      }
+    }, 3000);
+    imagePollingRef.current[courseId] = intervalId;
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -71,24 +104,48 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
   const addCourse = async (e) => {
     e.preventDefault();
     if (!newCourseName.trim()) return;
+    setIsCreatingCourse(true);
     const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
     const payload = {
       name: newCourseName,
+      description: newCourseDescription,
       icon: 'book',
       color: randomColor
     };
 
     const res = await api.post('/courses/', payload);
     if (res.ok) {
-      setCourses([...courses, { ...res.data, resourceList: [], componentList: [] }]);
+      const newCourse = { ...res.data, resourceList: [], componentList: [] };
+      setCourses([...courses, newCourse]);
       setSelectedCourseId(res.data.id);
+
+      // Start polling for the AI-generated image
+      pollForImage(res.data.id);
+
+      // If user attached an optional resource file, upload it now
+      if (newCourseFile) {
+        const formData = new FormData();
+        formData.append('file', newCourseFile);
+        formData.append('course_id', res.data.id);
+        try {
+          await api.post('/upload/', formData);
+          // Refresh courses to get updated resources
+          const coursesRes = await api.get('/courses/');
+          if (coursesRes.ok) setCourses(coursesRes.data);
+        } catch (err) {
+          console.error('Optional file upload failed:', err);
+        }
+      }
     } else {
-      alert("Failed to create course");
+      alert('Failed to create course');
     }
     setNewCourseName('');
+    setNewCourseDescription('');
+    setNewCourseFile(null);
     setIsAdding(false);
+    setIsCreatingCourse(false);
   };
 
   const deleteCourse = async (id, e) => {
@@ -332,31 +389,85 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
           </button>
         </div>
 
-        {/* Course Hero Panel */}
-        <div className="luxe-panel detail-hero bento-hero">
-          <div className="detail-hero-top" style={{ display: 'flex', alignItems: 'center' }}>
-            <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '15px' }}>
-              <ArrowLeft size={24} color="#1e293b" />
-            </button>
-            <h2 className="luxe-title" style={{ fontSize: '28px', color: 'black' }}>
-              {selectedCourse.name === 'Mathematics' ? t.mathSubject :
-                selectedCourse.name === 'Computer Science' ? (t.csSubject || 'Computer Science') :
-                  selectedCourse.name === 'World History' ? (t.historySubject || 'World History') :
-                    selectedCourse.name === 'Literature' ? (t.literatureSubject || 'Literature') :
-                      selectedCourse.name}
-            </h2>
-          </div>
+        {/* Course Hero Panel with AI Image */}
+        <div className="luxe-panel detail-hero bento-hero" style={{ overflow: 'hidden', position: 'relative' }}>
+          {/* AI Generated Background Image */}
+          {selectedCourse.image_url ? (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundImage: `url(${selectedCourse.image_url})`,
+              backgroundSize: 'cover', backgroundPosition: 'center',
+              opacity: 0.15, zIndex: 0
+            }} />
+          ) : (
+            <div style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: `linear-gradient(135deg, ${selectedCourse.color}15, ${selectedCourse.color}08)`,
+              zIndex: 0
+            }} />
+          )}
 
-          <div className="detail-stats" style={{ marginTop: '30px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#3b82f6' }}>{completedCount} / {total} {t.componentsCompleted || 'Resources Completed'}</span>
-            <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{prog}% {t.mastery || 'Mastery'}</span>
-          </div>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div className="detail-hero-top" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+              <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '5px', flexShrink: 0 }}>
+                <ArrowLeft size={24} color="#1e293b" />
+              </button>
 
-          <div className="luxe-progress-bg" style={{ height: '10px' }}>
-            <div
-              className="luxe-progress-fill"
-              style={{ width: `${prog}%`, background: '#3b82f6', boxShadow: `0 0 15px rgba(59, 130, 246, 0.5)` }}
-            ></div>
+              {/* Course Image Thumbnail */}
+              {selectedCourse.image_url ? (
+                <div style={{
+                  width: '72px', height: '72px', borderRadius: '16px',
+                  overflow: 'hidden', flexShrink: 0,
+                  boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                  border: '2px solid rgba(59, 130, 246, 0.2)'
+                }}>
+                  <img
+                    src={selectedCourse.image_url}
+                    alt={selectedCourse.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+              ) : (
+                <div style={{
+                  width: '72px', height: '72px', borderRadius: '16px',
+                  background: `linear-gradient(135deg, ${selectedCourse.color}30, ${selectedCourse.color}60)`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
+                  position: 'relative', overflow: 'hidden'
+                }}>
+                  {!selectedCourse.image_url && selectedCourse.id && (
+                    <Loader2 size={24} color={selectedCourse.color} style={{ animation: 'spinCircle 1.5s linear infinite', opacity: 0.6 }} />
+                  )}
+                </div>
+              )}
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h2 className="luxe-title" style={{ fontSize: '28px', color: 'black', margin: 0 }}>
+                  {selectedCourse.name === 'Mathematics' ? t.mathSubject :
+                    selectedCourse.name === 'Computer Science' ? (t.csSubject || 'Computer Science') :
+                      selectedCourse.name === 'World History' ? (t.historySubject || 'World History') :
+                        selectedCourse.name === 'Literature' ? (t.literatureSubject || 'Literature') :
+                          selectedCourse.name}
+                </h2>
+                {selectedCourse.description && (
+                  <p style={{ margin: '6px 0 0', fontSize: '14px', color: '#64748b', lineHeight: '1.5' }}>
+                    {selectedCourse.description}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="detail-stats" style={{ marginTop: '25px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#3b82f6' }}>{completedCount} / {total} {t.componentsCompleted || 'Resources Completed'}</span>
+              <span style={{ color: '#3b82f6', fontWeight: 'bold' }}>{prog}% {t.mastery || 'Mastery'}</span>
+            </div>
+
+            <div className="luxe-progress-bg" style={{ height: '10px' }}>
+              <div
+                className="luxe-progress-fill"
+                style={{ width: `${prog}%`, background: '#3b82f6', boxShadow: `0 0 15px rgba(59, 130, 246, 0.5)` }}
+              ></div>
+            </div>
           </div>
         </div>
 
@@ -701,7 +812,21 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
   const renderCourseCard = (course) => {
     const { total, done, prog } = getCourseCounts(course);
     return (
-      <div key={course.id} className="luxe-card clickable hover-lift animate-slide-up glass-glow" onClick={() => setSelectedCourseId(course.id)}>
+      <div key={course.id} className="luxe-card clickable hover-lift animate-slide-up glass-glow" onClick={() => setSelectedCourseId(course.id)} style={{ overflow: 'hidden' }}>
+        {/* Course Image Banner */}
+        {course.image_url && (
+          <div style={{
+            width: '100%', height: '100px', marginBottom: '12px',
+            borderRadius: '12px', overflow: 'hidden',
+            background: `linear-gradient(135deg, ${course.color}20, ${course.color}40)`
+          }}>
+            <img
+              src={course.image_url}
+              alt={course.name}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          </div>
+        )}
         <div className="card-top" style={{ justifyContent: 'flex-end' }}>
           <button className="del-btn" onClick={(e) => deleteCourse(course.id, e)}>
             <Trash2 size={16} />
@@ -800,11 +925,12 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
 
       {/* Add Course Form */}
       {isAdding && (
-        <form onSubmit={addCourse} className="add-subject-form luxe-panel">
+        <form onSubmit={addCourse} className="add-subject-form luxe-panel" style={{ maxWidth: '550px' }}>
           <div className="form-header">
             <h3 style={{ color: 'black' }}>{t.addCourse}</h3>
           </div>
-          <div className="form-body">
+          <div className="form-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            {/* Course Name - Required */}
             <input
               type="text"
               placeholder={t.courseName}
@@ -812,8 +938,92 @@ export default function Dashboard({ t, selectedCourseId, setSelectedCourseId, se
               onChange={(e) => setNewCourseName(e.target.value)}
               className="input-luxe"
               autoFocus
+              required
+              style={{ background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0' }}
             />
-            <button type="submit" className="btn-luxe submit">{t.addCourse}</button>
+
+            {/* Description - Optional */}
+            <div style={{ position: 'relative' }}>
+              <textarea
+                placeholder={t.courseDescriptionPlaceholder || 'Description of the course (optional)'}
+                value={newCourseDescription}
+                onChange={(e) => setNewCourseDescription(e.target.value)}
+                className="input-luxe"
+                rows={3}
+                style={{
+                  background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0',
+                  resize: 'vertical', minHeight: '70px', fontFamily: 'inherit',
+                  width: '100%', padding: '12px 16px', borderRadius: '12px'
+                }}
+              />
+              <span style={{
+                position: 'absolute', top: '-8px', right: '12px',
+                background: '#f8fafc', padding: '0 6px',
+                fontSize: '11px', color: '#94a3b8', fontWeight: '500'
+              }}>
+                {t.optionalField || 'Optional'}
+              </span>
+            </div>
+
+            {/* Add Resources - Optional */}
+            <div style={{ position: 'relative' }}>
+              <label style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '14px 16px', borderRadius: '12px',
+                border: newCourseFile ? '2px solid #3b82f6' : '1px dashed #cbd5e1',
+                background: newCourseFile ? 'rgba(59, 130, 246, 0.04)' : '#fff',
+                cursor: 'pointer', transition: 'all 0.2s'
+              }}>
+                <Upload size={20} color={newCourseFile ? '#3b82f6' : '#94a3b8'} />
+                <span style={{ fontSize: '14px', color: newCourseFile ? '#1e293b' : '#64748b', fontWeight: '500' }}>
+                  {newCourseFile
+                    ? newCourseFile.name
+                    : (t.addResourcesOptional || 'Add Resources (PDF/PPTX) — Optional')}
+                </span>
+                <input
+                  type="file"
+                  accept=".pdf,.pptx"
+                  style={{ display: 'none' }}
+                  onChange={(e) => setNewCourseFile(e.target.files?.[0] || null)}
+                />
+                {newCourseFile && (
+                  <button
+                    type="button"
+                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); setNewCourseFile(null); }}
+                    style={{
+                      marginLeft: 'auto', background: 'none', border: 'none',
+                      color: '#ef4444', cursor: 'pointer', padding: '2px'
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </label>
+              <span style={{
+                position: 'absolute', top: '-8px', right: '12px',
+                background: '#f8fafc', padding: '0 6px',
+                fontSize: '11px', color: '#94a3b8', fontWeight: '500'
+              }}>
+                {t.optionalField || 'Optional'}
+              </span>
+            </div>
+
+
+            <button
+              type="submit"
+              className="btn-luxe submit"
+              disabled={isCreatingCourse || !newCourseName.trim()}
+              style={{
+                opacity: (isCreatingCourse || !newCourseName.trim()) ? 0.6 : 1,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+              }}
+            >
+              {isCreatingCourse ? (
+                <><Loader2 size={18} style={{ animation: 'spinCircle 0.8s linear infinite' }} /> {t.creatingCourse || 'Creating...'}</>
+              ) : (
+                t.addCourse
+              )}
+            </button>
           </div>
         </form>
       )}
