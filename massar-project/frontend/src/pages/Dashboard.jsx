@@ -14,18 +14,27 @@ const availableIcons = {
 
 const CustomXAxisTick = ({ x, y, payload }) => {
   const fullText = payload.value;
-  const truncated = fullText.length > 12 ? fullText.substring(0, 12) + '...' : fullText;
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={16} textAnchor="end" fill="#94a3b8" fontSize={11} transform="rotate(-25)">
-        <title>{fullText}</title>
-        {truncated}
+      <text 
+        x={0} 
+        y={0} 
+        dy={16} 
+        textAnchor="end" 
+        fill="#94a3b8" 
+        fontSize={11} 
+        fontStyle="normal" 
+        fontWeight="500" 
+        transform="rotate(-45)"
+        style={{ direction: 'ltr', unicodeBidi: 'bidi-override' }}
+      >
+        {fullText}
       </text>
     </g>
   );
 };
 
-export default function Dashboard({ t, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
+export default function Dashboard({ t, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz, setSelectedComponentsDataForQuiz, isRtl }) {
   const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -502,11 +511,9 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
                   background: `linear-gradient(135deg, ${selectedCourse.color}30, ${selectedCourse.color}60)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0, boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
-                  position: 'relative', overflow: 'hidden'
+                  position: 'relative', overflow: 'hidden', color: selectedCourse.color
                 }}>
-                  {!selectedCourse.image_url && selectedCourse.id && (
-                    <Loader2 size={24} color={selectedCourse.color} style={{ animation: 'spinCircle 1.5s linear infinite', opacity: 0.6 }} />
-                  )}
+                  {availableIcons[selectedCourse.icon] ? availableIcons[selectedCourse.icon] : <span style={{ fontSize: '32px', fontWeight: 'bold' }}>{selectedCourse.name.charAt(0).toUpperCase()}</span>}
                 </div>
               )}
 
@@ -862,6 +869,10 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
                 disabled={selectedComponents.length === 0}
                 onClick={() => {
                   setSelectedComponentsForQuiz(selectedComponents);
+                  if (setSelectedComponentsDataForQuiz) {
+                    const data = selectedCourse.componentList.filter(c => selectedComponents.includes(c.id));
+                    setSelectedComponentsDataForQuiz(data);
+                  }
                   setCurrentPage('quiz');
                 }}
                 style={{
@@ -905,18 +916,27 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
                 <p style={{ color: '#64748b', textAlign: 'center' }}>{t.noChartComponents || 'Add components to see your progress chart.'}</p>
               </div>
             ) : (
-              <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px' }}>
+              <div style={{ flex: 1, minHeight: '450px', width: '100%', marginBottom: '20px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: 45, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                       <XAxis
                         dataKey="name"
                         stroke="#94a3b8"
                         interval={0}
-                        height={60}
+                        height={180}
                         tick={<CustomXAxisTick />}
                       />
-                      <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} tickFormatter={(val) => `${val}%`} />
+                      <YAxis 
+                        domain={[0, 100]} 
+                        stroke="#94a3b8" 
+                        width={60}
+                        dx={isRtl ? -20 : 0}
+                        tickMargin={5}
+                        tick={{ fill: '#94a3b8', fontSize: 13, fontWeight: 'bold' }} 
+                        ticks={[0, 25, 50, 75, 100]} 
+                        tickFormatter={(val) => isRtl ? `٪${val}` : `${val}%`} 
+                      />
                       <Tooltip
                         cursor={{ fill: 'rgba(0,0,0,0.02)' }}
                         content={({ active, payload }) => {

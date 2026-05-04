@@ -108,7 +108,7 @@ const translations = {
     footerCompany: "Company",
     footerAboutUs: "About Us",
     footerContactUs: "Contact Us",
-    rightsReserved: "All rights reserved. © 2026 Massar AI",
+    rightsReserved: "All rights reserved.",
     components: "Components",
     generateComponents: "Generate Components",
     generating: "Generating...",
@@ -247,7 +247,7 @@ const translations = {
     literatureSubject: "الأدب",
     startQuiz: "بدء الاختبار القصير",
     progressDiagram: "رسم بياني للتقدم",
-    resourcesLearningAssets: "المكتبة المعرفية",
+    resourcesLearningAssets: "مصادر التعلم",
     addResources: "إرفاق مصادر (PDF/PPTX)",
     addingResource: "جاري المعالجة والإرفاق...",
     open: "عرض",
@@ -279,7 +279,7 @@ const translations = {
     footerCompany: "منظومة مسار",
     footerAboutUs: "رؤيتنا ورسالتنا",
     footerContactUs: "للتواصل بشؤون المستفيدين",
-    rightsReserved: "مسار © 2026. كافة الحقوق التقنية محفوظة.",
+    rightsReserved: "كافة الحقوق التقنية محفوظة.",
     components: "الأقسام",
     generateComponents: "البناء الآلي للأقسام",
     generating: "جاري المعالجة...",
@@ -383,6 +383,8 @@ function App() {
   // Dashboard Sub-Routing State
   const [selectedCourseId, setSelectedCourseId] = useState(null);
   const [selectedComponentsForQuiz, setSelectedComponentsForQuiz] = useState([]);
+  const [selectedComponentsDataForQuiz, setSelectedComponentsDataForQuiz] = useState([]);
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0); // increments after quiz to force re-fetch
 
   // Restore session from localStorage on app load
   useEffect(() => {
@@ -642,6 +644,8 @@ function App() {
               setCurrentPage={setCurrentPage}
               selectedComponentsForQuiz={selectedComponentsForQuiz}
               setSelectedComponentsForQuiz={setSelectedComponentsForQuiz}
+              setSelectedComponentsDataForQuiz={setSelectedComponentsDataForQuiz}
+              refreshKey={dashboardRefreshKey}
             />
           </div>
         )}
@@ -655,8 +659,10 @@ function App() {
             t={t}
             setCurrentPage={setCurrentPage}
             selectedComponents={selectedComponentsForQuiz}
+            selectedComponentsData={selectedComponentsDataForQuiz}
             selectedCourseId={selectedCourseId}
             setSelectedCourseId={setSelectedCourseId}
+            onQuizComplete={() => setDashboardRefreshKey(k => k + 1)}
           />
         )}
 
