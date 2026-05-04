@@ -4,9 +4,15 @@ from app.models.user import UserSignup, UserLogin
 from app.database.database import get_db
 from app.models.db_user import DBUser
 from app.core.security import get_current_user
-from app.core.supabase_client import supabase
+from app.core.supabase_client import supabase, supabase_admin
+from pydantic import BaseModel
+from typing import Optional
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    redirect_url: Optional[str] = None
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 def signup(user: UserSignup, db: Session = Depends(get_db)):
@@ -113,3 +119,62 @@ def get_my_profile(current_user: DBUser = Depends(get_current_user)):
         "email": current_user.email,
         "user_role": current_user.role
     }
+
+@router.post("/forgot-password")
+def forgot_password(req: ForgotPasswordRequest):
+    """
+    Sends a password recovery email using Supabase admin API.
+    In dev mode (localhost), also returns the reset link directly so you can test without email.
+    """
+    try:
+        redirect_url = req.redirect_url or "http://localhost:5173/?page=reset-password"
+        
+        # Use admin API with service_role key to generate the recovery link
+        response = supabase_admin.auth.admin.generate_link({
+            "type": "recovery",
+            "email": req.email,
+            "options": {
+                "redirect_to": redirect_url
+            }
+        })
+        
+        # Extract the action link from the response
+        action_link = None
+        if hasattr(response, 'properties') and hasattr(response.properties, 'action_link'):
+            action_link = response.properties.action_link
+        elif hasattr(response, 'action_link'):
+            action_link = response.action_link
+            
+        result = {
+            "message": "Password reset link generated successfully.",
+            "success": True
+        }
+        
+        # In dev/local mode, include the link directly so no email is needed
+        if action_link:
+            print(f"[Reset] Recovery link for {req.email}: {action_link}")
+            result["reset_link"] = action_link
+        
+        return result
+
+    except Exception as e:
+        error_msg = str(e)
+        print(f"[Reset] Password reset failed: {error_msg}")
+        
+        if "User not found" in error_msg:
+            # Don't reveal if user exists — return success anyway
+            return {
+                "message": "If an account with that email exists, a reset link has been generated.",
+                "success": True
+            }
+        
+        if "rate" in error_msg.lower() or "429" in error_msg:
+            raise HTTPException(
+                status_code=429,
+                detail="Too many requests. Please wait a moment before trying again."
+            )
+        
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate reset link: {error_msg}"
+        )

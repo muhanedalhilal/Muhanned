@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
-import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Trophy, Medal, AlertCircle, BarChart2 } from 'lucide-react';
 
-export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, selectedCourseId, setSelectedCourseId }) {
+/* Animated fill bar */
+function Bar({ pct, color, delay = 0 }) {
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setW(pct), delay);
+    return () => clearTimeout(t);
+  }, [pct, delay]);
+  return (
+    <div style={{ background: '#f1f5f9', borderRadius: 99, height: 8, overflow: 'hidden', flex: 1 }}>
+      <div style={{ height: '100%', borderRadius: 99, background: color, width: `${w}%`, transition: 'width 1s cubic-bezier(.4,0,.2,1)' }} />
+    </div>
+  );
+}
+
+export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCourseId, setSelectedCourseId, selectedComponentsData = [] }) {
 
   // Go back to the course detail view (not command center)
   const navigateBack = () => {
@@ -26,6 +40,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
   const [averageMastery, setAverageMastery] = useState(0);
   const [kcMasteryMap, setKcMasteryMap] = useState({});
   const [isPrefetching, setIsPrefetching] = useState(false);
+  const [localComponentsData, setLocalComponentsData] = useState([]);
 
   useEffect(() => {
     if (selectedComponents.length === 0) {
@@ -42,6 +57,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
 
         if (compRes.ok && compRes.data) {
            const selected = compRes.data.filter(c => selectedComponents.includes(c.id));
+           setLocalComponentsData(selected);
            const sum = selected.reduce((acc, curr) => acc + curr.progress, 0);
            setAverageMastery(selected.length > 0 ? (sum / selected.length) : 0);
            
@@ -238,7 +254,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
             onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            <ArrowLeft size={15} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.quizBackToCourse || 'Back to Course'}
+            <ArrowLeft size={15} /> {t.quizBackToCourse || 'Back to Course'}
           </button>
         </div>
       </div>
@@ -249,43 +265,53 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
      RESULTS  — clean scorecard
   ───────────────────────────────────────── */
   if (quizFinished) {
-    const actTotal = Math.max(totalAnswered, 1); // Avoid division by zero
+    const actTotal = Math.max(totalAnswered, 1);
     const pct = Math.round((score / actTotal) * 100);
-    const msg = pct >= 80 ? 'Excellent work!' : pct >= 50 ? 'Good effort — keep going!' : 'Keep studying, you\'ll get there!';
-    const accent = pct >= 80 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+
+    const config = 
+      pct >= 80 ? { label: t.quizOutstanding || 'Outstanding!', icon: Trophy, color: '#10b981', bg: '#f0fdf4', msg: t.quizOutstandingMsg || 'You have mastered these concepts!' } :
+      pct >= 50 ? { label: t.quizGoodEffort || 'Good Effort!', icon: CheckCircle2, color: '#f59e0b', bg: '#fffbeb', msg: t.quizGoodEffortMsg || 'You are on the right track, keep going!' } :
+      { label: t.quizKeepPracticing || 'Keep Practicing', icon: AlertCircle, color: '#ef4444', bg: '#fef2f2', msg: t.quizKeepPracticingMsg || 'Review the materials and try again.' };
+
+    const ScoreIcon = config.icon;
+
+    // Build the Knowledge Breakdown
+    const breakdownMap = {};
+    answers.forEach((ans) => {
+       const kcId = ans.kc_id;
+       if (!breakdownMap[kcId]) breakdownMap[kcId] = { correct: 0, total: 0 };
+       breakdownMap[kcId].total += 1;
+       if (ans.is_correct) breakdownMap[kcId].correct += 1;
+    });
+    
+    const localBreakdown = Object.entries(breakdownMap).map(([id, stats]) => {
+       const kcObj = localComponentsData?.find(c => c.id === parseInt(id)) || selectedComponentsData?.find(c => c.id === parseInt(id));
+       return {
+          id,
+          topic: kcObj ? (kcObj.topic || kcObj.text) : `Topic ${id}`,
+          correct: stats.correct,
+          total: stats.total,
+          pct: Math.round((stats.correct / stats.total) * 100)
+       };
+    });
 
     return (
-      <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', animation: 'fadeIn 0.4s ease' }}>
-        <div style={{
-          background: 'white', borderRadius: '24px', padding: '48px 40px',
-          maxWidth: '440px', width: '100%', textAlign: 'center',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07), 0 20px 60px rgba(0,0,0,0.06)',
-          border: '1px solid #f1f5f9'
-        }}>
-          {/* No emoji — clean accent icon */}
-          <div style={{
-            width: '56px', height: '56px', borderRadius: '50%', margin: '0 auto 16px',
-            background: `${accent}18`, border: `2px solid ${accent}55`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <CheckCircle2 size={28} color={accent} strokeWidth={1.8} />
-          </div>
-          <h1 style={{ fontSize: '26px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px 0' }}>{t.quizComplete || 'Quiz Complete'}</h1>
-          <p style={{ color: '#94a3b8', fontSize: '14px', margin: '0 0 32px 0' }}>{msg}</p>
+      <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 16px 60px', animation: 'fadeIn 0.4s ease' }}>
 
-          {/* Score circle */}
-          <div style={{
-            width: '110px', height: '110px', borderRadius: '50%', margin: '0 auto 28px',
-            background: `conic-gradient(${accent} ${pct * 3.6}deg, #f1f5f9 0deg)`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 0 0 8px white, 0 0 0 10px ${accent}22`
-          }}>
-            <div style={{
-              width: '86px', height: '86px', borderRadius: '50%', background: 'white',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
-            }}>
-              <span style={{ fontSize: '22px', fontWeight: '900', color: '#0f172a', lineHeight: 1 }}>{pct}%</span>
-              <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginTop: '2px' }}>{t.quizScore || 'score'}</span>
+        {/* Dynamic Score Card */}
+        <div style={{ background: 'white', borderRadius: '24px', padding: '48px 40px', marginBottom: '24px', textAlign: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07), 0 20px 60px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
+          
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', margin: '0 auto 20px', background: config.bg, border: `2px solid ${config.color}33`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <ScoreIcon size={32} color={config.color} strokeWidth={2} />
+          </div>
+          
+          <h1 style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', margin: '0 0 6px 0' }}>{config.label}</h1>
+          <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 32px 0', fontWeight: '500' }}>{config.msg}</p>
+
+          <div style={{ width: '130px', height: '130px', borderRadius: '50%', margin: '0 auto 32px', background: `conic-gradient(${config.color} ${pct * 3.6}deg, #f1f5f9 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 8px white, 0 0 0 10px ${config.color}15` }}>
+            <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a', lineHeight: 1 }}>{pct}%</span>
+              <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.5px' }}>{t.quizScore || 'score'}</span>
             </div>
           </div>
 
@@ -294,28 +320,56 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
             {[
               { label: t.quizCorrect || 'Correct', val: score, color: '#10b981', bg: '#f0fdf4' },
               { label: t.quizWrong || 'Wrong', val: totalAnswered - score, color: '#ef4444', bg: '#fef2f2' },
-              { label: t.quizTotal || 'Total', val: totalAnswered, color: '#3b82f6', bg: '#eff6ff' },
+              { label: t.quizTotal || 'Total', val: totalAnswered, color: '#6366f1', bg: '#f5f3ff' },
             ].map((s, i) => (
-              <div key={i} style={{ flex: 1, padding: '14px 8px', borderRadius: '14px', background: s.bg }}>
-                <div style={{ fontSize: '22px', fontWeight: '900', color: s.color }}>{s.val}</div>
-                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase', marginTop: '2px' }}>{s.label}</div>
+              <div key={i} style={{ flex: 1, padding: '16px 8px', borderRadius: '16px', background: s.bg, border: '1px solid rgba(0,0,0,0.02)' }}>
+                <div style={{ fontSize: '24px', fontWeight: '900', color: s.color }}>{s.val}</div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', marginTop: '3px' }}>{s.label}</div>
               </div>
             ))}
           </div>
 
-          <button onClick={navigateBack} style={{
-            width: '100%', padding: '14px', borderRadius: '14px',
-            background: '#0f172a', color: 'white',
-            border: 'none', fontSize: '15px', fontWeight: '700',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-            transition: 'opacity 0.2s'
-          }}
-            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-          >
-            <ArrowLeft size={16} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.quizReturn || 'Return to Course'}
+          <button onClick={navigateBack} style={{ width: '100%', padding: '15px', borderRadius: '16px', background: '#0f172a', color: 'white', border: 'none', fontSize: '15px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', boxShadow: '0 10px 25px rgba(15,23,42,0.2)' }}>
+            <ArrowLeft size={18} /> {t.quizReturn || 'Return to Course'}
           </button>
         </div>
+
+        {/* Breakdown Card */}
+        {localBreakdown.length > 0 && (
+          <div style={{ background: 'white', borderRadius: '24px', padding: '32px 28px', border: '1px solid #f1f5f9', boxShadow: '0 20px 50px rgba(0,0,0,.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '28px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <BarChart2 size={22} color="#6366f1" />
+              </div>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#0f172a' }}>{t.quizKnowledgeBreakdown || 'Knowledge Breakdown'}</h2>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {localBreakdown.map((kc, i) => {
+                const kcColor = kc.pct >= 80 ? '#10b981' : kc.pct >= 50 ? '#f59e0b' : '#ef4444';
+
+                return (
+                  <div key={i} style={{ padding: '24px', borderRadius: '18px', border: '1px solid #f1f5f9', background: '#fafbff', animation: `fadeIn 0.4s ease ${i * 80}ms both` }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
+                      <span style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b', flex: 1, lineHeight: '1.4' }}>{kc.topic}</span>
+                      <span style={{ fontSize: '12px', fontWeight: '900', padding: '5px 12px', borderRadius: '20px', background: `${kcColor}15`, color: kcColor, whiteSpace: 'nowrap' }}>
+                        {kc.correct} / {kc.total} {t.quizCorrect || 'Correct'}
+                      </span>
+                    </div>
+
+                    <div style={{ marginBottom: '4px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{t.quizScore || 'Quiz Mastery'}</span>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: kcColor }}>{kc.pct}%</span>
+                      </div>
+                      <Bar pct={kc.pct} color={kcColor} delay={i * 80 + 200} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -338,7 +392,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
           color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)', flexShrink: 0
         }}>
-          <ArrowLeft size={15} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.quizEnd || 'End'}
+          <ArrowLeft size={15} /> {t.quizEnd || 'End'}
         </button>
 
         {/* Dynamic Mastery Progress bar */}

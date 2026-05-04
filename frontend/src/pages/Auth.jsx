@@ -3,16 +3,11 @@ import { CheckCircle, AlertTriangle, CloudOff, BrainCircuit, ArrowLeft, Mail } f
 import { api } from '../services/api';
 import { supabase } from '../services/supabase';
 
-export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, isRtl }) {
+export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, isRtl, setCurrentPage }) {
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [fieldErrors, setFieldErrors] = useState({ password: '', confirmPassword: '' });
   const [status, setStatus] = useState({ message: '', type: '' });
   const [isLoading, setIsLoading] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState('');
-  const [resetStatus, setResetStatus] = useState({ message: '', type: '' });
-  const [isResetLoading, setIsResetLoading] = useState(false);
-  const [devResetLink, setDevResetLink] = useState('');
 
   const getMsg = (key) => {
     switch (key) {
@@ -63,53 +58,6 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
       }
     }
     setFieldErrors(errors);
-  };
-
-  const handleForgotPassword = async (e) => {
-    e.preventDefault();
-
-    const email = resetEmail.trim();
-
-    if (!email) return;
-
-    setIsResetLoading(true);
-    setResetStatus({ message: "", type: "" });
-    setDevResetLink(""); // Clear previous link
-
-    try {
-      const redirectUrl = `${window.location.origin}/?page=reset-password`;
-
-      const response = await api.post('/auth/forgot-password', {
-        email: email,
-        redirect_url: redirectUrl,
-      });
-
-      if (!response.ok) {
-        setResetStatus({
-          message: response.message || "reset_error",
-          type: "error",
-        });
-        return;
-      }
-
-      if (response.data && response.data.reset_link) {
-        setDevResetLink(response.data.reset_link);
-      }
-
-      setResetStatus({
-        message: "reset_sent",
-        type: "success",
-      });
-    } catch (err) {
-      console.log("Reset password catch error:", err);
-
-      setResetStatus({
-        message: "reset_error",
-        type: "error",
-      });
-    } finally {
-      setIsResetLoading(false);
-    }
   };
 
   const handleAuthSubmit = async (e) => {
@@ -263,7 +211,7 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
               <div style={{ textAlign: isRtl ? 'right' : 'left', marginTop: '-8px', marginBottom: '12px' }}>
                 <button
                   type="button"
-                  onClick={() => { setShowForgotPassword(true); setResetEmail(formData.email || ''); setResetStatus({ message: '', type: '' }); }}
+                  onClick={() => setCurrentPage('forgot-password')}
                   style={{
                     background: 'none', border: 'none', padding: 0,
                     color: '#3b82f6', fontSize: '13px', fontWeight: '600',
@@ -325,112 +273,7 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
         </div>
       </div>
 
-      {/* Forgot Password Modal */}
-      {showForgotPassword && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 9999
-        }} onClick={() => setShowForgotPassword(false)}>
-          <div style={{
-            background: '#fff', borderRadius: '20px', padding: '36px 32px',
-            maxWidth: '440px', width: '90%', position: 'relative',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.15)'
-          }} onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setShowForgotPassword(false)}
-              style={{
-                position: 'absolute', top: '16px', left: isRtl ? 'auto' : '16px', right: isRtl ? '16px' : 'auto',
-                background: 'none', border: 'none', cursor: 'pointer', padding: '4px'
-              }}
-            >
-              <ArrowLeft size={22} color="#64748b" />
-            </button>
 
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <div style={{
-                width: '56px', height: '56px', borderRadius: '16px',
-                background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto 16px'
-              }}>
-                <Mail size={28} color="#fff" />
-              </div>
-              <h3 style={{ color: '#0f172a', fontSize: '22px', fontWeight: '800', margin: '0 0 8px' }}>
-                {isRtl ? 'إعادة تعيين كلمة المرور' : 'Reset Password'}
-              </h3>
-              <p style={{ color: '#64748b', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>
-                {isRtl ? 'أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين' : 'Enter your email and we\'ll send you a reset link'}
-              </p>
-            </div>
-
-            <form onSubmit={handleForgotPassword}>
-              <div style={{ marginBottom: '16px' }}>
-                <input
-                  type="email"
-                  placeholder={isRtl ? 'البريد الإلكتروني' : 'Email address'}
-                  required
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  style={{
-                    width: '100%', padding: '14px 16px', borderRadius: '12px',
-                    border: '1.5px solid #e2e8f0', fontSize: '15px',
-                    outline: 'none', transition: 'border 0.2s',
-                    direction: 'ltr', textAlign: 'left',
-                    boxSizing: 'border-box'
-                  }}
-                  onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                  onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isResetLoading || !resetEmail.trim()}
-                style={{
-                  width: '100%', padding: '14px', borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #3b82f6, #6366f1)',
-                  color: '#fff', border: 'none', fontSize: '15px',
-                  fontWeight: '700', cursor: 'pointer',
-                  opacity: (isResetLoading || !resetEmail.trim()) ? 0.6 : 1,
-                  transition: 'opacity 0.2s'
-                }}
-              >
-                {isResetLoading
-                  ? (isRtl ? 'جاري الإرسال...' : 'Sending...')
-                  : (isRtl ? 'إرسال رابط إعادة التعيين' : 'Send Reset Link')}
-              </button>
-            </form>
-
-            {resetStatus.message && (
-              <div style={{
-                marginTop: '16px', padding: '12px 16px', borderRadius: '10px',
-                background: resetStatus.type === 'success' ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                border: `1px solid ${resetStatus.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-                display: 'flex', flexDirection: 'column', gap: '8px',
-                fontSize: '13px', fontWeight: '500',
-                color: resetStatus.type === 'success' ? '#059669' : '#dc2626'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {resetStatus.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
-                  {getMsg(resetStatus.message)}
-                </div>
-                {devResetLink && (
-                  <a href={devResetLink} style={{
-                    display: 'block', padding: '10px', textAlign: 'center',
-                    background: '#059669', color: '#fff', borderRadius: '8px',
-                    textDecoration: 'none', fontWeight: '600', width: '100%',
-                    boxSizing: 'border-box', marginTop: '4px'
-                  }}>
-                    {isRtl ? 'رابط الاستعادة (للمطورين) - اضغط هنا' : 'Dev Reset Link - Click Here'}
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

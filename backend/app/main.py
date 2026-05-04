@@ -6,8 +6,6 @@ from app.database.database import engine, Base
 import app.models.db_user  # Imported so SQLAlchemy detects the table
 import os
 from app.api import knowledge
-from app.api import study_aids
-import app.models.study_aid  # Ensure study_aids table is created
 
 
 
@@ -50,8 +48,6 @@ app.include_router(knowledge.router)
 app.include_router(courses.router)
 from app.api import quiz
 app.include_router(quiz.router)
-app.include_router(study_aids.router)
-
 
 @app.get("/")
 def read_root():

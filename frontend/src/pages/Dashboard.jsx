@@ -1,10 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2, ImageIcon, FileText, Upload, Network, X, Download } from 'lucide-react';
+import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2, ImageIcon, FileText, Upload } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import ReactMarkdown from 'react-markdown';
-import mermaid from 'mermaid';
-import html2pdf from 'html2pdf.js';
-
 import { api } from '../services/api';
 
 const availableIcons = {
@@ -16,14 +12,8 @@ const availableIcons = {
   science: <FlaskConical size={24} />
 };
 
-const CustomXAxisTick = ({ x, y, payload, isRtl }) => {
+const CustomXAxisTick = ({ x, y, payload }) => {
   const fullText = payload.value;
-  // Use a regex to guess if the text is primarily Arabic
-  const isArabic = /[\u0600-\u06FF]/.test(fullText);
-  // Append strong directional marker to ensure '...' stays at the visual end of the text
-  const marker = isArabic ? '\u200F' : '\u200E';
-  const truncated = fullText.length > 12 ? fullText.substring(0, 12) + '...' + marker : fullText;
-  
   return (
     <g transform={`translate(${x},${y})`}>
       <text 
@@ -33,17 +23,18 @@ const CustomXAxisTick = ({ x, y, payload, isRtl }) => {
         textAnchor="end" 
         fill="#94a3b8" 
         fontSize={11} 
-        transform="rotate(-35)"
-        style={{ direction: 'ltr' }}
+        fontStyle="normal" 
+        fontWeight="500" 
+        transform="rotate(-45)"
+        style={{ direction: 'ltr', unicodeBidi: 'bidi-override' }}
       >
-        <title>{fullText}</title>
-        {truncated}
+        {fullText}
       </text>
     </g>
   );
 };
 
-export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
+export default function Dashboard({ t, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz, setSelectedComponentsDataForQuiz, isRtl }) {
   const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -57,6 +48,10 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
   const [deletingResId, setDeletingResId] = useState(null);
   const [isAddingComponent, setIsAddingComponent] = useState(false);
   const [newComponentName, setNewComponentName] = useState('');
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
+  const [isSavingComponent, setIsSavingComponent] = useState(false);
+  const [componentValidationError, setComponentValidationError] = useState('');
 
   const [dashboardUser, setDashboardUser] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -93,33 +88,6 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
     imagePollingRef.current[courseId] = intervalId;
   }, []);
 
-  // Study Aids State
-  const [isGeneratingAids, setIsGeneratingAids] = useState(false);
-  const [studyAidResult, setStudyAidResult] = useState(null);
-  const [savedStudyAids, setSavedStudyAids] = useState({});
-  const [studyAidError, setStudyAidError] = useState('');
-
-  const formatTopicCount = (count) => {
-    if (isRtl) {
-      if (count === 1) return 'موضوع واحد';
-      if (count === 2) return 'موضوعين';
-      if (count >= 3 && count <= 10) return `${count} مواضيع`;
-      return `${count} موضوعاً`;
-    }
-    return `${count} topic${count !== 1 ? 's' : ''}`;
-  };
-
-  useEffect(() => {
-    if (studyAidResult && studyAidResult.type === 'mindmap') {
-      try {
-        mermaid.initialize({ startOnLoad: true, theme: 'default' });
-        mermaid.contentLoaded();
-      } catch (e) {
-        console.error("Mermaid initialization failed:", e);
-      }
-    }
-  }, [studyAidResult]);
-
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -146,15 +114,14 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
     fetchUserData();
   }, []);
 
-  // Load saved study aids from DB when entering a course
   useEffect(() => {
-    if (!selectedCourseId) return;
-    api.get(`/study-aids/course/${selectedCourseId}`).then(res => {
-      if (res.ok && res.data) {
-        setSavedStudyAids(prev => ({ ...prev, [selectedCourseId]: res.data }));
-      }
-    });
-  }, [selectedCourseId]);
+    if (currentPage === 'dashboard') {
+      api.get('/courses/').then(res => {
+        if (res.ok) setCourses(res.data);
+      });
+    }
+  }, [currentPage]);
+
   const addCourse = async (e) => {
     e.preventDefault();
     if (!newCourseName.trim()) return;
@@ -324,70 +291,87 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
     }));
   };
 
-  const handleSaveComponent = (courseId) => {
-    if (newComponentName && newComponentName.trim()) {
-      setCourses(courses.map(course => {
-        if (course.id !== courseId) return course;
-        return {
-          ...course,
-          componentList: [...(course.componentList || []), { id: Date.now(), text: newComponentName.trim(), progress: 0 }]
-        };
-      }));
-    }
+  const openAddComponent = async (courseId, componentList) => {
+    setIsAddingComponent(true);
     setNewComponentName('');
-    setIsAddingComponent(false);
-  };
-
-
-  const generateStudyAid = async (type) => {
-    setIsGeneratingAids(true);
-    setStudyAidError('');
-    setStudyAidResult(null);
+    setComponentValidationError('');
+    setAiSuggestions([]);
+    setIsFetchingSuggestions(true);
     try {
-      const endpoint = type === 'summary' ? '/study-aids/summary' : '/study-aids/mindmap';
-      const res = await api.post(endpoint, { kc_ids: selectedComponents, course_id: selectedCourseId });
-      if (res.ok) {
-        const resultObj = {
-          id: res.data.saved_id,  // use real DB id
-          type,
-          content: type === 'summary' ? res.data.summary : res.data.mindmap,
-          title: res.data.title
-        };
-        setStudyAidResult(resultObj);
-        setSavedStudyAids(prev => ({
-          ...prev,
-          [selectedCourseId]: [resultObj, ...(prev[selectedCourseId] || [])]
-        }));
-      } else {
-        setStudyAidError(res.message || 'Failed to generate study aid.');
+      const existingTopics = (componentList || []).map(c => c.text);
+      const res = await api.post(`/courses/${courseId}/suggest-components`, { existing_topics: existingTopics });
+      if (res.ok && res.data.suggestions) {
+        setAiSuggestions(res.data.suggestions);
       }
-    } catch (e) {
-      setStudyAidError('An error occurred while communicating with the server.');
-    } finally {
-      setIsGeneratingAids(false);
+    } catch (_) {}
+    setIsFetchingSuggestions(false);
+  };
+
+  const handleSaveManualComponent = async (courseId) => {
+    const topic = newComponentName.trim();
+    if (!topic) return;
+    setIsSavingComponent(true);
+    setComponentValidationError('');
+    try {
+      const res = await api.post(`/courses/${courseId}/add-manual-component`, { topic });
+      if (res.ok) {
+        setCourses(courses.map(course => {
+          if (course.id !== courseId) return course;
+          return {
+            ...course,
+            componentList: [...(course.componentList || []), { id: res.data.id, text: res.data.text, content: res.data.content, progress: 0 }]
+          };
+        }));
+        setNewComponentName('');
+        setIsAddingComponent(false);
+        setAiSuggestions([]);
+        setComponentValidationError('');
+      } else {
+        // 422 → detail is the validation error reason
+        const reason = res.data?.detail || res.message || 'This topic does not seem related to this course.';
+        setComponentValidationError(reason);
+      }
+    } catch (err) {
+      setComponentValidationError('Something went wrong. Please try again.');
     }
+    setIsSavingComponent(false);
   };
 
-  const handleDownloadPDF = () => {
-    const element = document.getElementById('study-aid-content');
-    if (!element) return;
-    
-    const opt = {
-      margin:       [15, 15, 15, 15],
-      filename:     `Massar_${(studyAidResult?.title || 'Study_Aid').replace(/[^a-zA-Z0-9\u0600-\u06FF ]/g, '_').replace(/ /g, '_')}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(element).save();
+  const handlePickSuggestion = async (courseId, suggestion) => {
+    // Suggestions are already AI-validated; directly add via manual endpoint so they get saved to DB
+    setIsSavingComponent(true);
+    setComponentValidationError('');
+    try {
+      const res = await api.post(`/courses/${courseId}/add-manual-component`, { topic: suggestion.topic });
+      if (res.ok) {
+        setCourses(courses.map(course => {
+          if (course.id !== courseId) return course;
+          return {
+            ...course,
+            componentList: [...(course.componentList || []), { id: res.data.id, text: res.data.text, content: res.data.content, progress: 0 }]
+          };
+        }));
+        setIsAddingComponent(false);
+        setAiSuggestions([]);
+        setNewComponentName('');
+      } else {
+        setComponentValidationError(res.data?.detail || 'Failed to add suggestion.');
+      }
+    } catch (err) {
+      setComponentValidationError('Something went wrong.');
+    }
+    setIsSavingComponent(false);
   };
+
 
   // Render Course Detail View
   if (selectedCourseId) {
-    const selectedCourse = courses.find(c => String(c.id) === String(selectedCourseId));
+    const selectedCourse = courses.find(c => c.id === selectedCourseId);
     if (!selectedCourse) {
-      // Always show spinner while loading — only clear if loading is done and course truly not found
+      // Courses are still loading — show a spinner instead of a blank page
+      if (!dashboardLoading) {
+        setSelectedCourseId(null);
+      }
       return (
         <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{
@@ -397,24 +381,14 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
             minWidth: '260px'
           }}>
-            {dashboardLoading ? (
-              <div style={{
-                width: '52px', height: '52px', borderRadius: '50%',
-                border: '4px solid #e2e8f0', borderTopColor: '#3b82f6',
-                animation: 'spinCircle 0.8s linear infinite'
-              }} />
-            ) : (
-              // Courses loaded but this course no longer exists — go back
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ color: '#64748b', marginBottom: '16px' }}>Course not found.</p>
-                <button
-                  onClick={() => setSelectedCourseId(null)}
-                  style={{ padding: '10px 20px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}
-                >
-                  {t.backToDashboard || 'Back to Dashboard'}
-                </button>
-              </div>
-            )}
+            <div style={{
+              width: '52px', height: '52px', borderRadius: '50%',
+              border: '4px solid #e2e8f0', borderTopColor: '#3b82f6',
+              animation: 'spinCircle 0.8s linear infinite'
+            }} />
+            <p style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: '#0B1F3A' }}>
+              Loading course...
+            </p>
           </div>
         </div>
       );
@@ -442,14 +416,14 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
     const total = selectedCourse.componentList.length;
     const totalProgVal = selectedCourse.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
-    const completedCount = selectedCourse.componentList.filter(c => c.progress === 100).length;
+    const completedCount = selectedCourse.componentList.filter(c => c.progress >= 90).length;
 
     // Chart Data Preparation
     const chartData = selectedCourse.componentList.map((comp) => ({
       name: comp.text,
       fullName: comp.text,
       progress: comp.progress,
-      fill: comp.progress === 100 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
+      fill: comp.progress >= 90 ? selectedCourse.color : (comp.progress > 0 ? `${selectedCourse.color}99` : '#334155')
     }));
 
     return (
@@ -486,97 +460,10 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           </div>
         )}
 
-        {/* Study Aid Modal */}
-        {(isGeneratingAids || studyAidResult || studyAidError) && (
-          <div 
-            onClick={() => { if (!isGeneratingAids) { setStudyAidResult(null); setStudyAidError(''); } }}
-            style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(15, 23, 42, 0.8)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px',
-            cursor: isGeneratingAids ? 'default' : 'pointer'
-          }}>
-            <div onClick={(e) => e.stopPropagation()} style={{
-              background: '#ffffff',
-              borderRadius: '24px',
-              padding: '30px',
-              width: '100%', maxWidth: '800px',
-              maxHeight: '85vh',
-              overflowY: 'auto',
-              position: 'relative',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
-            }}>
-              <button 
-                onClick={() => { setStudyAidResult(null); setStudyAidError(''); }}
-                disabled={isGeneratingAids}
-                style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', zIndex: 10 }}
-              >
-                <X size={20} color="#64748b" />
-              </button>
-
-              {isGeneratingAids ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: '20px' }}>
-                  <div style={{
-                    width: '60px', height: '60px', borderRadius: '50%',
-                    border: '4px solid #e2e8f0', borderTopColor: '#3b82f6',
-                    animation: 'spinCircle 0.8s linear infinite'
-                  }} />
-                  <h3 style={{ margin: 0, fontSize: '20px', color: '#1e293b' }}>{t.generatingStudyAid || 'Generating Study Aid...'}</h3>
-                  <p style={{ color: '#64748b', fontSize: '15px' }}>{t.aiCreatingMaterials || 'Our AI is creating your personalized study materials.'}</p>
-                </div>
-              ) : studyAidError ? (
-                <div style={{ padding: '40px 0', textAlign: 'center' }}>
-                  <h3 style={{ color: '#ef4444', fontSize: '20px', marginBottom: '10px' }}>{t.generationFailed || 'Generation Failed'}</h3>
-                  <p style={{ color: '#64748b' }}>{studyAidError}</p>
-                </div>
-              ) : studyAidResult ? (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingRight: '50px' }}>
-                    <h2 style={{ fontSize: '24px', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      {studyAidResult.type === 'summary' ? <FileText size={24} color="#3b82f6" /> : <Network size={24} color="#8b5cf6" />}
-                      {studyAidResult.type === 'summary' ? (t.studySummary || 'Study Summary') : (t.mindMap || 'Mind Map')}
-                    </h2>
-                    <button
-                      onClick={handleDownloadPDF}
-                      className="btn-luxe hover-lift"
-                      style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', fontSize: '14px', border: 'none' }}
-                    >
-                      <Download size={16} style={{ marginRight: '6px' }} />
-                      {t.downloadPDF || 'Download PDF'}
-                    </button>
-                  </div>
-                  
-                  <div id="study-aid-content" style={{ background: '#ffffff', padding: '40px', borderRadius: '16px', border: '1px solid #e2e8f0', overflowX: 'auto', color: '#334155', lineHeight: '1.6' }}>
-                    {/* PDF Header - Visible in PDF and on screen */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px', paddingBottom: '20px', borderBottom: '2px solid #e2e8f0' }}>
-                      <img src="/logo.png" alt="Massar Logo" style={{ height: '40px' }} />
-                      <div>
-                        <h1 style={{ margin: 0, fontSize: '22px', color: '#0f172a', lineHeight: '1.4' }}>
-                          {studyAidResult.title}
-                        </h1>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>{t.generatedByAI || 'Generated by Massar AI'}</p>
-                      </div>
-                    </div>
-
-                    {studyAidResult.type === 'summary' ? (
-                       <ReactMarkdown>{studyAidResult.content}</ReactMarkdown>
-                    ) : (
-                       <pre className="mermaid">{studyAidResult.content}</pre>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
-        )}
-
 
         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
           <button className="btn-luxe" onClick={() => { setSelectedCourseId(null); setSelectedComponents([]); }} style={{ background: 'rgba(0,0,0,0.05)', color: 'black', border: '1px solid rgba(0,0,0,0.1)' }}>
-            <ArrowLeft size={18} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.backToDashboard}
+            <ArrowLeft size={18} /> {t.backToDashboard}
           </button>
         </div>
 
@@ -624,11 +511,9 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                   background: `linear-gradient(135deg, ${selectedCourse.color}30, ${selectedCourse.color}60)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   flexShrink: 0, boxShadow: '0 4px 15px rgba(0,0,0,0.08)',
-                  position: 'relative', overflow: 'hidden'
+                  position: 'relative', overflow: 'hidden', color: selectedCourse.color
                 }}>
-                  {!selectedCourse.image_url && selectedCourse.id && (
-                    <Loader2 size={24} color={selectedCourse.color} style={{ animation: 'spinCircle 1.5s linear infinite', opacity: 0.6 }} />
-                  )}
+                  {availableIcons[selectedCourse.icon] ? availableIcons[selectedCourse.icon] : <span style={{ fontSize: '32px', fontWeight: 'bold' }}>{selectedCourse.name.charAt(0).toUpperCase()}</span>}
                 </div>
               )}
 
@@ -826,33 +711,120 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
             </div>
 
 
-            {/* Add Component Button OR Input */}
+            {/* Add Component Button OR AI-Powered Input */}
             {isAddingComponent ? (
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
+              <div style={{
+                marginTop: '10px',
+                background: 'rgba(59,130,246,0.03)',
+                padding: '18px',
+                borderRadius: '14px',
+                border: '1px solid rgba(59,130,246,0.15)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px'
+              }}>
+
+                {/* AI Suggestions */}
+                <div>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '12px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                    AI Suggestions
+                  </p>
+                  {isFetchingSuggestions ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '18px 0' }}>
+                      <div style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '50%',
+                        border: '3px solid rgba(59,130,246,0.15)',
+                        borderTopColor: '#3b82f6',
+                        animation: 'spinCircle 0.75s linear infinite'
+                      }} />
+                    </div>
+                  ) : aiSuggestions.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {aiSuggestions.map((s, i) => (
+                        <button
+                          key={i}
+                          disabled={isSavingComponent}
+                          onClick={() => handlePickSuggestion(selectedCourse.id, s)}
+                          style={{
+                            background: 'rgba(59,130,246,0.05)',
+                            border: '1px solid rgba(59,130,246,0.2)',
+                            borderRadius: '10px',
+                            padding: '10px 16px',
+                            cursor: isSavingComponent ? 'not-allowed' : 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.2s ease',
+                            width: '100%',
+                          }}
+                          onMouseOver={e => { if (!isSavingComponent) { e.currentTarget.style.background = 'rgba(59,130,246,0.1)'; e.currentTarget.style.borderColor = '#3b82f6'; } }}
+                          onMouseOut={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.05)'; e.currentTarget.style.borderColor = 'rgba(59,130,246,0.2)'; }}
+                        >
+                          <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e3a8a' }}>{s.topic}</span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '13px', color: '#94a3b8' }}>No suggestions available. Type a topic below.</p>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.08)' }} />
+                  <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', textTransform: 'uppercase' }}>or type your own</span>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(0,0,0,0.08)' }} />
+                </div>
+
+                {/* Manual Input */}
                 <input
                   type="text"
                   value={newComponentName}
-                  onChange={(e) => setNewComponentName(e.target.value)}
+                  onChange={(e) => { setNewComponentName(e.target.value); setComponentValidationError(''); }}
                   placeholder={t.addComponent || 'Component name...'}
                   className="input-luxe"
                   autoFocus
-                  style={{ background: '#ffffff', color: '#0f172a', border: '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
+                  disabled={isSavingComponent}
+                  style={{ background: '#ffffff', color: '#0f172a', border: componentValidationError ? '1.5px solid #ef4444' : '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSaveComponent(selectedCourse.id);
-                    if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); }
+                    if (e.key === 'Enter') handleSaveManualComponent(selectedCourse.id);
+                    if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); setAiSuggestions([]); setComponentValidationError(''); }
                   }}
                 />
+
+                {/* Validation Error */}
+                {componentValidationError && (
+                  <div style={{
+                    background: 'rgba(239,68,68,0.06)',
+                    border: '1px solid rgba(239,68,68,0.25)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px'
+                  }}>
+                    <span style={{ fontSize: '15px', marginTop: '1px' }}>⚠️</span>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#dc2626', fontWeight: '500' }}>
+                      {componentValidationError}
+                    </p>
+                  </div>
+                )}
+
+                {/* Action buttons */}
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     className="btn-luxe primary hover-lift"
-                    onClick={() => handleSaveComponent(selectedCourse.id)}
-                    style={{ padding: '8px', flex: 1, justifyContent: 'center' }}
+                    onClick={() => handleSaveManualComponent(selectedCourse.id)}
+                    disabled={isSavingComponent || !newComponentName.trim()}
+                    style={{ padding: '8px', flex: 1, justifyContent: 'center', opacity: (!newComponentName.trim() || isSavingComponent) ? 0.5 : 1 }}
                   >
-                    {t.save || 'Save'}
+                    {isSavingComponent ? <Loader2 size={16} className="spin-icon" style={{ marginRight: '6px' }} /> : null}
+                    {isSavingComponent ? 'Checking...' : (t.save || 'Save')}
                   </button>
                   <button
                     className="btn-luxe hover-lift"
-                    onClick={() => { setIsAddingComponent(false); setNewComponentName(''); }}
+                    onClick={() => { setIsAddingComponent(false); setNewComponentName(''); setAiSuggestions([]); setComponentValidationError(''); }}
+                    disabled={isSavingComponent}
                     style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}
                   >
                     {t.cancel || 'Cancel'}
@@ -862,7 +834,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
             ) : (
               <button
                 className="btn-luxe hover-lift"
-                onClick={() => setIsAddingComponent(true)}
+                onClick={() => openAddComponent(selectedCourse.id, selectedCourse.componentList)}
                 style={{
                   background: 'rgba(0, 0, 0, 0.03)',
                   border: '1px dashed rgba(0, 0, 0, 0.15)',
@@ -897,6 +869,10 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                 disabled={selectedComponents.length === 0}
                 onClick={() => {
                   setSelectedComponentsForQuiz(selectedComponents);
+                  if (setSelectedComponentsDataForQuiz) {
+                    const data = selectedCourse.componentList.filter(c => selectedComponents.includes(c.id));
+                    setSelectedComponentsDataForQuiz(data);
+                  }
                   setCurrentPage('quiz');
                 }}
                 style={{
@@ -920,82 +896,12 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                 <span>
                   {selectedComponents.length === 0
                     ? (t.startQuiz || 'Start the quiz')
-                    : `${t.startQuiz || 'Start Quiz'} (${formatTopicCount(selectedComponents.length)})`
+                    : `${t.startQuiz || 'Start Quiz'} (${selectedComponents.length} topic${selectedComponents.length !== 1 ? 's' : ''})`
                   }
                 </span>
                 <div className="btn-glow"></div>
               </button>
             </div>
-
-            {/* Generate Study Aids Buttons */}
-              <div style={{ marginTop: '12px', display: 'flex', gap: '10px' }}>
-                <button
-                  className="btn-luxe hover-lift"
-                  disabled={selectedComponents.length === 0}
-                  onClick={() => generateStudyAid('summary')}
-                  style={{
-                    flex: 1, justifyContent: 'center', padding: '12px', fontSize: '14px',
-                    opacity: selectedComponents.length === 0 ? 0.5 : 1,
-                    background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155'
-                  }}
-                >
-                  <FileText size={18} style={{ marginRight: '6px' }} />
-                  {t.summarySheet || 'Summary Sheet'}
-                </button>
-                <button
-                  className="btn-luxe hover-lift"
-                  disabled={selectedComponents.length === 0}
-                  onClick={() => generateStudyAid('mindmap')}
-                  style={{
-                    flex: 1, justifyContent: 'center', padding: '12px', fontSize: '14px',
-                    opacity: selectedComponents.length === 0 ? 0.5 : 1,
-                    background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155'
-                  }}
-                >
-                  <Network size={18} style={{ marginRight: '6px' }} />
-                  {t.mindMap || 'Mind Map'}
-                </button>
-              </div>
-
-            {/* Saved Study Aids List */}
-            {savedStudyAids[selectedCourseId] && savedStudyAids[selectedCourseId].length > 0 && (
-              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
-                <h4 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {t.yourStudyAids || 'Your Study Aids'}
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {savedStudyAids[selectedCourseId].map((aid) => (
-                    <div 
-                      key={aid.id} 
-                      className="task-item clickable hover-lift"
-                      onClick={() => setStudyAidResult(aid)}
-                      style={{ padding: '12px 15px', background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                    >
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#4c1d95', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                         {aid.type === 'summary' ? <FileText size={16} /> : <Network size={16} />}
-                         {aid.title}
-                      </span>
-                      <button 
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          // Optimistically remove from UI
-                          setSavedStudyAids(prev => ({
-                             ...prev,
-                             [selectedCourseId]: prev[selectedCourseId].filter(a => a.id !== aid.id)
-                          }));
-                          if (studyAidResult?.id === aid.id) setStudyAidResult(null);
-                          // Delete from DB
-                          await api.delete(`/study-aids/${aid.id}`);
-                        }}
-                        style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: '#94a3b8' }}
-                      >
-                         <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Panel 3: Progress Chart ONLY (Mastery Tracking Enabled) */}
@@ -1010,25 +916,26 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                 <p style={{ color: '#64748b', textAlign: 'center' }}>{t.noChartComponents || 'Add components to see your progress chart.'}</p>
               </div>
             ) : (
-              <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px', overflowX: 'auto', overflowY: 'hidden' }}>
-                <div style={{ width: '100%', minWidth: `${Math.max(100, chartData.length * 80)}px`, height: '250px' }}>
+              <div style={{ flex: 1, minHeight: '450px', width: '100%', marginBottom: '20px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 10, right: isRtl ? 45 : 10, left: isRtl ? 0 : -20, bottom: 0 }}>
+                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: 45, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                       <XAxis
                         dataKey="name"
                         stroke="#94a3b8"
                         interval={0}
-                        height={60}
-                        tick={<CustomXAxisTick isRtl={isRtl} />}
+                        height={180}
+                        tick={<CustomXAxisTick />}
                       />
                       <YAxis 
-                        orientation={isRtl ? "right" : "left"} 
                         domain={[0, 100]} 
                         stroke="#94a3b8" 
-                        tick={{ fill: '#94a3b8', fontSize: 12, dx: isRtl ? 35 : 0 }} 
+                        width={60}
+                        dx={isRtl ? -20 : 0}
+                        tickMargin={5}
+                        tick={{ fill: '#94a3b8', fontSize: 13, fontWeight: 'bold' }} 
                         ticks={[0, 25, 50, 75, 100]} 
-                        tickFormatter={(val) => `${val}%`} 
+                        tickFormatter={(val) => isRtl ? `٪${val}` : `${val}%`} 
                       />
                       <Tooltip
                         cursor={{ fill: 'rgba(0,0,0,0.02)' }}
@@ -1038,7 +945,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
                                 <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p>
                                 <p style={{ margin: 0, color: payload[0].payload.fill }}>
-                                  {t.progressHover || 'Progress:'} {payload[0].value}%
+                                  Progress: {payload[0].value}%
                                 </p>
                               </div>
                             );
@@ -1050,9 +957,8 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
         </div>
       </div>
     );
@@ -1065,7 +971,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
     const total = course.componentList.length;
     const totalProgVal = course.componentList.reduce((acc, curr) => acc + curr.progress, 0);
     const prog = total === 0 ? 0 : Math.round(totalProgVal / total);
-    const completedCount = course.componentList.filter(c => c.progress === 100).length;
+    const completedCount = course.componentList.filter(c => c.progress >= 90).length;
     return { total, done: completedCount, prog };
   };
 
