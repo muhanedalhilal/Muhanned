@@ -1,12 +1,18 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
+from typing import Optional
+from pydantic import BaseModel
 from app.models.user import UserSignup, UserLogin
 from app.database.database import get_db
 from app.models.db_user import DBUser
 from app.core.security import get_current_user
-from app.core.supabase_client import supabase
+from app.core.supabase_client import supabase, supabase_admin
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+    redirect_url: Optional[str] = None
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 def signup(user: UserSignup, db: Session = Depends(get_db)):
@@ -113,3 +119,28 @@ def get_my_profile(current_user: DBUser = Depends(get_current_user)):
         "email": current_user.email,
         "user_role": current_user.role
     }
+
+@router.post("/forgot-password")
+def forgot_password(req: ForgotPasswordRequest):
+    """
+    Sends a password recovery email using Supabase admin API.
+    """
+    try:
+        redirect_url = req.redirect_url or "http://localhost:5173/?page=reset-password"
+        
+        # Use admin API with service_role key to generate the recovery link
+        response = supabase_admin.auth.admin.generate_link({
+            "type": "recovery",
+            "email": req.email,
+            "options": {
+                "redirect_to": redirect_url
+            }
+        })
+        
+        return {"message": "Password reset email sent."}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Forgot password failed: {str(e)}"
+        )
