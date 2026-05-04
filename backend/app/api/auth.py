@@ -128,14 +128,11 @@ def forgot_password(req: ForgotPasswordRequest):
     try:
         redirect_url = req.redirect_url or "http://localhost:5173/?page=reset-password"
         
-        # Use admin API with service_role key to generate the recovery link
-        response = supabase_admin.auth.admin.generate_link({
-            "type": "recovery",
-            "email": req.email,
-            "options": {
-                "redirect_to": redirect_url
-            }
-        })
+        # Use the standard auth method to send a password reset email directly
+        supabase.auth.reset_password_for_email(
+            req.email,
+            {"redirect_to": redirect_url}
+        )
         
         return {"message": "Password reset email sent."}
         
