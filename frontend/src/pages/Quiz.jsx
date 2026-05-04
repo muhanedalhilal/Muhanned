@@ -296,7 +296,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
     });
 
     return (
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 60px', animation: 'fadeIn 0.4s ease' }}>
+      <div style={{ maxWidth: '700px', margin: '0 auto', padding: '0 16px 60px', animation: 'fadeIn 0.4s ease' }}>
 
         {/* Dynamic Score Card */}
         <div style={{ background: 'white', borderRadius: '24px', padding: '48px 40px', marginBottom: '24px', textAlign: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.07), 0 20px 60px rgba(0,0,0,0.06)', border: '1px solid #f1f5f9' }}>
@@ -381,7 +381,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
   const LETTERS = ['A', 'B', 'C', 'D'];
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 24px 40px', animation: 'fadeIn 0.3s ease' }}>
+    <div style={{ maxWidth: '680px', margin: '0 auto', padding: '0 16px 40px', animation: 'fadeIn 0.3s ease' }}>
 
        {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px', paddingTop: '8px' }}>
