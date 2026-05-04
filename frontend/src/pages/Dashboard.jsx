@@ -28,16 +28,16 @@ const CustomXAxisTick = ({ x, y, payload, isRtl }) => {
   // No truncation: show full text
   const marker = isArabic ? '\u200F' : '\u200E';
   const label = fullText + marker;
-  
+
   return (
     <g transform={`translate(${x},${y})`}>
-      <text 
-        x={0} 
-        y={0} 
-        dy={20} 
-        textAnchor={isRtl ? "start" : "end"} 
-        fill="#94a3b8" 
-        fontSize={12} 
+      <text
+        x={0}
+        y={0}
+        dy={20}
+        textAnchor={isRtl ? "start" : "end"}
+        fill="#94a3b8"
+        fontSize={12}
         fontWeight="700"
         transform={isRtl ? "rotate(35)" : "rotate(-35)"}
         style={{ direction: 'ltr' }}
@@ -376,13 +376,13 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
   const handleDownloadPDF = () => {
     const element = document.getElementById('study-aid-content');
     if (!element) return;
-    
+
     const opt = {
-      margin:       [15, 15, 15, 15],
-      filename:     `Massar_${(studyAidResult?.title || 'Study_Aid').replace(/[^a-zA-Z0-9\u0600-\u06FF ]/g, '_').replace(/ /g, '_')}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      margin: [15, 15, 15, 15],
+      filename: `Massar_${(studyAidResult?.title || 'Study_Aid').replace(/[^a-zA-Z0-9\u0600-\u06FF ]/g, '_').replace(/ /g, '_')}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     html2pdf().set(opt).from(element).save();
@@ -489,17 +489,17 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
 
         {/* Study Aid Modal */}
         {(isGeneratingAids || studyAidResult || studyAidError) && (
-          <div 
+          <div
             onClick={() => { if (!isGeneratingAids) { setStudyAidResult(null); setStudyAidError(''); } }}
             style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(15, 23, 42, 0.8)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px',
-            cursor: isGeneratingAids ? 'default' : 'pointer'
-          }}>
+              position: 'fixed', inset: 0, zIndex: 9999,
+              background: 'rgba(15, 23, 42, 0.8)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px',
+              cursor: isGeneratingAids ? 'default' : 'pointer'
+            }}>
             <div onClick={(e) => e.stopPropagation()} style={{
               background: '#ffffff',
               borderRadius: '24px',
@@ -510,7 +510,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
               position: 'relative',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
             }}>
-              <button 
+              <button
                 onClick={() => { setStudyAidResult(null); setStudyAidError(''); }}
                 disabled={isGeneratingAids}
                 style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', zIndex: 10 }}
@@ -548,7 +548,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                       {t.downloadPDF || 'Download PDF'}
                     </button>
                   </div>
-                  
+
                   <div id="study-aid-content" style={{ background: '#ffffff', padding: '40px', borderRadius: '16px', border: '1px solid #e2e8f0', overflowX: 'auto', color: '#334155', lineHeight: '1.6' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px', paddingBottom: '20px', borderBottom: '2px solid #e2e8f0' }}>
                       <img src="/logo.png" alt="Massar Logo" style={{ height: '40px' }} />
@@ -561,9 +561,9 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                     </div>
 
                     {studyAidResult.type === 'summary' ? (
-                       <ReactMarkdown>{studyAidResult.content}</ReactMarkdown>
+                      <ReactMarkdown>{studyAidResult.content}</ReactMarkdown>
                     ) : (
-                       <pre className="mermaid">{studyAidResult.content}</pre>
+                      <pre className="mermaid">{studyAidResult.content}</pre>
                     )}
                   </div>
                 </div>
@@ -888,7 +888,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                   {savedStudyAids[selectedCourseId].map((aid) => (
                     <div key={aid.id} className="task-item clickable hover-lift" onClick={() => setStudyAidResult(aid)} style={{ padding: '12px 15px', background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '14px', fontWeight: '600', color: '#4c1d95', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                         {aid.type === 'summary' ? <FileText size={16} /> : <Network size={16} />} {aid.title}
+                        {aid.type === 'summary' ? <FileText size={16} /> : <Network size={16} />} {aid.title}
                       </span>
                       <button onClick={async (e) => { e.stopPropagation(); setSavedStudyAids(prev => ({ ...prev, [selectedCourseId]: prev[selectedCourseId].filter(a => a.id !== aid.id) })); if (studyAidResult?.id === aid.id) setStudyAidResult(null); await api.delete(`/study-aids/${aid.id}`); }} style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: '#94a3b8' }}><X size={14} /></button>
                     </div>
@@ -913,16 +913,16 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                   <BarChart data={chartData} margin={{ top: 10, right: isRtl ? 20 : 10, left: isRtl ? 10 : 45, bottom: 40 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                     <XAxis dataKey="name" stroke="#94a3b8" interval={0} height={200} tick={<CustomXAxisTick isRtl={isRtl} />} />
-                    <YAxis 
+                    <YAxis
                       orientation={isRtl ? "right" : "left"}
-                      domain={[0, 100]} 
-                      stroke="#94a3b8" 
+                      domain={[0, 100]}
+                      stroke="#94a3b8"
                       width={isRtl ? 80 : 85}
                       dx={0}
                       tickMargin={isRtl ? 35 : 12}
-                      tick={{ fill: '#334155', fontSize: 18, fontWeight: '900' }} 
-                      ticks={[0, 25, 50, 75, 100]} 
-                      tickFormatter={(val) => isRtl ? `٪${toArabicDigits(val)}` : `${val}%`} 
+                      tick={{ fill: '#334155', fontSize: 18, fontWeight: '900' }}
+                      ticks={[0, 25, 50, 75, 100]}
+                      tickFormatter={(val) => isRtl ? `٪${toArabicDigits(val)}` : `${val}%`}
                     />
                     <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} content={({ active, payload }) => { if (active && payload && payload.length) { return (<div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}><p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p><p style={{ margin: 0, color: payload[0].payload.fill }}>{t.progressHover || 'Progress:'} {payload[0].value}%</p></div>); } return null; }} />
                     <Bar dataKey="progress" radius={[4, 4, 0, 0]} maxBarSize={50} />
@@ -958,9 +958,9 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           </div>
         ) : (
           <div style={{ width: '100%', height: '100px', marginBottom: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, ${course.color}15, ${course.color}30)` }}>
-             <div style={{ color: course.color, transform: 'scale(1.8)' }}>
-                {availableIcons[course.icon || 'book']}
-             </div>
+            <div style={{ color: course.color, transform: 'scale(1.8)' }}>
+              {availableIcons[course.icon || 'book']}
+            </div>
           </div>
         )}
         <div className="card-top" style={{ justifyContent: 'flex-end' }}>
