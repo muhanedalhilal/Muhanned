@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2 } from 'lucide-react';
+import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2, FileText, Network, X, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import ReactMarkdown from 'react-markdown';
+import mermaid from 'mermaid';
+import html2pdf from 'html2pdf.js';
+
 import { api } from '../services/api';
 
 const availableIcons = {
@@ -12,12 +16,26 @@ const availableIcons = {
   science: <FlaskConical size={24} />
 };
 
-const CustomXAxisTick = ({ x, y, payload }) => {
+const CustomXAxisTick = ({ x, y, payload, isRtl }) => {
   const fullText = payload.value;
-  const truncated = fullText.length > 12 ? fullText.substring(0, 12) + '...' : fullText;
+  // Use a regex to guess if the text is primarily Arabic
+  const isArabic = /[\u0600-\u06FF]/.test(fullText);
+  // Append strong directional marker to ensure '...' stays at the visual end of the text
+  const marker = isArabic ? '\u200F' : '\u200E';
+  const truncated = fullText.length > 12 ? fullText.substring(0, 12) + '...' + marker : fullText;
+  
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={16} textAnchor="end" fill="#94a3b8" fontSize={11} transform="rotate(-25)">
+      <text 
+        x={0} 
+        y={0} 
+        dy={16} 
+        textAnchor="end" 
+        fill="#94a3b8" 
+        fontSize={11} 
+        transform="rotate(-35)"
+        style={{ direction: 'ltr' }}
+      >
         <title>{fullText}</title>
         {truncated}
       </text>
@@ -25,7 +43,7 @@ const CustomXAxisTick = ({ x, y, payload }) => {
   );
 };
 
-export default function Dashboard({ t, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
+export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
   const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -45,6 +63,33 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedComponents, setSelectedComponents] = useState([]);
+
+  // Study Aids State
+  const [isGeneratingAids, setIsGeneratingAids] = useState(false);
+  const [studyAidResult, setStudyAidResult] = useState(null);
+  const [savedStudyAids, setSavedStudyAids] = useState({});
+  const [studyAidError, setStudyAidError] = useState('');
+
+  const formatTopicCount = (count) => {
+    if (isRtl) {
+      if (count === 1) return 'موضوع واحد';
+      if (count === 2) return 'موضوعين';
+      if (count >= 3 && count <= 10) return `${count} مواضيع`;
+      return `${count} موضوعاً`;
+    }
+    return `${count} topic${count !== 1 ? 's' : ''}`;
+  };
+
+  useEffect(() => {
+    if (studyAidResult && studyAidResult.type === 'mindmap') {
+      try {
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+        mermaid.contentLoaded();
+      } catch (e) {
+        console.error("Mermaid initialization failed:", e);
+      }
+    }
+  }, [studyAidResult]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -72,13 +117,15 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
     fetchUserData();
   }, []);
 
+  // Load saved study aids from DB when entering a course
   useEffect(() => {
-    if (currentPage === 'dashboard') {
-      api.get('/courses/').then(res => {
-        if (res.ok) setCourses(res.data);
-      });
-    }
-  }, [currentPage]);
+    if (!selectedCourseId) return;
+    api.get(`/study-aids/course/${selectedCourseId}`).then(res => {
+      if (res.ok && res.data) {
+        setSavedStudyAids(prev => ({ ...prev, [selectedCourseId]: res.data }));
+      }
+    });
+  }, [selectedCourseId]);
 
   const addCourse = async (e) => {
     e.preventDefault();
@@ -297,15 +344,55 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
     setIsSavingComponent(false);
   };
 
+  const generateStudyAid = async (type) => {
+    setIsGeneratingAids(true);
+    setStudyAidError('');
+    setStudyAidResult(null);
+    try {
+      const endpoint = type === 'summary' ? '/study-aids/summary' : '/study-aids/mindmap';
+      const res = await api.post(endpoint, { kc_ids: selectedComponents, course_id: selectedCourseId });
+      if (res.ok) {
+        const resultObj = {
+          id: res.data.saved_id,  // use real DB id
+          type,
+          content: type === 'summary' ? res.data.summary : res.data.mindmap,
+          title: res.data.title
+        };
+        setStudyAidResult(resultObj);
+        setSavedStudyAids(prev => ({
+          ...prev,
+          [selectedCourseId]: [resultObj, ...(prev[selectedCourseId] || [])]
+        }));
+      } else {
+        setStudyAidError(res.message || 'Failed to generate study aid.');
+      }
+    } catch (e) {
+      setStudyAidError('An error occurred while communicating with the server.');
+    } finally {
+      setIsGeneratingAids(false);
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    const element = document.getElementById('study-aid-content');
+    if (!element) return;
+    
+    const opt = {
+      margin:       [15, 15, 15, 15],
+      filename:     `Massar_${(studyAidResult?.title || 'Study_Aid').replace(/[^a-zA-Z0-9\u0600-\u06FF ]/g, '_').replace(/ /g, '_')}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(element).save();
+  };
 
   // Render Course Detail View
   if (selectedCourseId) {
-    const selectedCourse = courses.find(c => c.id === selectedCourseId);
+    const selectedCourse = courses.find(c => String(c.id) === String(selectedCourseId));
     if (!selectedCourse) {
-      // Courses are still loading — show a spinner instead of a blank page
-      if (!dashboardLoading) {
-        setSelectedCourseId(null);
-      }
+      // Always show spinner while loading — only clear if loading is done and course truly not found
       return (
         <div style={{ minHeight: '70vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{
@@ -315,14 +402,24 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px',
             minWidth: '260px'
           }}>
-            <div style={{
-              width: '52px', height: '52px', borderRadius: '50%',
-              border: '4px solid #e2e8f0', borderTopColor: '#3b82f6',
-              animation: 'spinCircle 0.8s linear infinite'
-            }} />
-            <p style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: '#0B1F3A' }}>
-              Loading course...
-            </p>
+            {dashboardLoading ? (
+              <div style={{
+                width: '52px', height: '52px', borderRadius: '50%',
+                border: '4px solid #e2e8f0', borderTopColor: '#3b82f6',
+                animation: 'spinCircle 0.8s linear infinite'
+              }} />
+            ) : (
+              // Courses loaded but this course no longer exists — go back
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: '#64748b', marginBottom: '16px' }}>Course not found.</p>
+                <button
+                  onClick={() => setSelectedCourseId(null)}
+                  style={{ padding: '10px 20px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}
+                >
+                  {t.backToDashboard || 'Back to Dashboard'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       );
@@ -394,10 +491,97 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
           </div>
         )}
 
+        {/* Study Aid Modal */}
+        {(isGeneratingAids || studyAidResult || studyAidError) && (
+          <div 
+            onClick={() => { if (!isGeneratingAids) { setStudyAidResult(null); setStudyAidError(''); } }}
+            style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(15, 23, 42, 0.8)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px',
+            cursor: isGeneratingAids ? 'default' : 'pointer'
+          }}>
+            <div onClick={(e) => e.stopPropagation()} style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              padding: '30px',
+              width: '100%', maxWidth: '800px',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              position: 'relative',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            }}>
+              <button 
+                onClick={() => { setStudyAidResult(null); setStudyAidError(''); }}
+                disabled={isGeneratingAids}
+                style={{ position: 'absolute', top: '20px', right: '20px', background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: '50%', padding: '8px', cursor: 'pointer', zIndex: 10 }}
+              >
+                <X size={20} color="#64748b" />
+              </button>
+
+              {isGeneratingAids ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px 0', gap: '20px' }}>
+                  <div style={{
+                    width: '60px', height: '60px', borderRadius: '50%',
+                    border: '4px solid #e2e8f0', borderTopColor: '#3b82f6',
+                    animation: 'spinCircle 0.8s linear infinite'
+                  }} />
+                  <h3 style={{ margin: 0, fontSize: '20px', color: '#1e293b' }}>{t.generatingStudyAid || 'Generating Study Aid...'}</h3>
+                  <p style={{ color: '#64748b', fontSize: '15px' }}>{t.aiCreatingMaterials || 'Our AI is creating your personalized study materials.'}</p>
+                </div>
+              ) : studyAidError ? (
+                <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                  <h3 style={{ color: '#ef4444', fontSize: '20px', marginBottom: '10px' }}>{t.generationFailed || 'Generation Failed'}</h3>
+                  <p style={{ color: '#64748b' }}>{studyAidError}</p>
+                </div>
+              ) : studyAidResult ? (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingRight: '50px' }}>
+                    <h2 style={{ fontSize: '24px', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      {studyAidResult.type === 'summary' ? <FileText size={24} color="#3b82f6" /> : <Network size={24} color="#8b5cf6" />}
+                      {studyAidResult.type === 'summary' ? (t.studySummary || 'Study Summary') : (t.mindMap || 'Mind Map')}
+                    </h2>
+                    <button
+                      onClick={handleDownloadPDF}
+                      className="btn-luxe hover-lift"
+                      style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', fontSize: '14px', border: 'none' }}
+                    >
+                      <Download size={16} style={{ marginRight: '6px' }} />
+                      {t.downloadPDF || 'Download PDF'}
+                    </button>
+                  </div>
+                  
+                  <div id="study-aid-content" style={{ background: '#ffffff', padding: '40px', borderRadius: '16px', border: '1px solid #e2e8f0', overflowX: 'auto', color: '#334155', lineHeight: '1.6' }}>
+                    {/* PDF Header - Visible in PDF and on screen */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px', paddingBottom: '20px', borderBottom: '2px solid #e2e8f0' }}>
+                      <img src="/logo.png" alt="Massar Logo" style={{ height: '40px' }} />
+                      <div>
+                        <h1 style={{ margin: 0, fontSize: '22px', color: '#0f172a', lineHeight: '1.4' }}>
+                          {studyAidResult.title}
+                        </h1>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>{t.generatedByAI || 'Generated by Massar AI'}</p>
+                      </div>
+                    </div>
+
+                    {studyAidResult.type === 'summary' ? (
+                       <ReactMarkdown>{studyAidResult.content}</ReactMarkdown>
+                    ) : (
+                       <pre className="mermaid">{studyAidResult.content}</pre>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
+
 
         <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', alignItems: 'center' }}>
           <button className="btn-luxe" onClick={() => { setSelectedCourseId(null); setSelectedComponents([]); }} style={{ background: 'rgba(0,0,0,0.05)', color: 'black', border: '1px solid rgba(0,0,0,0.1)' }}>
-            <ArrowLeft size={18} /> {t.backToDashboard}
+            <ArrowLeft size={18} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.backToDashboard}
           </button>
         </div>
 
@@ -405,7 +589,7 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
         <div className="luxe-panel detail-hero bento-hero">
           <div className="detail-hero-top" style={{ display: 'flex', alignItems: 'center' }}>
             <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '15px' }}>
-              <ArrowLeft size={24} color="#1e293b" />
+              <ArrowLeft size={24} color="#1e293b" style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} />
             </button>
             <h2 className="luxe-title" style={{ fontSize: '28px', color: 'black' }}>
               {selectedCourse.name === 'Mathematics' ? t.mathSubject :
@@ -774,13 +958,85 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
                 <span>
                   {selectedComponents.length === 0
                     ? (t.startQuiz || 'Start the quiz')
-                    : `${t.startQuiz || 'Start Quiz'} (${selectedComponents.length} topic${selectedComponents.length !== 1 ? 's' : ''})`
+                    : `${t.startQuiz || 'Start Quiz'} (${formatTopicCount(selectedComponents.length)})`
                   }
                 </span>
                 <div className="btn-glow"></div>
               </button>
             </div>
+
+            {/* Generate Study Aids Buttons */}
+              <div style={{ marginTop: '12px', display: 'flex', gap: '10px' }}>
+                <button
+                  className="btn-luxe hover-lift"
+                  disabled={selectedComponents.length === 0}
+                  onClick={() => generateStudyAid('summary')}
+                  style={{
+                    flex: 1, justifyContent: 'center', padding: '12px', fontSize: '14px',
+                    opacity: selectedComponents.length === 0 ? 0.5 : 1,
+                    background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155'
+                  }}
+                >
+                  <FileText size={18} style={{ marginRight: '6px' }} />
+                  {t.summarySheet || 'Summary Sheet'}
+                </button>
+                <button
+                  className="btn-luxe hover-lift"
+                  disabled={selectedComponents.length === 0}
+                  onClick={() => generateStudyAid('mindmap')}
+                  style={{
+                    flex: 1, justifyContent: 'center', padding: '12px', fontSize: '14px',
+                    opacity: selectedComponents.length === 0 ? 0.5 : 1,
+                    background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155'
+                  }}
+                >
+                  <Network size={18} style={{ marginRight: '6px' }} />
+                  {t.mindMap || 'Mind Map'}
+                </button>
+              </div>
+
+            {/* Saved Study Aids List */}
+            {savedStudyAids[selectedCourseId] && savedStudyAids[selectedCourseId].length > 0 && (
+              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                <h4 style={{ margin: '0 0 10px 0', fontSize: '15px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {t.yourStudyAids || 'Your Study Aids'}
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {savedStudyAids[selectedCourseId].map((aid) => (
+                    <div 
+                      key={aid.id} 
+                      className="task-item clickable hover-lift"
+                      onClick={() => setStudyAidResult(aid)}
+                      style={{ padding: '12px 15px', background: 'rgba(139, 92, 246, 0.05)', border: '1px solid rgba(139, 92, 246, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#4c1d95', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                         {aid.type === 'summary' ? <FileText size={16} /> : <Network size={16} />}
+                         {aid.title}
+                      </span>
+                      <button 
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          // Optimistically remove from UI
+                          setSavedStudyAids(prev => ({
+                             ...prev,
+                             [selectedCourseId]: prev[selectedCourseId].filter(a => a.id !== aid.id)
+                          }));
+                          if (studyAidResult?.id === aid.id) setStudyAidResult(null);
+                          // Delete from DB
+                          await api.delete(`/study-aids/${aid.id}`);
+                        }}
+                        style={{ background: 'none', border: 'none', padding: '4px', cursor: 'pointer', color: '#94a3b8' }}
+                      >
+                         <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
+
 
           {/* Panel 3: Progress Chart ONLY (Mastery Tracking Enabled) */}
           <div className="luxe-panel bento-chart">
@@ -794,18 +1050,26 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
                 <p style={{ color: '#64748b', textAlign: 'center' }}>{t.noChartComponents || 'Add components to see your progress chart.'}</p>
               </div>
             ) : (
-              <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px' }}>
+              <div style={{ flex: 1, minHeight: '250px', width: '100%', marginBottom: '20px', overflowX: 'auto', overflowY: 'hidden' }}>
+                <div style={{ width: '100%', minWidth: `${Math.max(100, chartData.length * 80)}px`, height: '250px' }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <BarChart data={chartData} margin={{ top: 10, right: isRtl ? 45 : 10, left: isRtl ? 0 : -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                       <XAxis
                         dataKey="name"
                         stroke="#94a3b8"
                         interval={0}
                         height={60}
-                        tick={<CustomXAxisTick />}
+                        tick={<CustomXAxisTick isRtl={isRtl} />}
                       />
-                      <YAxis domain={[0, 100]} stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} ticks={[0, 25, 50, 75, 100]} tickFormatter={(val) => `${val}%`} />
+                      <YAxis 
+                        orientation={isRtl ? "right" : "left"} 
+                        domain={[0, 100]} 
+                        stroke="#94a3b8" 
+                        tick={{ fill: '#94a3b8', fontSize: 12, dx: isRtl ? 35 : 0 }} 
+                        ticks={[0, 25, 50, 75, 100]} 
+                        tickFormatter={(val) => `${val}%`} 
+                      />
                       <Tooltip
                         cursor={{ fill: 'rgba(0,0,0,0.02)' }}
                         content={({ active, payload }) => {
@@ -814,7 +1078,7 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
                               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
                                 <p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p>
                                 <p style={{ margin: 0, color: payload[0].payload.fill }}>
-                                  Progress: {payload[0].value}%
+                                  {t.progressHover || 'Progress:'} {payload[0].value}%
                                 </p>
                               </div>
                             );
@@ -826,6 +1090,7 @@ export default function Dashboard({ t, currentPage, selectedCourseId, setSelecte
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+              </div>
               )}
             </div>
         </div>

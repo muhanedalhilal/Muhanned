@@ -179,3 +179,75 @@ def validate_and_generate_component(course_name: str, topic: str) -> dict:
     except Exception as e:
         print(f"Error validating component: {e}")
         return {"valid": False, "reason": "AI validation failed. Please try again."}
+
+def generate_summary_from_kcs(kcs: list[dict]) -> str:
+    """
+    Takes a list of Knowledge Components and generates a comprehensive summary sheet in Markdown.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return "AI service not configured."
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    
+    kcs_text = "\n\n".join([f"Topic: {kc['topic']}\nContent: {kc['content']}" for kc in kcs])
+
+    prompt = f"""
+    You are an expert tutor. Create a comprehensive, easy-to-understand study summary sheet based on the following Knowledge Components.
+    Format the output strictly in clean Markdown. Include clear headings, bullet points, and highlight key terms in bold.
+    Do not include any JSON. Only return the Markdown text.
+
+    Knowledge Components:
+    {kcs_text}
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"Error generating summary: {e}")
+        return "An error occurred while generating the summary."
+
+def generate_mind_map_from_kcs(kcs: list[dict]) -> str:
+    """
+    Takes a list of Knowledge Components and generates a Mermaid JS mind map.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return "AI service not configured."
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    
+    kcs_text = "\n\n".join([f"Topic: {kc['topic']}\nContent: {kc['content']}" for kc in kcs])
+
+    prompt = f"""
+    You are an expert educational AI. Generate a Mermaid JS mindmap based on the following Knowledge Components.
+    The mindmap should have a central root node (e.g. "Study Guide"), branching out to the main topics, and then sub-branches for key details.
+    
+    IMPORTANT REQUIREMENTS:
+    - Output ONLY valid Mermaid mindmap syntax.
+    - Start the output with exactly: mindmap
+    - Use proper indentation (spaces) to define the hierarchy.
+    - Do NOT wrap the output in markdown code blocks (e.g. do not use ```mermaid ... ```). Just the raw mermaid code.
+    - Keep node text relatively short. Use quotes if text has special characters like brackets or parentheses.
+
+    Knowledge Components:
+    {kcs_text}
+    """
+
+    try:
+        response = model.generate_content(prompt)
+        response_text = response.text.strip()
+        if response_text.startswith("```mermaid"):
+            response_text = response_text[10:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        return response_text.strip()
+    except Exception as e:
+        print(f"Error generating mind map: {e}")
+        return "mindmap\n  Error\n    GenerationFailed"
+

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { ArrowLeft, CheckCircle2, XCircle } from 'lucide-react';
 
-export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCourseId, setSelectedCourseId }) {
+export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, selectedCourseId, setSelectedCourseId }) {
 
   // Go back to the course detail view (not command center)
   const navigateBack = () => {
@@ -238,7 +238,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
             onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            <ArrowLeft size={15} /> {t.quizBackToCourse || 'Back to Course'}
+            <ArrowLeft size={15} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.quizBackToCourse || 'Back to Course'}
           </button>
         </div>
       </div>
@@ -313,7 +313,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
             onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
             onMouseLeave={e => e.currentTarget.style.opacity = '1'}
           >
-            <ArrowLeft size={16} /> {t.quizReturn || 'Return to Course'}
+            <ArrowLeft size={16} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.quizReturn || 'Return to Course'}
           </button>
         </div>
       </div>
@@ -338,7 +338,7 @@ export default function Quiz({ t, setCurrentPage, selectedComponents, selectedCo
           color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
           boxShadow: '0 1px 3px rgba(0,0,0,0.06)', flexShrink: 0
         }}>
-          <ArrowLeft size={15} /> {t.quizEnd || 'End'}
+          <ArrowLeft size={15} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.quizEnd || 'End'}
         </button>
 
         {/* Dynamic Mastery Progress bar */}
