@@ -59,6 +59,28 @@ def delete_document(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
         
+    # Explicitly delete child knowledge components to prevent foreign key IntegrityErrors
+    db.query(KnowledgeComponent).filter(KnowledgeComponent.document_id == doc_id).delete(synchronize_session=False)
+    
     db.delete(document)
     db.commit()
     return {"message": "Document and associated Knowledge Components deleted successfully."}
+
+@router.delete("/components/{kc_id}")
+def delete_knowledge_component(
+    kc_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete a specific Knowledge Component."""
+    kc = (
+        db.query(KnowledgeComponent)
+        .filter(KnowledgeComponent.id == kc_id, KnowledgeComponent.user_id == current_user.id)
+        .first()
+    )
+    if not kc:
+        raise HTTPException(status_code=404, detail="Knowledge Component not found")
+        
+    db.delete(kc)
+    db.commit()
+    return {"message": "Knowledge Component deleted successfully."}
