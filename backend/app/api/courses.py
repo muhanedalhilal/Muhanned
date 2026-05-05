@@ -21,7 +21,7 @@ from app.core.ai_service import suggest_components_for_course, validate_and_gene
 from app.core.course_images import build_course_image_url, build_course_image_fallback_url
 
 router = APIRouter(prefix="/courses", tags=["courses"])
-COVER_PIPELINE_VERSION = "2026-05-05-v2"
+COVER_PIPELINE_VERSION = "2026-05-06-v3"
 
 class CourseCreate(BaseModel):
     name: str

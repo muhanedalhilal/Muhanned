@@ -1002,7 +1002,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
         {/* Course Image Banner */}
         {course.image_url ? (
           <div style={{
-            width: '100%', height: '100px', marginBottom: '12px',
+            width: '100%', height: '124px', marginBottom: '16px',
             borderRadius: '12px', overflow: 'hidden',
             background: `linear-gradient(135deg, ${course.color}20, ${course.color}40)`
           }}>
@@ -1010,11 +1010,11 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
               src={course.image_url}
               alt={course.name}
               onError={() => useCourseImageFallback(course.id)}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block', imageRendering: 'auto' }}
             />
           </div>
         ) : (
-          <div style={{ width: '100%', height: '100px', marginBottom: '12px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, ${course.color}15, ${course.color}30)` }}>
+          <div style={{ width: '100%', height: '124px', marginBottom: '16px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `linear-gradient(135deg, ${course.color}15, ${course.color}30)` }}>
             <div style={{ color: course.color, transform: 'scale(1.8)' }}>
               {availableIcons[course.icon || 'book']}
             </div>
