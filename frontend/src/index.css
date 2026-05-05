@@ -3410,9 +3410,9 @@ body {
 
 /* --- Bento Box Layout system --- */
 .bento-layout {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(330px, 1.08fr) minmax(260px, 0.9fr);
+  align-items: stretch;
   gap: 20px;
   margin-top: 20px;
 }
@@ -3422,28 +3422,34 @@ body {
 }
 
 .bento-chart {
-  flex: 1 1 300px;
-  max-width: 400px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 .bento-tasks {
-  flex: 1 1 340px;
-  max-width: 500px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   margin-top: 0;
 }
 
 .bento-components {
-  flex: 1 1 340px;
-  max-width: 500px;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
 @media (max-width: 992px) {
+  .bento-layout {
+    grid-template-columns: 1fr;
+  }
 
   .bento-chart,
   .bento-tasks,

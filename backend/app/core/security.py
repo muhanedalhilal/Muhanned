@@ -1,5 +1,6 @@
 import os
 import httpx
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
@@ -8,9 +9,42 @@ from app.models.db_user import DBUser
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+DEV_AUTH_FALLBACK = os.getenv("MASSAR_DEV_AUTH_FALLBACK", "false").lower() in {"1", "true", "yes", "on"}
 
 # This forces the requester to present an "Authorization: Bearer <token>" header
 security = HTTPBearer()
+
+def get_or_create_local_user_from_token(token: str, db: Session):
+    """
+    Local development fallback for when Supabase Auth is unreachable.
+    This is enabled only with MASSAR_DEV_AUTH_FALLBACK=true.
+    """
+    try:
+        payload = jwt.decode(token, options={"verify_signature": False, "verify_aud": False})
+    except Exception:
+        payload = {}
+
+    uid = payload.get("sub") or payload.get("user_id") or "local-dev-user"
+    email = payload.get("email") or f"{uid}@local.dev"
+    metadata = payload.get("user_metadata") or {}
+    name = metadata.get("name") or email.split("@")[0].capitalize()
+
+    user = db.query(DBUser).filter(DBUser.supabase_auth_id == uid).first()
+    if user:
+        return user
+
+    existing_by_email = db.query(DBUser).filter(DBUser.email == email).first()
+    if existing_by_email:
+        existing_by_email.supabase_auth_id = uid
+        db.commit()
+        db.refresh(existing_by_email)
+        return existing_by_email
+
+    user = DBUser(supabase_auth_id=uid, name=name, email=email, role="student")
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
     """
@@ -81,9 +115,15 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         return user
 
     except HTTPException:
+        if DEV_AUTH_FALLBACK:
+            print("Warning: Supabase auth unavailable. Using local dev auth fallback.")
+            return get_or_create_local_user_from_token(token, db)
         raise
     except Exception as e:
         print(f"Authentication error: {e}")
+        if DEV_AUTH_FALLBACK:
+            print("Warning: Supabase auth unavailable. Using local dev auth fallback.")
+            return get_or_create_local_user_from_token(token, db)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed: {str(e)}"

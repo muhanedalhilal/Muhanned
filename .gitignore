@@ -13,6 +13,9 @@ __pycache__/
 *.pyo
 *.pyd
 *.egg-info/
+*.db
+*.log
+backend/generated/
 dist/
 build/
 

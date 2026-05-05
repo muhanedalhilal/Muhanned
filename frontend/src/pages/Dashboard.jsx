@@ -63,6 +63,37 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
   const [dashboardError, setDashboardError] = useState(null);
   const [selectedComponents, setSelectedComponents] = useState([]);
   const imagePollingRef = useRef({});
+  const imageRepairRef = useRef({});
+
+  const repairCourseImage = useCallback(async (courseId) => {
+    if (!courseId || imageRepairRef.current[courseId]) return;
+    imageRepairRef.current[courseId] = true;
+    try {
+      const res = await api.get(`/courses/${courseId}/image-status`);
+      if (res.ok && res.data.image_url) {
+        setCourses(prev => prev.map(course =>
+          course.id === courseId
+            ? {
+                ...course,
+                image_url: res.data.image_url,
+                image_fallback_url: res.data.image_fallback_url || course.image_fallback_url
+              }
+            : course
+        ));
+      }
+    } finally {
+      delete imageRepairRef.current[courseId];
+    }
+  }, []);
+
+  const useCourseImageFallback = useCallback((courseId) => {
+    repairCourseImage(courseId);
+    setCourses(prev => prev.map(course => {
+      if (course.id !== courseId || !course.image_fallback_url) return course;
+      if (course.image_url === course.image_fallback_url) return course;
+      return { ...course, image_url: course.image_fallback_url };
+    }));
+  }, [repairCourseImage]);
 
   // Poll for AI-generated image readiness
   const pollForImage = useCallback((courseId) => {
@@ -75,7 +106,13 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
         const res = await api.get(`/courses/${courseId}/image-status`);
         if (res.ok && res.data.ready && res.data.image_url) {
           setCourses(prev => prev.map(c =>
-            c.id === courseId ? { ...c, image_url: res.data.image_url } : c
+            c.id === courseId
+              ? {
+                  ...c,
+                  image_url: res.data.image_url,
+                  image_fallback_url: res.data.image_fallback_url || c.image_fallback_url
+                }
+              : c
           ));
           clearInterval(intervalId);
           delete imagePollingRef.current[courseId];
@@ -149,12 +186,13 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
   // Load saved study aids from DB when entering a course
   useEffect(() => {
     if (!selectedCourseId) return;
+    repairCourseImage(selectedCourseId);
     api.get(`/study-aids/course/${selectedCourseId}`).then(res => {
       if (res.ok && res.data) {
         setSavedStudyAids(prev => ({ ...prev, [selectedCourseId]: res.data }));
       }
     });
-  }, [selectedCourseId]);
+  }, [selectedCourseId, repairCourseImage]);
   const addCourse = async (e) => {
     e.preventDefault();
     if (!newCourseName.trim()) return;
@@ -615,6 +653,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                   <img
                     src={selectedCourse.image_url}
                     alt={selectedCourse.name}
+                    onError={() => useCourseImageFallback(selectedCourse.id)}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
@@ -1093,6 +1132,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
             <img
               src={course.image_url}
               alt={course.name}
+              onError={() => useCourseImageFallback(course.id)}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           </div>
@@ -1252,7 +1292,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                 </span>
                 <input
                   type="file"
-                  accept=".pdf,.pptx"
+                  accept=".pdf,.ppt,.pptx"
                   style={{ display: 'none' }}
                   onChange={(e) => setNewCourseFile(e.target.files?.[0] || null)}
                 />

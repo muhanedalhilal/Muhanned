@@ -1,6 +1,81 @@
 import os
 import google.generativeai as genai
 import json
+import re
+
+def fallback_kcs_from_text(text: str, max_items: int = 7) -> list[dict]:
+    """
+    Builds simple Knowledge Components locally when the AI provider is unavailable.
+    """
+    cleaned = re.sub(r"\s+", " ", text).strip()
+    if not cleaned:
+        return []
+
+    chunks = re.split(r"(?<=[.!?])\s+|\n+", cleaned)
+    kcs = []
+    seen_topics = set()
+
+    for chunk in chunks:
+        content = chunk.strip()
+        if len(content) < 40:
+            continue
+
+        words = content.split()
+        topic = " ".join(words[:8]).strip(" ,.;:-")
+        if len(words) > 8:
+            topic += "..."
+
+        topic_key = topic.lower()
+        if topic_key in seen_topics:
+            continue
+
+        seen_topics.add(topic_key)
+        kcs.append({
+            "topic": topic,
+            "content": content[:500]
+        })
+
+        if len(kcs) >= max_items:
+            break
+
+    if kcs:
+        return kcs
+
+    return [{
+        "topic": "Uploaded Resource Overview",
+        "content": cleaned[:500]
+    }]
+
+def fallback_kcs_for_resource(course_name: str | None, filename: str | None) -> list[dict]:
+    """
+    Builds useful starter components when a PDF/PPT has no extractable text.
+    This keeps uploaded resources from producing an empty course.
+    """
+    course_label = " ".join((course_name or "this course").split())
+    resource_label = " ".join((filename or "the uploaded resource").split())
+
+    return [
+        {
+            "topic": f"{course_label} Resource Overview",
+            "content": f"Review {resource_label} as part of {course_label}. Identify the main learning objective, the section titles, and the ideas the resource repeats or emphasizes."
+        },
+        {
+            "topic": f"{course_label} Core Vocabulary",
+            "content": f"Collect the important terms, symbols, formulas, and definitions introduced in {resource_label}. Make sure each term can be explained in your own words."
+        },
+        {
+            "topic": "Key Procedures and Methods",
+            "content": f"Break down the main procedures shown in {resource_label} into clear steps. Focus on when each step is used and what result it should produce."
+        },
+        {
+            "topic": "Worked Examples",
+            "content": f"Use examples from {resource_label} to connect the theory to practice. For each example, note the givens, the method used, and the final conclusion."
+        },
+        {
+            "topic": "Practice and Mastery Check",
+            "content": f"After studying {resource_label}, practice retrieving the key ideas without looking. Mark any weak points for review before starting a quiz."
+        }
+    ]
 
 def generate_kcs_from_text(text: str) -> list[dict]:
     """
@@ -10,7 +85,7 @@ def generate_kcs_from_text(text: str) -> list[dict]:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         print("Warning: GEMINI_API_KEY not found in .env. Cannot generate KCs.")
-        return []
+        return fallback_kcs_from_text(text)
 
     genai.configure(api_key=api_key)
     
@@ -45,7 +120,7 @@ def generate_kcs_from_text(text: str) -> list[dict]:
         return kcs
     except Exception as e:
         print(f"Error generating KCs: {e}")
-        return []
+        return fallback_kcs_from_text(text)
 
 def generate_quiz_from_kcs(kcs: list[dict]) -> list[dict]:
     """

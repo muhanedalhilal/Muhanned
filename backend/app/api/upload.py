@@ -7,11 +7,12 @@ from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, status,
 from sqlalchemy.orm import Session
 from app.core.security import get_current_user
 from app.models.db_user import DBUser
+from app.models.course import Course
 from app.models.document import Document
 from app.models.knowledge_component import KnowledgeComponent
 from app.database.database import get_db
 from app.core.supabase_client import supabase
-from app.core.ai_service import generate_kcs_from_text
+from app.core.ai_service import generate_kcs_from_text, fallback_kcs_for_resource
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
@@ -27,12 +28,12 @@ def extract_text_from_file(file_path: str, ext: str) -> str:
             with open(file_path, 'rb') as f:
                 reader = PyPDF2.PdfReader(f)
                 for page in reader.pages:
-                    text += page.extract_text() + "\n"
+                    text += (page.extract_text() or "") + "\n"
         elif ext in [".ppt", ".pptx"]:
             prs = Presentation(file_path)
             for slide in prs.slides:
                 for shape in slide.shapes:
-                    if hasattr(shape, "text"):
+                    if hasattr(shape, "text") and shape.text:
                         text += shape.text + "\n"
     except Exception as e:
         print(f"Extraction error: {e}")
@@ -59,6 +60,16 @@ def upload_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid file type. Only {', '.join(ALLOWED_EXTENSIONS)} are allowed."
         )
+
+    course = None
+    if course_id is not None:
+        course = (
+            db.query(Course)
+            .filter(Course.id == course_id, Course.user_id == current_user.id)
+            .first()
+        )
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
 
     safe_filename = f"{uuid.uuid4()}{ext}"
     save_path = os.path.join(UPLOAD_DIR, safe_filename)
@@ -99,23 +110,41 @@ def upload_file(
 
     # 5. Generate KCs with AI
     kcs_data = []
-    if extracted_text.strip():
-        kcs_data = generate_kcs_from_text(extracted_text)
+    generated_components = []
+    source_text = extracted_text.strip()
+    if source_text:
+        kcs_data = generate_kcs_from_text(source_text)
 
-        # 6. Save KCs to Postgres
-        for kc in kcs_data:
-            topic = kc.get("topic", "Unknown Topic")
-            content = kc.get("content", "No content provided.")
-            
-            new_kc = KnowledgeComponent(
-                topic=topic,
-                content=content,
-                document_id=new_doc.id,
-                user_id=current_user.id,
-                course_id=course_id
-            )
-            db.add(new_kc)
-        db.commit()
+    if not isinstance(kcs_data, list) or not kcs_data:
+        kcs_data = fallback_kcs_for_resource(course.name if course else None, file.filename)
+
+    # 6. Save KCs to Postgres
+    new_kcs = []
+    for kc in kcs_data:
+        if not isinstance(kc, dict):
+            continue
+        topic = str(kc.get("topic") or "Unknown Topic").strip() or "Unknown Topic"
+        content = str(kc.get("content") or "No content provided.").strip() or "No content provided."
+        
+        new_kc = KnowledgeComponent(
+            topic=topic,
+            content=content,
+            document_id=new_doc.id,
+            user_id=current_user.id,
+            course_id=course_id
+        )
+        db.add(new_kc)
+        new_kcs.append(new_kc)
+    db.commit()
+
+    for new_kc in new_kcs:
+        db.refresh(new_kc)
+        generated_components.append({
+            "id": new_kc.id,
+            "text": new_kc.topic,
+            "content": new_kc.content,
+            "progress": int((new_kc.mastery_prob or 0.1) * 100)
+        })
 
     # Optionally clean up the local temp file to save space
     try:
@@ -123,8 +152,22 @@ def upload_file(
     except:
         pass
 
+    file_url = None
+    if new_doc.supabase_path:
+        try:
+            file_url = supabase.storage.from_("documents").get_public_url(new_doc.supabase_path)
+        except Exception:
+            pass
+
     return {
         "message": "File processed and AI KCs generated!",
         "document_id": new_doc.id,
-        "kcs_generated": len(kcs_data)
+        "kcs_generated": len(generated_components),
+        "resource": {
+            "id": new_doc.id,
+            "text": new_doc.filename,
+            "type": new_doc.file_type,
+            "fileUrl": file_url
+        },
+        "components": generated_components
     }
