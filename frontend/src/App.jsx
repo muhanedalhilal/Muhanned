@@ -100,6 +100,7 @@ const translations = {
     n3Desc: "Content that grows with you.",
     n4: "Mastery Evaluation",
     n4Desc: "Proving your new skills.",
+    endQuiz: "End Quiz",
     footerTagline: "Empowering the future through intelligent, adaptive AI education.",
     footerSupport: "Support",
     footerDocumentation: "Documentation",
@@ -107,7 +108,7 @@ const translations = {
     footerCompany: "Company",
     footerAboutUs: "About Us",
     footerContactUs: "Contact Us",
-    rightsReserved: "All rights reserved. © 2026 Massar AI",
+    rightsReserved: "All rights reserved.",
     components: "Components",
     generateComponents: "Generate Components",
     generating: "Generating...",
@@ -182,6 +183,10 @@ const translations = {
     quizCorrectTitle: "Correct! Great job.",
     quizIncorrectTitle: "Incorrect. The correct answer is: ",
     quizNextBtn: "Next Question →",
+    quizNext: "Next Question",
+    quizFinish: "Finish Quiz",
+    quizLoadingMore: "Loading more...",
+    quizMoreQuestions: "More Questions",
     quizResultsBtn: "View Results →",
     quizEndResultsBtn: "End Quiz and View Results",
     quizLoading: "Loading...",
@@ -366,6 +371,10 @@ const translations = {
     quizCorrectTitle: "إجابة صحيحة! أحسنت.",
     quizIncorrectTitle: "إجابة خاطئة. الإجابة الصحيحة هي: ",
     quizNextBtn: "السؤال التالي ←",
+    quizNext: "السؤال التالي",
+    quizFinish: "إنهاء الاختبار",
+    quizLoadingMore: "جاري تحميل المزيد...",
+    quizMoreQuestions: "المزيد من الأسئلة",
     quizResultsBtn: "عرض النتائج ←",
     quizEndResultsBtn: "إنهاء وعرض النتائج",
     quizLoading: "جاري التحميل...",
@@ -381,7 +390,8 @@ const translations = {
     quizWrong: "خاطئة",
     quizTotal: "المجموع",
     quizReturn: "العودة للمادة",
-    quizCorrectSoFar: "إجابات صحيحة حتى الآن"
+    quizCorrectSoFar: "إجابات صحيحة حتى الآن",
+    endQuiz: "إنهاء الاختبار"
   }
 };
 
