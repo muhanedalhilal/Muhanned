@@ -205,7 +205,7 @@ def _ensure_document_components(course: Course, current_user: DBUser, db: Sessio
         if has_components:
             continue
 
-        for kc in fallback_kcs_for_resource(course.name, document.filename):
+        for kc in fallback_kcs_for_resource(None, document.filename):
             db.add(KnowledgeComponent(
                 topic=kc["topic"],
                 content=kc["content"],

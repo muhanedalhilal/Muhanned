@@ -12,7 +12,7 @@ from app.models.document import Document
 from app.models.knowledge_component import KnowledgeComponent
 from app.database.database import get_db
 from app.core.supabase_client import supabase
-from app.core.ai_service import generate_kcs_from_text, fallback_kcs_for_resource
+from app.core.ai_service import generate_kcs_from_text, generate_kcs_from_file, fallback_kcs_for_resource
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
@@ -20,6 +20,11 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 ALLOWED_EXTENSIONS = {".pdf", ".ppt", ".pptx"}
+MIME_TYPES = {
+    ".pdf": "application/pdf",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+}
 
 def extract_text_from_file(file_path: str, ext: str) -> str:
     text = ""
@@ -108,15 +113,30 @@ def upload_file(
     # 4. Extract text
     extracted_text = extract_text_from_file(save_path, ext)
 
-    # 5. Generate KCs with AI
+    # 5. Generate KCs from the uploaded file. Prefer extracted text, then ask
+    # Gemini to analyze the original file when extraction returns nothing.
     kcs_data = []
     generated_components = []
+    generation_source = "none"
     source_text = extracted_text.strip()
     if source_text:
         kcs_data = generate_kcs_from_text(source_text)
+        if kcs_data:
+            generation_source = "extracted_text"
 
     if not isinstance(kcs_data, list) or not kcs_data:
-        kcs_data = fallback_kcs_for_resource(course.name if course else None, file.filename)
+        kcs_data = generate_kcs_from_file(
+            save_path,
+            mime_type=MIME_TYPES.get(ext) or file.content_type,
+            filename=file.filename
+        )
+        if kcs_data:
+            generation_source = "uploaded_file"
+
+    if not isinstance(kcs_data, list) or not kcs_data:
+        kcs_data = fallback_kcs_for_resource(None, file.filename)
+        if kcs_data:
+            generation_source = "file_fallback"
 
     # 6. Save KCs to Postgres
     new_kcs = []
@@ -163,6 +183,8 @@ def upload_file(
         "message": "File processed and AI KCs generated!",
         "document_id": new_doc.id,
         "kcs_generated": len(generated_components),
+        "generation_source": generation_source,
+        "extracted_characters": len(source_text),
         "resource": {
             "id": new_doc.id,
             "text": new_doc.filename,

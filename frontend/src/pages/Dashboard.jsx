@@ -293,9 +293,17 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
       const response = await api.post('/upload/', formData);
       if (response.ok) {
         const docId = response.data.document_id;
-        // Fetch KCs generated from the backend
-        let kcsList = [];
-        if (docId) {
+        let kcsList = Array.isArray(response.data.components)
+          ? response.data.components.map(kc => ({
+              id: kc.id,
+              text: kc.text || kc.topic,
+              content: kc.content,
+              progress: kc.progress || 0
+            }))
+          : [];
+
+        // Fallback for older backend responses.
+        if (kcsList.length === 0 && docId) {
           const kcsResponse = await api.get(`/knowledge/documents/${docId}/kcs`);
           if (kcsResponse.ok) {
             kcsList = kcsResponse.data.map(kc => ({
@@ -310,11 +318,12 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
         setCourses(courses.map(course => {
           if (course.id !== courseId) return course;
 
+          const uploadedResource = response.data.resource || {};
           const newResource = {
             id: docId || Date.now(),
-            text: file.name,
-            type: extension,
-            fileUrl: null // Wait for backend serving later
+            text: uploadedResource.text || file.name,
+            type: uploadedResource.type || extension,
+            fileUrl: uploadedResource.fileUrl || null
           };
           return {
             ...course,

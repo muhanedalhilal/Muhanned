@@ -2,6 +2,45 @@ import os
 import google.generativeai as genai
 import json
 import re
+import time
+
+
+def _parse_kc_response(response_text: str) -> list[dict]:
+    cleaned = response_text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[7:]
+    if cleaned.startswith("```"):
+        cleaned = cleaned[3:]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    cleaned = cleaned.strip()
+
+    try:
+        parsed = json.loads(cleaned)
+    except json.JSONDecodeError:
+        start = cleaned.find("[")
+        end = cleaned.rfind("]")
+        if start == -1 or end == -1 or end <= start:
+            return []
+        try:
+            parsed = json.loads(cleaned[start:end + 1])
+        except json.JSONDecodeError:
+            return []
+
+    if not isinstance(parsed, list):
+        return []
+
+    kcs = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        topic = str(item.get("topic") or "").strip()
+        content = str(item.get("content") or "").strip()
+        if topic and content:
+            kcs.append({"topic": topic, "content": content})
+        if len(kcs) >= 7:
+            break
+    return kcs
 
 def fallback_kcs_from_text(text: str, max_items: int = 7) -> list[dict]:
     """
@@ -48,32 +87,17 @@ def fallback_kcs_from_text(text: str, max_items: int = 7) -> list[dict]:
 
 def fallback_kcs_for_resource(course_name: str | None, filename: str | None) -> list[dict]:
     """
-    Builds useful starter components when a PDF/PPT has no extractable text.
-    This keeps uploaded resources from producing an empty course.
+    Builds a file-only fallback when a PDF/PPT has no readable content.
+    The course_name argument is kept for backwards compatibility but is
+    intentionally not used. Uploaded-resource KCs must never be invented from
+    the course title.
     """
-    course_label = " ".join((course_name or "this course").split())
     resource_label = " ".join((filename or "the uploaded resource").split())
 
     return [
         {
-            "topic": f"{course_label} Resource Overview",
-            "content": f"Review {resource_label} as part of {course_label}. Identify the main learning objective, the section titles, and the ideas the resource repeats or emphasizes."
-        },
-        {
-            "topic": f"{course_label} Core Vocabulary",
-            "content": f"Collect the important terms, symbols, formulas, and definitions introduced in {resource_label}. Make sure each term can be explained in your own words."
-        },
-        {
-            "topic": "Key Procedures and Methods",
-            "content": f"Break down the main procedures shown in {resource_label} into clear steps. Focus on when each step is used and what result it should produce."
-        },
-        {
-            "topic": "Worked Examples",
-            "content": f"Use examples from {resource_label} to connect the theory to practice. For each example, note the givens, the method used, and the final conclusion."
-        },
-        {
-            "topic": "Practice and Mastery Check",
-            "content": f"After studying {resource_label}, practice retrieving the key ideas without looking. Mark any weak points for review before starting a quiz."
+            "topic": f"{resource_label} Needs Readable Content",
+            "content": f"Massar could not extract readable text from {resource_label}, so it did not create components from the course name. Upload a text-based PDF/PPTX or a file with selectable text so components can be generated from the file content."
         }
     ]
 
@@ -95,6 +119,7 @@ def generate_kcs_from_text(text: str) -> list[dict]:
     prompt = f"""
     You are an expert educational AI. 
     Read the following text extracted from an educational document.
+    Use ONLY this document text. Do not infer topics from the course name, file name, or any outside assumptions.
     Extract the core "Knowledge Components" (KCs) - these are the fundamental concepts, definitions, or facts.
     IMPORTANT: Extract ONLY the top 5 to 7 most critical and important concepts from the text. Do not return more than 7 components.
     Return the result strictly as a JSON array of objects. 
@@ -107,20 +132,68 @@ def generate_kcs_from_text(text: str) -> list[dict]:
 
     try:
         response = model.generate_content(prompt)
-        # Attempt to parse json
-        response_text = response.text.strip()
-        
-        # Sometimes Gemini wraps in ```json ... ```
-        if response_text.startswith("```json"):
-            response_text = response_text[7:]
-        if response_text.endswith("```"):
-            response_text = response_text[:-3]
-            
-        kcs = json.loads(response_text)
-        return kcs
+        kcs = _parse_kc_response(response.text)
+        return kcs or fallback_kcs_from_text(text)
     except Exception as e:
         print(f"Error generating KCs: {e}")
         return fallback_kcs_from_text(text)
+
+
+def generate_kcs_from_file(file_path: str, mime_type: str | None = None, filename: str | None = None) -> list[dict]:
+    """
+    Uses Gemini's file input as a second path when local text extraction is empty.
+    This keeps uploaded-resource generation tied to the actual file, not the course name.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("Warning: GEMINI_API_KEY not found in .env. Cannot generate KCs from uploaded file.")
+        return []
+
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    uploaded_file = None
+
+    prompt = """
+    You are an expert educational AI.
+    Analyze the uploaded educational resource itself.
+    Use ONLY the content visible or readable inside the uploaded file. Ignore the course name, file name, and outside assumptions.
+    Extract the core "Knowledge Components" (KCs) - these are the fundamental concepts, definitions, or facts.
+    IMPORTANT: Extract ONLY the top 5 to 7 most critical and important concepts from the file. Do not return more than 7 components.
+    Return the result strictly as a JSON array of objects.
+    Each object must have exactly two keys: "topic" and "content".
+    Do not wrap the JSON in markdown blocks, just return raw JSON so it can be parsed.
+    """
+
+    try:
+        uploaded_file = genai.upload_file(
+            file_path,
+            mime_type=mime_type,
+            display_name=filename or os.path.basename(file_path)
+        )
+
+        for _ in range(12):
+            state = getattr(getattr(uploaded_file, "state", None), "name", None)
+            if state != "PROCESSING":
+                break
+            time.sleep(1)
+            uploaded_file = genai.get_file(uploaded_file.name)
+
+        state = getattr(getattr(uploaded_file, "state", None), "name", None)
+        if state == "FAILED":
+            print(f"Gemini file processing failed for {filename or file_path}.")
+            return []
+
+        response = model.generate_content([uploaded_file, prompt])
+        return _parse_kc_response(response.text)
+    except Exception as e:
+        print(f"Error generating KCs from uploaded file: {e}")
+        return []
+    finally:
+        if uploaded_file is not None:
+            try:
+                genai.delete_file(uploaded_file.name)
+            except Exception:
+                pass
 
 def generate_quiz_from_kcs(kcs: list[dict]) -> list[dict]:
     """
@@ -325,4 +398,3 @@ def generate_mind_map_from_kcs(kcs: list[dict]) -> str:
     except Exception as e:
         print(f"Error generating mind map: {e}")
         return "mindmap\n  Error\n    GenerationFailed"
-
