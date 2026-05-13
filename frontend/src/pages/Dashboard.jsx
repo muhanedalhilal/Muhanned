@@ -421,15 +421,15 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
         } else if (res.status === 422) {
           // AI validation rejected — topic not found in uploaded resources
           const backendReason = res.message || '';
-          const isNoResources = backendReason.toLowerCase().includes('no course resources') || backendReason.toLowerCase().includes('upload');
+          const isNoResources = backendReason.toLowerCase().includes('no course resources') || backendReason.toLowerCase().includes('upload a document first');
           setComponentError(
             isRtl
               ? (isNoResources
                 ? 'لم يتم رفع أي مورد بعد. يرجى رفع ملف أولاً حتى يمكن التحقق من المواضيع.'
-                : `الموضوع "${topicToSave}" غير موجود في محتوى المصادر المرفوعة. أضف فقط مواضيع مغطاة في الملفات المرفوعة.`)
+                : `الموضوع "${topicToSave}" غير مرتبط بالمصادر المرفوعة. أضف فقط مواضيع مغطاة في ملفاتك.`)
               : (isNoResources
                 ? 'No resources uploaded yet. Please upload a file first so topics can be validated.'
-                : `"${topicToSave}" was not found in your uploaded resources. Only add topics that are covered in your uploaded files.`)
+                : `"${topicToSave}" was not found in your uploaded resources. Only add topics that are covered in your files.`)
           );
         } else {
           setComponentError(isRtl ? 'تعذّر إضافة المكوّن. يرجى المحاولة مرة أخرى.' : 'Failed to add component. Please try again.');

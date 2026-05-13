@@ -377,28 +377,28 @@ If the exact topic isn't found, summarize the closest related concept from the m
 Respond ONLY as a raw JSON object:
 {{"valid": true, "topic": "{topic}", "content": "<summary from material only>"}}"""
     else:
-        prompt = f"""You are a STRICT educational content validator with ONE job: decide if a topic is genuinely covered in the uploaded course material shown below.
+        prompt = f"""You are an educational content validator with ONE job: decide if a topic is genuinely covered by or closely related to the uploaded course material shown below.
 
 COURSE: "{course_name}"
 STUDENT'S REQUESTED TOPIC: "{topic}"
 
---- UPLOADED COURSE MATERIAL (the ONLY source of truth) ---
+--- UPLOADED COURSE MATERIAL ---
 {document_corpus}
 --- END OF MATERIAL ---
 
-DECISION RULES — follow these exactly, no exceptions:
-1. If "{topic}" is explicitly discussed, defined, or explained in the material above → valid=true
-2. If "{topic}" only appears as a passing word (e.g., in an example like "count the dogs") → valid=false
-3. If "{topic}" is from a completely different field than the material → valid=false
-4. If you are not 100% certain the topic is a genuine subject in the material → valid=false
+DECISION RULES — follow these exactly:
+1. If "{topic}" is explicitly discussed, defined, or explained in the material → valid=true
+2. If "{topic}" is a recognized educational concept that directly relates to the overarching subject of the material → valid=true
+3. If "{topic}" only appears as a passing, irrelevant word (e.g., in an example like "count the dogs") → valid=false
+4. If "{topic}" is from a completely different field than the material → valid=false
 
-EXAMPLES OF WHAT TO REJECT even if the word appears:
+EXAMPLES OF WHAT TO REJECT:
 - Material is about math, topic is "dogs" → REJECT (dogs is not a math concept)
 - Material is about biology, topic is "Python programming" → REJECT
 - Material is about physics, topic is "cooking" → REJECT
 
-If valid=true: summarize EXACTLY what the material says about "{topic}" in 2-3 sentences. DO NOT add outside knowledge.
-If valid=false: explain in one sentence that this topic is not a subject covered in the uploaded material.
+If valid=true: summarize EXACTLY what the material says about "{topic}" (or how it relates) in 2-3 sentences.
+If valid=false: explain in one sentence that this topic is not related to the uploaded material.
 
 Respond ONLY as a raw JSON object (no markdown, no explanation outside JSON):
 {{"valid": true, "topic": "<exact topic name>", "content": "<summary from material only>"}}

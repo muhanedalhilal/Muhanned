@@ -156,6 +156,17 @@ export default function InstructorDashboard({ t, isRtl }) {
           if (topicOverride) {
             setAiSuggestions(prev => prev.filter(s => s !== topicOverride));
           }
+        } else if (res.status === 422) {
+          const backendReason = res.message || '';
+          const isNoResources = backendReason.toLowerCase().includes('no course resources') || backendReason.toLowerCase().includes('upload a document first');
+          const errorMsg = isRtl
+            ? (isNoResources
+              ? 'لم يتم رفع أي مورد بعد. يرجى رفع ملف أولاً حتى يمكن التحقق من المواضيع.'
+              : `الموضوع "${topicToSave}" غير مرتبط بالمصادر المرفوعة. أضف فقط مواضيع مغطاة في ملفاتك.`)
+            : (isNoResources
+              ? 'No resources uploaded yet. Please upload a file first so topics can be validated.'
+              : `"${topicToSave}" was not found in your uploaded resources. Only add topics that are covered in your files.`);
+          alert(errorMsg);
         } else {
           alert("Failed to add component: " + res.message);
         }
