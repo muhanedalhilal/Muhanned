@@ -39,8 +39,8 @@ async function request(endpoint, method, data = null) {
         // Do NOT hard-redirect here — let the app/component handle it
         return { ok: false, status: response.status, message: "Session expired. Please log in again." };
       }
-      // Pass the backend error cleanly
-      throw new Error(result.detail || result.message || "API request failed");
+      // Pass the backend error cleanly without throwing, so callers can check ok + status
+      return { ok: false, status: response.status, message: result.detail || result.message || "API request failed" };
     }
 
     return { ok: true, data: result };

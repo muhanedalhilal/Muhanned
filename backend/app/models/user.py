@@ -5,6 +5,7 @@ class UserSignup(BaseModel):
     name: str = Field(..., min_length=2, description="The user's full name")
     email: EmailStr = Field(..., description="The user's email address")
     password: str = Field(..., min_length=6, description="The user's password")
+    role: str = Field("student", description="The user's role (student or teacher)")
 
     @field_validator('password')
     @classmethod
