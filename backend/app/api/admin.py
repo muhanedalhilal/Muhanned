@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 from app.database.database import get_db
 from app.models.db_user import DBUser
+from app.models.course import Course
 from app.core.security import require_admin
 from app.core.supabase_client import supabase_admin
 
@@ -156,9 +157,13 @@ def get_platform_stats(
     admins = db.query(func.count(DBUser.id)).filter(DBUser.role == "admin").scalar()
     teachers = db.query(func.count(DBUser.id)).filter(DBUser.role == "teacher").scalar()
 
+    # Count courses
+    total_courses = db.query(func.count(Course.id)).scalar()
+
     return {
         "total_users": total_users,
         "new_users_this_week": new_users_this_week,
+        "total_courses": total_courses,
         "roles": {
             "students": students,
             "admins": admins,

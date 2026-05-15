@@ -413,7 +413,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
      ACTIVE QUIZ — clean card design
   ───────────────────────────────────────── */
   const currentQ = questions[currentIdx];
-  const LETTERS = ['A', 'B', 'C', 'D'];
+  const LETTERS = isRtl ? ['أ', 'ب', 'ج', 'د'] : ['A', 'B', 'C', 'D'];
 
   return (
     <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', padding: '0 24px 40px', animation: 'fadeIn 0.3s ease' }}>

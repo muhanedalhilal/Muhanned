@@ -117,16 +117,17 @@ def generate_kcs_from_text(text: str) -> list[dict]:
     model = genai.GenerativeModel("gemini-2.5-pro")
     
     prompt = f"""
-    You are an expert educational AI. 
-    Read the following text extracted from an educational document.
-    Use ONLY this document text. Do not infer topics from the course name, file name, or any outside assumptions.
-    Extract the core "Knowledge Components" (KCs) - these are the fundamental concepts, definitions, or facts.
-    IMPORTANT: Extract ONLY the top 5 to 7 most critical and important concepts from the text. Do not return more than 7 components.
-    Return the result strictly as a JSON array of objects. 
-    Each object must have exactly two keys: "topic" and "content".
-    Do not wrap the JSON in markdown blocks, just return raw JSON so it can be parsed.
+    أنت خبير تعليمي يعتمد على الذكاء الاصطناعي.
+    اقرأ النص التالي المستخرج من مستند تعليمي.
+    استخدم هذا النص فقط. لا تستنتج مواضيع من اسم الدورة أو اسم الملف أو أي افتراضات خارجية.
+    استخرج "المكونات المعرفية" الأساسية (KCs) - وهي المفاهيم أو التعريفات أو الحقائق الأساسية.
+    هام: استخرج فقط أهم 5 إلى 7 مفاهيم نقدية من النص. لا تقم بإرجاع أكثر من 7 مكونات.
+    قم بإرجاع النتيجة بتنسيق مصفوفة JSON فقط.
+    يجب أن يحتوي كل كائن على مفتاحين فقط: "topic" و "content".
+    تعليمات اللغة: يجب أن يكون المخرج (المواضيع والمحتوى) بنفس لغة النص المرفق. إذا كان النص بالعربية أجب بالعربية، وإذا كان بالإنجليزية أجب بالإنجليزية.
+    لا تقم بتغليف JSON بكتل ماركداون، فقط أرجع JSON الخام حتى يمكن تحليله.
 
-    Text:
+    النص:
     {text[:100000]} # Limit to 100K chars for safety, though Gemini supports much more.
     """
 
@@ -154,14 +155,15 @@ def generate_kcs_from_file(file_path: str, mime_type: str | None = None, filenam
     uploaded_file = None
 
     prompt = """
-    You are an expert educational AI.
-    Analyze the uploaded educational resource itself.
-    Use ONLY the content visible or readable inside the uploaded file. Ignore the course name, file name, and outside assumptions.
-    Extract the core "Knowledge Components" (KCs) - these are the fundamental concepts, definitions, or facts.
-    IMPORTANT: Extract ONLY the top 5 to 7 most critical and important concepts from the file. Do not return more than 7 components.
-    Return the result strictly as a JSON array of objects.
-    Each object must have exactly two keys: "topic" and "content".
-    Do not wrap the JSON in markdown blocks, just return raw JSON so it can be parsed.
+    أنت خبير تعليمي يعتمد على الذكاء الاصطناعي.
+    قم بتحليل المورد التعليمي المرفق نفسه.
+    استخدم فقط المحتوى المرئي أو المقروء داخل الملف المرفق. تجاهل اسم الدورة واسم الملف والافتراضات الخارجية.
+    استخرج "المكونات المعرفية" الأساسية (KCs) - وهي المفاهيم أو التعريفات أو الحقائق الأساسية.
+    هام: استخرج فقط أهم 5 إلى 7 مفاهيم نقدية من الملف. لا تقم بإرجاع أكثر من 7 مكونات.
+    قم بإرجاع النتيجة بتنسيق مصفوفة JSON فقط.
+    يجب أن يحتوي كل كائن على مفتاحين فقط: "topic" و "content".
+    تعليمات اللغة: يجب أن يكون المخرج (المواضيع والمحتوى) بنفس لغة الملف المرفق. إذا كان محتوى الملف بالعربية أجب بالعربية، وإذا كان بالإنجليزية أجب بالإنجليزية.
+    لا تقم بتغليف JSON بكتل ماركداون، فقط أرجع JSON الخام حتى يمكن تحليله.
     """
 
     try:
@@ -211,21 +213,22 @@ def generate_quiz_from_kcs(kcs: list[dict]) -> list[dict]:
     kcs_text = "\n\n".join([f"ID: {kc['id']}\nTopic: {kc['topic']}\nContent: {kc['content']}\nMastery Probability: {kc['mastery_prob']}" for kc in kcs])
 
     prompt = f"""
-    You are an expert AI quiz generator.
-    Based strictly on the following knowledge components, create 5 multiple choice questions.
-    IMPORTANT: The 'Mastery Probability' (0.0 to 1.0) indicates how well the student understands the topic. 
-    - If Mastery Probability is low (e.g., < 0.4), generate questions that test fundamental, easy concepts.
-    - If Mastery Probability is medium (e.g., 0.4 to 0.7), generate moderately difficult questions.
-    - If Mastery Probability is high (e.g., > 0.7), generate hard, advanced questions requiring deep critical thinking.
+    أنت صانع اختبارات خبير يعتمد على الذكاء الاصطناعي.
+    بناءً على المكونات المعرفية التالية بدقة، قم بإنشاء 5 أسئلة متعددة الخيارات.
+    هام: يشير 'احتمال الإتقان' (Mastery Probability) (من 0.0 إلى 1.0) إلى مدى فهم الطالب للموضوع.
+    - إذا كان احتمال الإتقان منخفضًا (مثل < 0.4)، فقم بإنشاء أسئلة تختبر المفاهيم الأساسية والسهلة.
+    - إذا كان احتمال الإتقان متوسطًا (مثل 0.4 إلى 0.7)، فقم بإنشاء أسئلة متوسطة الصعوبة.
+    - إذا كان احتمال الإتقان عاليًا (مثل > 0.7)، فقم بإنشاء أسئلة صعبة ومتقدمة تتطلب تفكيرًا نقديًا عميقًا.
     
-    Return the result strictly as a JSON array of objects.
-    Each object must have:
-    - "question": the question text
-    - "options": an array of exactly 4 string options
-    - "answer": the index (0-3) of the correct option
-    - "kc_id": the integer ID of the knowledge component this question tests
+    قم بإرجاع النتيجة بتنسيق مصفوفة JSON فقط.
+    تعليمات اللغة: يجب أن تكون الأسئلة والخيارات بنفس لغة المكونات المعرفية المرفقة (عربي إذا كانت المكونات بالعربية، أو إنجليزي إذا كانت بالإنجليزية).
+    يجب أن يحتوي كل كائن على:
+    - "question": نص السؤال
+    - "options": مصفوفة تحتوي على 4 خيارات نصية بالضبط
+    - "answer": فهرس (0-3) الخيار الصحيح
+    - "kc_id": المعرف الرقمي للمكون المعرفي الذي يختبره هذا السؤال
 
-    Knowledge Components:
+    المكونات المعرفية:
     {kcs_text}
     """
 
@@ -264,34 +267,35 @@ def suggest_components_for_course(course_name: str, existing_topics: list[str], 
         for kc in existing_kc_data[:15]:  # cap to avoid huge prompts
             content_lines.append(f"- {kc['topic']}: {kc['content'][:300]}")
         resource_context = (
-            "The course already has the following knowledge extracted from uploaded resources:\n"
+            "تحتوي الدورة بالفعل على المعرفة التالية المستخرجة من الموارد المرفوعة:\n"
             + "\n".join(content_lines)
         )
         grounding_instruction = (
-            "Base your suggestions STRICTLY on the content above from the uploaded resources. "
-            "Do NOT invent topics from the course name or general knowledge. "
-            "Suggest topics that logically extend or complement what is already in the uploaded material."
+            "ابنِ اقتراحاتك بشكل صارم على المحتوى أعلاه من الموارد المرفوعة. "
+            "لا تخترع مواضيع من اسم الدورة أو المعرفة العامة. "
+            "اقترح مواضيع توسع أو تكمل منطقيًا ما هو موجود بالفعل في المواد المرفوعة."
         )
     else:
         resource_context = ""
         grounding_instruction = (
-            "Since no resources have been uploaded yet, suggest broadly relevant topics for this course."
+            "نظرًا لعدم رفع أي موارد بعد، اقترح مواضيع ذات صلة عامة بهذه الدورة."
         )
 
     prompt = f"""
-    You are an expert curriculum designer.
-    A student is studying a course called: "{course_name}".
-    They already have these Knowledge Component topics: {existing_str}.
+    أنت خبير في تصميم المناهج.
+    يدرس الطالب دورة تسمى: "{course_name}".
+    لديهم بالفعل مواضيع المكونات المعرفية التالية: {existing_str}.
 
     {resource_context}
 
     {grounding_instruction}
 
-    Suggest exactly 3 new, distinct Knowledge Component topics that are NOT already in the list above.
-    Return the result strictly as a JSON array of objects with exactly two keys:
-    - "topic": a short, clear topic name (max 8 words)
-    - "rationale": one sentence explaining why it is important
-    Do not wrap the JSON in markdown blocks, just return raw JSON.
+    اقترح بالضبط 3 مواضيع جديدة ومتميزة للمكونات المعرفية ليست موجودة بالفعل في القائمة أعلاه.
+    تعليمات اللغة: يجب أن تكون المواضيع والمبررات بنفس لغة اسم الدورة والمواضيع الموجودة (عربي إذا كانت بالعربية، أو إنجليزي إذا كانت بالإنجليزية).
+    قم بإرجاع النتيجة بتنسيق مصفوفة JSON فقط من كائنات تحتوي على مفتاحين بالضبط:
+    - "topic": اسم موضوع قصير وواضح (بحد أقصى 8 كلمات)
+    - "rationale": جملة واحدة تشرح سبب أهميته
+    لا تقم بتغليف JSON بكتل ماركداون، فقط أرجع JSON الخام.
     """
 
     try:
@@ -365,45 +369,45 @@ def validate_and_generate_component(course_name: str, topic: str, existing_kc_da
     model = genai.GenerativeModel("gemini-2.5-pro")
 
     if is_suggestion:
-        prompt = f"""You are an educational AI. A student is adding the pre-approved AI-suggested topic: "{topic}" to their course: "{course_name}".
+        prompt = f"""أنت ذكاء اصطناعي تعليمي. يضيف طالب الموضوع المقترح والمعتمد مسبقًا: "{topic}" إلى دورته: "{course_name}".
         
---- UPLOADED COURSE MATERIAL ---
+--- المواد الدراسية المرفوعة ---
 {document_corpus}
---- END OF MATERIAL ---
+--- نهاية المواد ---
 
-Summarize EXACTLY what the material says about "{topic}" in 2-3 sentences. DO NOT add outside knowledge. 
-If the exact topic isn't found, summarize the closest related concept from the material.
+لخص بالضبط ما تقوله المادة عن "{topic}" في جملتين إلى 3 جمل. لا تضف معرفة خارجية. 
+إذا لم يتم العثور على الموضوع الدقيق، فلخص أقرب مفهوم ذي صلة من المادة.
 
-Respond ONLY as a raw JSON object:
-{{"valid": true, "topic": "{topic}", "content": "<summary from material only>"}}"""
+استجب فقط ككائن JSON خام:
+{{"valid": true, "topic": "{topic}", "content": "<الملخص من المادة فقط، ويجب أن يكون بنفس لغة المادة>"}}"""
     else:
-        prompt = f"""You are an educational content validator with ONE job: decide if a topic is genuinely covered by or closely related to the uploaded course material shown below.
+        prompt = f"""أنت مدقق محتوى تعليمي ومهمتك الوحيدة: تحديد ما إذا كان الموضوع يغطيه بالفعل أو يرتبط ارتباطًا وثيقًا بالمواد الدراسية المرفوعة أدناه.
 
-COURSE: "{course_name}"
-STUDENT'S REQUESTED TOPIC: "{topic}"
+الدورة: "{course_name}"
+الموضوع المطلوب من الطالب: "{topic}"
 
---- UPLOADED COURSE MATERIAL ---
+--- المواد الدراسية المرفوعة ---
 {document_corpus}
---- END OF MATERIAL ---
+--- نهاية المواد ---
 
-DECISION RULES — follow these exactly:
-1. If "{topic}" is explicitly discussed, defined, or explained in the material → valid=true
-2. If "{topic}" is a recognized educational concept that directly relates to the overarching subject of the material → valid=true
-3. If "{topic}" only appears as a passing, irrelevant word (e.g., in an example like "count the dogs") → valid=false
-4. If "{topic}" is from a completely different field than the material → valid=false
+قواعد القرار — اتبعها بدقة:
+1. إذا تمت مناقشة "{topic}" صراحة، أو تعريفه، أو شرحه في المادة → valid=true
+2. إذا كان "{topic}" مفهوما تعليميا معترفا به يرتبط ارتباطا مباشرا بالموضوع الشامل للمادة → valid=true
+3. إذا ظهر "{topic}" فقط ككلمة عابرة غير ذات صلة (مثلا، في مثال مثل "عد الكلاب") → valid=false
+4. إذا كان "{topic}" من مجال مختلف تماما عن المادة → valid=false
 
-EXAMPLES OF WHAT TO REJECT:
-- Material is about math, topic is "dogs" → REJECT (dogs is not a math concept)
-- Material is about biology, topic is "Python programming" → REJECT
-- Material is about physics, topic is "cooking" → REJECT
+أمثلة لما يجب رفضه:
+- المادة تتحدث عن الرياضيات، الموضوع هو "الكلاب" → رفض
+- المادة تتحدث عن علم الأحياء، الموضوع هو "برمجة بايثون" → رفض
+- المادة تتحدث عن الفيزياء، الموضوع هو "الطبخ" → رفض
 
-If valid=true: summarize EXACTLY what the material says about "{topic}" (or how it relates) in 2-3 sentences.
-If valid=false: explain in one sentence that this topic is not related to the uploaded material.
+إذا كان valid=true: لخص بالضبط ما تقوله المادة عن "{topic}" (أو كيف يرتبط بها) في جملتين إلى 3 جمل، واكتب الملخص بنفس لغة المادة.
+إذا كان valid=false: اشرح في جملة واحدة سبب الرفض، واكتب الشرح بنفس لغة الموضوع المطلوب.
 
-Respond ONLY as a raw JSON object (no markdown, no explanation outside JSON):
-{{"valid": true, "topic": "<exact topic name>", "content": "<summary from material only>"}}
-OR
-{{"valid": false, "reason": "<one sentence explanation>"}}"""
+استجب فقط ككائن JSON خام (بدون ماركداون، وبدون شرح خارج JSON):
+{{"valid": true, "topic": "<اسم الموضوع الدقيق>", "content": "<الملخص من المادة فقط>"}}
+أو
+{{"valid": false, "reason": "<شرح من جملة واحدة>"}}"""
 
     try:
         response = model.generate_content(prompt)
@@ -435,11 +439,12 @@ def generate_summary_from_kcs(kcs: list[dict]) -> str:
     kcs_text = "\n\n".join([f"Topic: {kc['topic']}\nContent: {kc['content']}" for kc in kcs])
 
     prompt = f"""
-    You are an expert tutor. Create a comprehensive, easy-to-understand study summary sheet based on the following Knowledge Components.
-    Format the output strictly in clean Markdown. Include clear headings, bullet points, and highlight key terms in bold.
-    Do not include any JSON. Only return the Markdown text.
+    أنت معلم خبير. أنشئ ورقة ملخص دراسي شاملة وسهلة الفهم بناءً على المكونات المعرفية التالية.
+    تعليمات اللغة: يجب أن يكون الملخص بنفس لغة المكونات المعرفية المرفقة (عربي إذا كانت المكونات بالعربية، أو إنجليزي إذا كانت بالإنجليزية).
+    نسق المخرجات بدقة بتنسيق Markdown النظيف. قم بتضمين عناوين واضحة، ونقاط، وميز المصطلحات الأساسية بخط غامق.
+    لا تقم بتضمين أي JSON. فقط أرجع نص Markdown.
 
-    Knowledge Components:
+    المكونات المعرفية:
     {kcs_text}
     """
 
@@ -464,18 +469,19 @@ def generate_mind_map_from_kcs(kcs: list[dict]) -> str:
     kcs_text = "\n\n".join([f"Topic: {kc['topic']}\nContent: {kc['content']}" for kc in kcs])
 
     prompt = f"""
-    You are an expert educational AI. Generate a Mermaid JS mindmap based on the following Knowledge Components.
-    The mindmap should have a central root node (e.g. "Study Guide"), branching out to the main topics, and then sub-branches for key details.
+    أنت خبير تعليمي يعتمد على الذكاء الاصطناعي. قم بإنشاء خريطة ذهنية بتنسيق Mermaid JS بناءً على المكونات المعرفية التالية.
+    تعليمات اللغة: يجب أن تكون نصوص العقد بنفس لغة المكونات المعرفية المرفقة (عربي إذا كانت المكونات بالعربية، أو إنجليزي إذا كانت بالإنجليزية).
+    يجب أن تحتوي الخريطة الذهنية على عقدة جذرية مركزية (مثل "دليل الدراسة" أو "Study Guide")، تتفرع إلى المواضيع الرئيسية، ثم تتفرع إلى فروع فرعية للتفاصيل الرئيسية.
     
-    IMPORTANT REQUIREMENTS:
-    - Output ONLY valid Mermaid mindmap syntax.
-    - Start the output with exactly: mindmap
-    - Use proper indentation (spaces) to define the hierarchy.
-    - Do NOT wrap the output in markdown code blocks (e.g. do not use ```mermaid ... ```). Just the raw mermaid code.
-    - Keep node text very short and concise (max 3-5 words).
-    - NEVER use special characters like colons (:), parentheses (), brackets [], braces {{}}, asterisks (*), or quotes (") in the node text. Use ONLY alphanumeric characters and spaces.
+    متطلبات هامة:
+    - أخرج فقط صيغة خريطة Mermaid الصالحة.
+    - ابدأ المخرجات بالضبط بكلمة: mindmap
+    - استخدم المسافات البادئة المناسبة (مسافات) لتحديد التسلسل الهرمي.
+    - لا تقم بتغليف المخرجات في كتل التعليمات البرمجية Markdown (على سبيل المثال، لا تستخدم ```mermaid ... ```). فقط كود mermaid الخام.
+    - اجعل نص العقدة قصيرًا وموجزًا للغاية (بحد أقصى 3-5 كلمات).
+    - لا تستخدم أبدًا أحرفًا خاصة مثل النقطتين (:)، أو الأقواس ()، أو الأقواس المعقوفة []، أو الأقواس المتعرجة {{}}، أو العلامات النجمية (*)، أو علامات الاقتباس (") في نص العقدة. استخدم فقط الأحرف الأبجدية الرقمية والمسافات.
 
-    Knowledge Components:
+    المكونات المعرفية:
     {kcs_text}
     """
 

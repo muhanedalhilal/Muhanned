@@ -11,6 +11,10 @@ async function request(endpoint, method, data = null) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Attach language preference
+  const lang = localStorage.getItem('massar_lang') || 'en';
+  headers['Accept-Language'] = lang;
+
   const config = {
     method,
     headers,

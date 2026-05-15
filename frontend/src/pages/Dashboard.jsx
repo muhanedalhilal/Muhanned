@@ -622,7 +622,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                 fontSize: '15px', fontWeight: '600',
                 color: '#0B1F3A', letterSpacing: '0.2px'
               }}>
-                Generating components
+                {t.addingKnowledgeComponent || 'Adding Knowledge Components...'}
               </span>
             </div>
           </div>
