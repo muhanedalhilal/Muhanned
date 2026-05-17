@@ -1,14 +1,17 @@
-from fastapi import FastAPI
+﻿from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.api import auth, admin, users, upload, courses
+from app.api import auth, admin, users, upload, courses, groups
 from app.database.database import engine, Base
+from app.database.schema_compat import ensure_group_schema
 import app.models.db_user  # Imported so SQLAlchemy detects the table
 import os
 from app.api import knowledge
 from app.api import study_aids
+import app.models.document  # Ensure documents table is registered before metadata sync
+import app.models.knowledge_component  # Ensure knowledge_components table is registered before metadata sync
 import app.models.study_aid  # Ensure study_aids table is created
-
+import app.models.group # Ensure groups table is created
 
 
 @asynccontextmanager
@@ -16,10 +19,11 @@ async def lifespan(app: FastAPI):
     # Try to Create PostgreSQL Tables if they don't exist yet
     try:
         Base.metadata.create_all(bind=engine)
+        ensure_group_schema(engine)
         print("Database metadata synchronized.")
     except Exception as e:
         print(f"Warning: Could not connect to Database on startup. Supabase might be offline. Error: {e}")
-    
+
     yield
     # Cleanup on shutdown (if needed)
 
@@ -48,6 +52,7 @@ app.include_router(users.router)
 app.include_router(upload.router)
 app.include_router(knowledge.router)
 app.include_router(courses.router)
+app.include_router(groups.router)
 from app.api import quiz
 app.include_router(quiz.router)
 app.include_router(study_aids.router)

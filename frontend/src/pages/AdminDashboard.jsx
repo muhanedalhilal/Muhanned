@@ -32,9 +32,9 @@ export default function AdminDashboard({ t, authToken }) {
   // Map the real api hook into the dynamic cards
   const platformStats = [
     { title: t.totalUsers || 'Total Users', value: apiStats?.total_users || 0, icon: <Users size={32} color="#3b82f6" /> },
-    { title: t.activeCourses || 'New This Week', value: apiStats?.new_users_this_week || 0, icon: <BookOpen size={32} color="#8b5cf6" /> },
-    { title: t.tasksCompleted || 'Platform Admins', value: apiStats?.roles?.admins || 0, icon: <CheckCircle size={32} color="#10b981" /> },
-    { title: t.systemHealth || 'Platform Students', value: apiStats?.roles?.students || 0, icon: <Activity size={32} color="#ec4899" /> },
+    { title: t.totalStudents || 'Total Students', value: apiStats?.roles?.students || 0, icon: <BookOpen size={32} color="#8b5cf6" /> },
+    { title: t.totalInstructors || 'Total Instructors', value: apiStats?.roles?.teachers || 0, icon: <CheckCircle size={32} color="#10b981" /> },
+    { title: t.totalCourses || 'Total Courses', value: apiStats?.total_courses || 0, icon: <Activity size={32} color="#ec4899" /> },
   ];
 
   const startEditing = (user) => {

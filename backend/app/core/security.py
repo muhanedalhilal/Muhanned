@@ -46,12 +46,11 @@ def get_or_create_local_user_from_token(token: str, db: Session):
     db.refresh(user)
     return user
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+def get_user_from_token(token: str, db: Session):
     """
     Validates the Supabase JWT via a direct HTTP call (bypasses supabase-py session issues).
     If the user is found in Supabase but missing from PostgreSQL, auto-creates them.
     """
-    token = credentials.credentials
     try:
         # 1. Verify the JWT directly via Supabase REST API
         response = httpx.get(
@@ -128,6 +127,10 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Authentication failed: {str(e)}"
         )
+
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security), db: Session = Depends(get_db)):
+    return get_user_from_token(credentials.credentials, db)
 
 
 def require_admin(current_user: DBUser = Depends(get_current_user)):

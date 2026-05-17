@@ -11,8 +11,11 @@ from app.models.course import Course
 from app.models.document import Document
 from app.models.knowledge_component import KnowledgeComponent
 from app.database.database import get_db
+from app.core.document_links import document_view_url
 from app.core.supabase_client import supabase
 from app.core.ai_service import generate_kcs_from_text, generate_kcs_from_file, fallback_kcs_for_resource
+from app.core.group_realtime import group_realtime
+from app.models.group import Group, GroupMembership, GroupStudentProgress
 
 router = APIRouter(prefix="/upload", tags=["upload"])
 
@@ -45,7 +48,7 @@ def extract_text_from_file(file_path: str, ext: str) -> str:
     return text
 
 @router.post("/")
-def upload_file(
+async def upload_file(
     file: UploadFile = File(...),
     course_id: int = Form(None),
     current_user: DBUser = Depends(get_current_user),
@@ -166,20 +169,31 @@ def upload_file(
             "progress": int((new_kc.mastery_prob or 0.1) * 100)
         })
 
-    # Optionally clean up the local temp file to save space
-    try:
-        os.remove(save_path)
-    except:
-        pass
+    file_url = document_view_url(new_doc)
 
-    file_url = None
-    if new_doc.supabase_path:
-        try:
-            file_url = supabase.storage.from_("documents").get_public_url(new_doc.supabase_path)
-        except Exception:
-            pass
+    affected_groups = []
+    if course_id is not None:
+        affected_groups = db.query(Group).filter(Group.course_id == course_id).all()
+        for group in affected_groups:
+            memberships = db.query(GroupMembership).filter(GroupMembership.group_id == group.id).all()
+            for membership in memberships:
+                for new_kc in new_kcs:
+                    exists = db.query(GroupStudentProgress.id).filter(
+                        GroupStudentProgress.group_id == group.id,
+                        GroupStudentProgress.student_id == membership.student_id,
+                        GroupStudentProgress.knowledge_component_id == new_kc.id,
+                    ).first()
+                    if not exists:
+                        db.add(GroupStudentProgress(
+                            group_id=group.id,
+                            student_id=membership.student_id,
+                            knowledge_component_id=new_kc.id,
+                            mastery_prob=0.1,
+                        ))
+        if affected_groups:
+            db.commit()
 
-    return {
+    result = {
         "message": "File processed and AI KCs generated!",
         "document_id": new_doc.id,
         "kcs_generated": len(generated_components),
@@ -193,3 +207,16 @@ def upload_file(
         },
         "components": generated_components
     }
+
+    for group in affected_groups:
+        student_ids = [
+            row[0] for row in db.query(GroupMembership.student_id).filter(GroupMembership.group_id == group.id).all()
+        ]
+        await group_realtime.send_to_users(set(student_ids + [current_user.id]), {
+            "type": "group_resource_created",
+            "groupId": group.id,
+            "resource": result["resource"],
+            "components": generated_components,
+        })
+
+    return result

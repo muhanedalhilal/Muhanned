@@ -5,7 +5,8 @@ import ReactMarkdown from 'react-markdown';
 import mermaid from 'mermaid';
 import html2pdf from 'html2pdf.js';
 
-import { api } from '../services/api';
+import { api, openResource } from '../services/api';
+import StudentGroups from '../components/StudentGroups';
 
 const availableIcons = {
   book: <BookOpen size={24} />,
@@ -17,7 +18,7 @@ const availableIcons = {
 };
 
 const toArabicDigits = (num) => {
-  const arabicDigits = ['Ù ', 'Ù¡', 'Ù¢', 'Ù£', 'Ù¤', 'Ù¥', 'Ù¦', 'Ù§', 'Ù¨', 'Ù©'];
+  const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
   return num.toString().replace(/\d/g, (d) => arabicDigits[d]);
 };
 
@@ -49,7 +50,8 @@ const CustomXAxisTick = ({ x, y, payload, isRtl }) => {
   );
 };
 
-export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz }) {
+export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, setSelectedCourseId, setCurrentPage, selectedComponentsForQuiz, setSelectedComponentsForQuiz, setActiveGroupQuiz, onRefreshReady }) {
+  const tt = (key, fallback) => t?.[key] || fallback;
   const [courses, setCourses] = useState([]);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -63,6 +65,12 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
   const [deletingResId, setDeletingResId] = useState(null);
   const [isAddingComponent, setIsAddingComponent] = useState(false);
   const [newComponentName, setNewComponentName] = useState('');
+  const [isSuggestingComponents, setIsSuggestingComponents] = useState(false);
+  const [suggestedComponents, setSuggestedComponents] = useState([]);
+  const [isValidatingComponent, setIsValidatingComponent] = useState(false);
+  const [componentError, setComponentError] = useState('');
+  const [showStudyAidMenu, setShowStudyAidMenu] = useState(false);
+  const [isStudentGroupDetail, setIsStudentGroupDetail] = useState(false);
 
   const [dashboardUser, setDashboardUser] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
@@ -144,12 +152,12 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
 
   const formatTopicCount = (count) => {
     if (isRtl) {
-      if (count === 1) return 'Ù…ÙˆØ¶ÙˆØ¹ ÙˆØ§Ø­Ø¯';
-      if (count === 2) return 'Ù…ÙˆØ¶ÙˆØ¹ÙŠÙ†';
-      if (count >= 3 && count <= 10) return `${count} Ù…ÙˆØ§Ø¶ÙŠØ¹`;
-      return `${count} Ù…ÙˆØ¶ÙˆØ¹Ø§Ù‹`;
+      if (count === 1) return tt('oneTopic', 'موضوع واحد');
+      if (count === 2) return tt('twoTopics', 'موضوعان');
+      if (count >= 3 && count <= 10) return `${toArabicDigits(count)} ${tt('topicsPlural', 'مواضيع')}`;
+      return `${toArabicDigits(count)} ${tt('topicSingle', 'موضوع')}`;
     }
-    return `${count} topic${count !== 1 ? 's' : ''}`;
+    return count === 1 ? tt('topicSingle', 'topic') : `${count} ${tt('topicsPlural', 'topics')}`;
   };
 
   useEffect(() => {
@@ -181,12 +189,23 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           setCourses(coursesRes.data);
         }
       } catch (e) {
-        setDashboardError("Failed to fetch dashboard data");
+        setDashboardError(tt('failedFetchDashboard', 'Failed to fetch dashboard data'));
       } finally {
         setDashboardLoading(false);
       }
     };
     fetchUserData();
+  }, []);
+
+  // Expose refreshCourses to parent (App) so Quiz can trigger it
+  const refreshCourses = async () => {
+    const coursesRes = await api.get('/courses/');
+    if (coursesRes.ok) setCourses(coursesRes.data);
+  };
+
+  useEffect(() => {
+    if (onRefreshReady) onRefreshReady(refreshCourses);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Load saved study aids from DB when entering a course
@@ -224,6 +243,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
 
       // If user attached an optional resource file, upload it now
       if (newCourseFile) {
+        setIsUploading(true);
         const formData = new FormData();
         formData.append('file', newCourseFile);
         formData.append('course_id', res.data.id);
@@ -234,10 +254,12 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           if (coursesRes.ok) setCourses(coursesRes.data);
         } catch (err) {
           console.error('Optional file upload failed:', err);
+        } finally {
+          setIsUploading(false);
         }
       }
     } else {
-      alert('Failed to create course');
+      alert(tt('failedCreateCourse', 'Failed to create course'));
     }
     setNewCourseName('');
     setNewCourseDescription('');
@@ -253,7 +275,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
       setCourses(courses.filter(c => c.id !== id));
       if (selectedCourseId === id) setSelectedCourseId(null);
     } else {
-      alert("Failed to delete course");
+      alert(tt('failedDeleteCourse', 'Failed to delete course'));
     }
   };
 
@@ -278,7 +300,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
     const validExts = ['pdf', 'ppt', 'pptx'];
     const extension = file.name.split('.').pop().toLowerCase();
     if (!validExts.includes(extension)) {
-      alert("Invalid file type! Only PDF, PPT, and PPTX are allowed.");
+      alert(tt('invalidResourceType', 'Invalid file type. Only PDF, PPT, and PPTX are allowed.'));
       e.target.value = '';
       return;
     }
@@ -332,10 +354,10 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           };
         }));
       } else {
-        alert("Upload failed: " + response.message);
+        alert(`${tt('uploadFailed', 'Upload failed')}: ${response.message}`);
       }
     } catch (err) {
-      alert("Error parsing upload: " + err.message);
+      alert(`${tt('errorParsingUpload', 'Error parsing upload')}: ${err.message}`);
     } finally {
       setIsUploading(false);
       e.target.value = '';
@@ -343,7 +365,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
   };
 
   const deleteResource = async (courseId, resourceId) => {
-    if (!window.confirm(t.confirmDeleteResource || "Are you sure you want to delete this resource? All related AI Knowledge Components will also be permanently deleted.")) {
+    if (!window.confirm(tt('confirmDeleteResource', "Are you sure you want to delete this resource? All related AI Knowledge Components will also be permanently deleted."))) {
       return;
     }
 
@@ -357,7 +379,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           setCourses(coursesRes.data);
         }
       } else {
-        alert("Failed to delete resource: " + res.message);
+        alert(`${tt('failedDeleteResource', 'Failed to delete resource')}: ${res.message}`);
       }
     } catch (err) {
       console.error(err);
@@ -376,18 +398,70 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
     }));
   };
 
-  const handleSaveComponent = (courseId) => {
-    if (newComponentName && newComponentName.trim()) {
-      setCourses(courses.map(course => {
-        if (course.id !== courseId) return course;
-        return {
-          ...course,
-          componentList: [...(course.componentList || []), { id: Date.now(), text: newComponentName.trim(), progress: 0 }]
-        };
-      }));
+  const handleSaveComponent = async (courseId, topicName = null) => {
+    const topicToSave = topicName || newComponentName.trim();
+    if (topicToSave) {
+      setIsValidatingComponent(true);
+      setComponentError('');
+      try {
+        const isSuggestion = !!topicName;
+        const res = await api.post(`/courses/${courseId}/add-manual-component`, {
+          topic: topicToSave,
+          is_suggestion: isSuggestion
+        });
+        if (res.ok) {
+          setCourses(courses.map(course => {
+            if (course.id !== courseId) return course;
+            return {
+              ...course,
+              componentList: [...(course.componentList || []), { id: res.data.id, text: res.data.text, content: res.data.content, progress: res.data.progress }]
+            };
+          }));
+          setNewComponentName('');
+          setIsAddingComponent(false);
+          setComponentError('');
+          setSuggestedComponents(prev => prev.filter(s => s !== topicToSave));
+        } else if (res.status === 422) {
+          // AI validation rejected: topic not found in uploaded resources
+          const backendReason = res.message || '';
+          const isNoResources = backendReason.toLowerCase().includes('no course resources') || backendReason.toLowerCase().includes('upload a document first');
+          setComponentError(
+            isRtl
+              ? (isNoResources
+                ? tt('noResourcesForValidation', 'لم يتم رفع أي مورد بعد. يرجى رفع ملف أولاً حتى يمكن التحقق من المواضيع.')
+                : `"${topicToSave}" ${tt('topicNotFoundInResources', 'غير موجود ضمن الموارد المرفوعة. أضف فقط المواضيع الموجودة في ملفاتك.')}`)
+              : (isNoResources
+                ? tt('noResourcesForValidation', 'No resources uploaded yet. Please upload a file first so topics can be validated.')
+                : `"${topicToSave}" ${tt('topicNotFoundInResources', 'was not found in your uploaded resources. Only add topics that are covered in your files.')}`)
+          );
+        } else {
+          setComponentError(tt('failedAddComponent', 'Failed to add component. Please try again.'));
+        }
+      } catch (e) {
+        setComponentError(tt('saveComponentError', 'An error occurred while saving. Please try again.'));
+      } finally {
+        setIsValidatingComponent(false);
+      }
     }
-    setNewComponentName('');
-    setIsAddingComponent(false);
+  };
+
+  const fetchSuggestions = async (courseId) => {
+    setIsSuggestingComponents(true);
+    setSuggestedComponents([]);
+    try {
+      const course = courses.find(c => c.id === courseId);
+      const existing_topics = (course.componentList || []).map(c => c.text);
+      const res = await api.post(`/courses/${courseId}/suggest-components`, { existing_topics });
+      if (res.ok && res.data.suggestions) {
+        // Normalize: backend may return plain strings OR objects like {topic, rationale}
+        const normalized = res.data.suggestions.map(s => (typeof s === 'string' ? s : s.topic || s.text || String(s)));
+        setSuggestedComponents(normalized);
+      }
+    } catch (e) {
+      console.error("Failed to fetch suggestions");
+    } finally {
+      setIsSuggestingComponents(false);
+    }
   };
 
   const generateStudyAid = async (type) => {
@@ -410,10 +484,10 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           [selectedCourseId]: [resultObj, ...(prev[selectedCourseId] || [])]
         }));
       } else {
-        setStudyAidError(res.message || 'Failed to generate study aid.');
+        setStudyAidError(res.message || tt('failedGenerateStudyAid', 'Failed to generate study aid.'));
       }
     } catch (e) {
-      setStudyAidError('An error occurred while communicating with the server.');
+      setStudyAidError(tt('serverCommunicationError', 'An error occurred while communicating with the server.'));
     } finally {
       setIsGeneratingAids(false);
     }
@@ -422,6 +496,30 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
   const handleDownloadPDF = () => {
     const element = document.getElementById('study-aid-content');
     if (!element) return;
+
+    // explicitly inline the computed color for all mermaid text nodes
+    const mermaidNodes = element.querySelectorAll('.mermaid *');
+    mermaidNodes.forEach(node => {
+      const computedStyle = window.getComputedStyle(node);
+      if (computedStyle.color) {
+        node.style.setProperty('color', computedStyle.color, 'important');
+      }
+      if (computedStyle.fill && computedStyle.fill !== 'none') {
+        node.style.setProperty('fill', computedStyle.fill, 'important');
+      }
+    });
+
+    // Specifically target ONLY text elements in the root blue node to guarantee white font in PDF
+    // We avoid selecting paths/rects so we don't accidentally turn the blue background white
+    const rootTextElements = element.querySelectorAll(
+      '.mermaid .root-node p, .mermaid .root-node span, .mermaid .root-node div, .mermaid .root-node text, .mermaid .root-node tspan, ' +
+      '.mermaid .section-root p, .mermaid .section-root span, .mermaid .section-root div, .mermaid .section-root text, .mermaid .section-root tspan, ' +
+      '.mermaid [class*="root"] p, .mermaid [class*="root"] span, .mermaid [class*="root"] div, .mermaid [class*="root"] text, .mermaid [class*="root"] tspan'
+    );
+    rootTextElements.forEach(node => {
+      node.style.setProperty('color', '#ffffff', 'important');
+      node.style.setProperty('fill', '#ffffff', 'important');
+    });
 
     const opt = {
       margin: [15, 15, 15, 15],
@@ -501,7 +599,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
     const chartData = isRtl ? [...rawChartData].reverse() : rawChartData;
 
     return (
-      <div className="dashboard-section command-center" style={{ position: 'relative' }}>
+      <div className="dashboard-section command-center student-dashboard-page" style={{ position: 'relative' }}>
 
         {/* Full-screen AI Generation Overlay */}
         {isUploading && (
@@ -527,7 +625,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                 fontSize: '15px', fontWeight: '600',
                 color: '#0B1F3A', letterSpacing: '0.2px'
               }}>
-                Generating components
+                {t.addingKnowledgeComponent || 'Adding Knowledge Components...'}
               </span>
             </div>
           </div>
@@ -642,8 +740,8 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
 
           <div style={{ position: 'relative', zIndex: 1 }}>
             <div className="detail-hero-top" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-              <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: '5px', flexShrink: 0 }}>
-                <ArrowLeft size={24} color="#1e293b" />
+              <button className="del-btn" onClick={() => setSelectedCourseId(null)} style={{ marginRight: isRtl ? '0' : '5px', marginLeft: isRtl ? '5px' : '0', flexShrink: 0 }}>
+                <ArrowLeft size={24} color="#1e293b" style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} />
               </button>
 
               {selectedCourse.image_url ? (
@@ -709,8 +807,8 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           </div>
         </div>
 
-        <div className="bento-layout">
-          <div className="task-checklist luxe-panel bento-tasks" style={{ flex: 1, maxWidth: '600px', minWidth: '340px', display: 'flex', flexDirection: 'column' }}>
+        <div className="bento-layout" style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'stretch', width: '100%' }}>
+          <div className="task-checklist luxe-panel bento-tasks" style={{ flex: 1, minWidth: '340px', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ color: 'black', marginBottom: '15px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Library size={22} color="#3b82f6" />
               {t.resourcesLearningAssets || 'Resources & Learning Assets'}
@@ -728,12 +826,11 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                     className="task-item"
                     style={{ padding: '18px 20px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '15px' }}
                   >
-                    <div style={{ width: '100%' }}>
-                      {res.fileUrl ? (
-                        <a
-                          href={res.fileUrl}
-                          target="_blank"
-                          rel="noreferrer"
+                    <div style={{ width: '100%', minWidth: 0 }}>
+                      {(res.fileUrl || res.id) ? (
+                        <button
+                          type="button"
+                          onClick={() => openResource(res)}
                           className="task-text"
                           title={res.text}
                           style={{
@@ -743,24 +840,34 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                             lineHeight: '1.4',
                             textDecoration: 'none',
                             cursor: 'pointer',
-                            display: 'inline-block',
-                            wordBreak: 'break-word'
+                            display: 'block',
+                            width: '100%',
+                            textAlign: isRtl ? 'right' : 'left',
+                            background: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
                           }}
                           onMouseOver={(e) => e.currentTarget.style.color = '#3b82f6'}
                           onMouseOut={(e) => e.currentTarget.style.color = '#1e293b'}
                         >
                           {res.text}
-                        </a>
+                        </button>
                       ) : (
                         <span
                           className="task-text"
+                          title={res.text}
                           style={{
                             fontSize: '16px',
                             fontWeight: '800',
                             color: '#1e293b',
                             lineHeight: '1.4',
-                            display: 'inline-block',
-                            wordBreak: 'break-word'
+                            display: 'block',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
                           }}
                         >
                           {res.text}
@@ -798,7 +905,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
             </div>
           </div>
 
-          <div className="components-section luxe-panel bento-components" style={{ flex: 1, maxWidth: '600px', minWidth: '340px', display: 'flex', flexDirection: 'column' }}>
+          <div className="components-section luxe-panel bento-components" style={{ flex: 1, minWidth: '340px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
               <h3 style={{ color: 'black', margin: 0, fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Layers size={22} color="#3b82f6" />
@@ -809,7 +916,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                   onClick={toggleSelectAll}
                   style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: '13px', fontWeight: '700', cursor: 'pointer', textDecoration: 'underline' }}
                 >
-                  {isAllSelected ? (t.deselectAll || "Deselect All") : (t.selectAll || "Select All")}
+                  {isAllSelected ? tt('deselectAll', 'Deselect All') : tt('selectAll', 'Select All')}
                 </button>
               )}
             </div>
@@ -864,27 +971,52 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
             </div>
 
             {isAddingComponent ? (
-              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
+              <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
+                {(isSuggestingComponents || suggestedComponents.length > 0) && (
+                  <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+                    <h4 style={{ margin: '0 0 8px', fontSize: '13px', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {isSuggestingComponents ? <Loader2 size={14} className="spin-icon" /> : <Wand2 size={14} />}
+                      {isSuggestingComponents ? tt('aiSuggestionsLoading', 'AI suggestions loading...') : tt('aiSuggestionsAdd', 'AI Suggestions — click to add')}
+                    </h4>
+                    {!isSuggestingComponents && suggestedComponents.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '7px' }}>
+                        {suggestedComponents.map((topic, i) => (
+                          <button key={i} onClick={() => handleSaveComponent(selectedCourse.id, topic)} disabled={isValidatingComponent} style={{ background: '#ffffff', border: '1px solid #bfdbfe', color: '#2563eb', padding: '5px 11px', borderRadius: '20px', fontSize: '13px', cursor: isValidatingComponent ? 'not-allowed' : 'pointer', fontWeight: '600', transition: '0.2s' }} onMouseOver={(e) => { if (!isValidatingComponent) e.currentTarget.style.background = '#eff6ff'; }} onMouseOut={(e) => { if (!isValidatingComponent) e.currentTarget.style.background = '#ffffff'; }}>
+                            + {topic}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <input
                   type="text"
                   value={newComponentName}
-                  onChange={(e) => setNewComponentName(e.target.value)}
-                  placeholder={t.addComponent || 'Component name...'}
+                  onChange={(e) => { setNewComponentName(e.target.value); if (componentError) setComponentError(''); }}
+                  placeholder={tt('manualTopicPlaceholder', 'Or type a topic manually...')}
                   className="input-luxe"
-                  autoFocus
-                  style={{ background: '#ffffff', color: '#0f172a', border: '1px solid #3b82f6', width: '100%', marginBottom: '0' }}
+                  disabled={isValidatingComponent}
+                  style={{ background: '#ffffff', color: '#0f172a', border: `1px solid ${componentError ? '#ef4444' : '#3b82f6'}`, width: '100%', marginBottom: '0' }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') handleSaveComponent(selectedCourse.id);
-                    if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); }
+                    if (e.key === 'Escape') { setIsAddingComponent(false); setNewComponentName(''); setSuggestedComponents([]); setComponentError(''); }
                   }}
                 />
+                {componentError && (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px', fontSize: '13px', color: '#dc2626', fontWeight: '500', lineHeight: '1.5' }}>
+                    <span style={{ flexShrink: 0 }}>x</span>
+                    <span>{componentError}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn-luxe primary hover-lift" onClick={() => handleSaveComponent(selectedCourse.id)} style={{ padding: '8px', flex: 1, justifyContent: 'center' }}>{t.save || 'Save'}</button>
-                  <button className="btn-luxe hover-lift" onClick={() => { setIsAddingComponent(false); setNewComponentName(''); }} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}>{t.cancel || 'Cancel'}</button>
+                  <button className="btn-luxe primary hover-lift" disabled={isValidatingComponent || !newComponentName.trim()} onClick={() => handleSaveComponent(selectedCourse.id)} style={{ padding: '8px', flex: 1, justifyContent: 'center' }}>
+                    {isValidatingComponent ? <Loader2 size={16} className="spin-icon" /> : tt('saveTitle', 'Save')}
+                  </button>
+                  <button className="btn-luxe hover-lift" disabled={isValidatingComponent} onClick={() => { setIsAddingComponent(false); setNewComponentName(''); setSuggestedComponents([]); setComponentError(''); }} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}>{tt('cancelTitle', 'Cancel')}</button>
                 </div>
               </div>
             ) : (
-              <button className="btn-luxe hover-lift" onClick={() => setIsAddingComponent(true)} style={{ background: 'rgba(0, 0, 0, 0.03)', border: '1px dashed rgba(0, 0, 0, 0.15)', color: '#1e293b', marginTop: '10px', width: '100%', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+              <button className="btn-luxe hover-lift" onClick={() => { setIsAddingComponent(true); fetchSuggestions(selectedCourse.id); }} style={{ background: 'rgba(0, 0, 0, 0.03)', border: '1px dashed rgba(0, 0, 0, 0.15)', color: '#1e293b', marginTop: '10px', width: '100%', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
                 <Plus size={18} /> <span>{t.addComponent || 'Add Component'}</span>
               </button>
             )}
@@ -898,6 +1030,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                 disabled={selectedComponents.length === 0}
                 onClick={() => {
                   setSelectedComponentsForQuiz(selectedComponents);
+                  setActiveGroupQuiz?.(null);
                   setCurrentPage('quiz');
                 }}
                 style={{
@@ -919,13 +1052,47 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
               </button>
             </div>
 
-            <div style={{ marginTop: '12px', display: 'flex', gap: '10px' }}>
-              <button className="btn-luxe hover-lift" disabled={selectedComponents.length === 0} onClick={() => generateStudyAid('summary')} style={{ flex: 1, justifyContent: 'center', padding: '12px', fontSize: '14px', opacity: selectedComponents.length === 0 ? 0.5 : 1, background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155' }}>
-                <FileText size={18} style={{ marginRight: '6px' }} /> {t.summarySheet || 'Summary Sheet'}
+            <div style={{ marginTop: '12px', position: 'relative' }}>
+              <button
+                className="btn-luxe hover-lift"
+                disabled={selectedComponents.length === 0}
+                onClick={() => setShowStudyAidMenu(prev => !prev)}
+                style={{ width: '100%', justifyContent: 'space-between', padding: '12px 16px', fontSize: '14px', opacity: selectedComponents.length === 0 ? 0.5 : 1, background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155' }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {tt('generateStudyAid', 'Generate Study Aid')}
+                </span>
+                <span style={{ fontSize: '12px', opacity: 0.6, transform: showStudyAidMenu ? 'rotate(180deg)' : 'none', display: 'inline-block', transition: 'transform 0.2s' }}>v</span>
               </button>
-              <button className="btn-luxe hover-lift" disabled={selectedComponents.length === 0} onClick={() => generateStudyAid('mindmap')} style={{ flex: 1, justifyContent: 'center', padding: '12px', fontSize: '14px', opacity: selectedComponents.length === 0 ? 0.5 : 1, background: '#f8fafc', border: '1px solid #cbd5e1', color: '#334155' }}>
-                <Network size={18} style={{ marginRight: '6px' }} /> {t.mindMap || 'Mind Map'}
-              </button>
+
+              {showStudyAidMenu && selectedComponents.length > 0 && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', zIndex: 50, overflow: 'hidden' }}>
+                  <button
+                    onClick={() => { generateStudyAid('summary'); setShowStudyAidMenu(false); }}
+                    style={{ width: '100%', padding: '14px 16px', background: 'none', border: 'none', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: '600', color: '#334155', transition: 'background 0.15s' }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                  >
+                    <FileText size={18} color="#3b82f6" />
+                    <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
+                      <div>{t.summarySheet || 'Summary Sheet'}</div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '400' }}>{tt('summaryDescription', 'Text summary of selected topics')}</div>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => { generateStudyAid('mindmap'); setShowStudyAidMenu(false); }}
+                    style={{ width: '100%', padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '14px', fontWeight: '600', color: '#334155', transition: 'background 0.15s' }}
+                    onMouseOver={(e) => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'none'}
+                  >
+                    <Network size={18} color="#8b5cf6" />
+                    <div style={{ textAlign: isRtl ? 'right' : 'left' }}>
+                      <div>{t.mindMap || 'Mind Map'}</div>
+                      <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '400' }}>{tt('mindMapDescription', 'Visual interactive mind map')}</div>
+                    </div>
+                  </button>
+                </div>
+              )}
             </div>
 
             {savedStudyAids[selectedCourseId] && savedStudyAids[selectedCourseId].length > 0 && (
@@ -945,7 +1112,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
             )}
           </div>
 
-          <div className="luxe-panel bento-chart" style={{ flex: 1, maxWidth: '600px', minWidth: '340px', display: 'flex', flexDirection: 'column' }}>
+          <div className="luxe-panel bento-chart" style={{ flex: 1, minWidth: '100%', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ color: 'black', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <BarChart3 size={22} color="#3b82f6" /> {t.progressDiagram || 'Progress Diagram'}
             </h3>
@@ -969,7 +1136,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                       tickMargin={isRtl ? 35 : 12}
                       tick={{ fill: '#334155', fontSize: 18, fontWeight: '900' }}
                       ticks={[0, 25, 50, 75, 100]}
-                      tickFormatter={(val) => isRtl ? `Ùª${toArabicDigits(val)}` : `${val}%`}
+                      tickFormatter={(val) => `${val}%`}
                     />
                     <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} content={({ active, payload }) => { if (active && payload && payload.length) { return (<div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}><p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p><p style={{ margin: 0, color: payload[0].payload.fill }}>{t.progressHover || 'Progress:'} {payload[0].value}%</p></div>); } return null; }} />
                     <Bar dataKey="progress" radius={[4, 4, 0, 0]} maxBarSize={50} />
@@ -1038,80 +1205,91 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
   };
 
   return (
-    <div className="dashboard-section command-center">
-      <div className="command-header-premium">
-        <div className="header-text-group">
-          <h1 className="luxe-title">
-            {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{ display: 'inline', marginRight: '10px' }} />}
-            {dashboardError ? (t.dashboard || "Student Dashboard") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : (t.dashboard || "Student Dashboard"))}
-          </h1>
-          <p className="luxe-subtitle">{t.manageCourses}</p>
+    <div className="dashboard-section command-center student-dashboard-page">
+      <div style={{ display: isStudentGroupDetail ? 'none' : undefined }}>
+        <div className="command-header-premium">
+          <div className="header-text-group">
+            <h1 className="luxe-title">
+              {dashboardLoading && <Loader2 size={24} className="spin-icon" style={{ display: 'inline', marginRight: '10px' }} />}
+              {dashboardError ? (t.dashboard || "Student Dashboard") : (dashboardUser ? `${t.welcomeBack}, ${dashboardUser.name}` : (t.dashboard || "Student Dashboard"))}
+            </h1>
+            <p className="luxe-subtitle">{t.manageCourses}</p>
+          </div>
+          <div className="header-actions">
+            <div className="search-bar" style={{ position: 'relative', background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.08)' }}>
+              <Search size={18} color="#94a3b8" />
+              <input type="text" placeholder={t.searchPlaceholder || "Search courses..."} className="search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsSearchFocused(true)} onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)} />
+              {isSearchFocused && searchQuery && (
+                <div className="search-suggestions" style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', marginTop: '8px', padding: '8px 0', zIndex: 100, boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {filteredCourses.length > 0 ? filteredCourses.map(course => (
+                    <div key={course.id} style={{ padding: '8px 16px', cursor: 'pointer', color: 'black', display: 'flex', alignItems: 'center', gap: '10px', transition: '0.2s' }} onClick={() => { setSelectedCourseId(course.id); setSearchQuery(''); }} onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                      <div style={{ transform: 'scale(0.8)' }}>{availableIcons[course.icon]}</div>
+                      <span style={{ fontSize: '14px', fontWeight: '500' }}>{course.name}</span>
+                    </div>
+                  )) : (<div style={{ padding: '8px 16px', color: '#94a3b8', fontSize: '14px' }}>{t.noMatchesFound || 'No matches found...'}</div>)}
+                </div>
+              )}
+            </div>
+            <button className="btn-luxe primary" onClick={() => setIsAdding(!isAdding)}><Plus size={18} /><span>{t.addCourse}</span></button>
+          </div>
         </div>
-        <div className="header-actions">
-          <div className="search-bar" style={{ position: 'relative', background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.08)' }}>
-            <Search size={18} color="#94a3b8" />
-            <input type="text" placeholder={t.searchPlaceholder || "Search courses..."} className="search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsSearchFocused(true)} onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)} />
-            {isSearchFocused && searchQuery && (
-              <div className="search-suggestions" style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '12px', marginTop: '8px', padding: '8px 0', zIndex: 100, boxShadow: '0 10px 40px rgba(0, 0, 0, 0.5)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {filteredCourses.length > 0 ? filteredCourses.map(course => (
-                  <div key={course.id} style={{ padding: '8px 16px', cursor: 'pointer', color: 'black', display: 'flex', alignItems: 'center', gap: '10px', transition: '0.2s' }} onClick={() => { setSelectedCourseId(course.id); setSearchQuery(''); }} onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'} onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
-                    <div style={{ transform: 'scale(0.8)' }}>{availableIcons[course.icon]}</div>
-                    <span style={{ fontSize: '14px', fontWeight: '500' }}>{course.name}</span>
-                  </div>
-                )) : (<div style={{ padding: '8px 16px', color: '#94a3b8', fontSize: '14px' }}>{t.noMatchesFound || 'No matches found...'}</div>)}
+        {isAdding && (
+          <form onSubmit={addCourse} className="add-subject-form luxe-panel" style={{ maxWidth: '550px' }}>
+            <div className="form-header"><h3 style={{ color: 'black' }}>{t.addCourse}</h3></div>
+            <div className="form-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <input type="text" placeholder={t.courseName} value={newCourseName} onChange={(e) => setNewCourseName(e.target.value)} className="input-luxe" autoFocus required style={{ background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0' }} />
+              <div style={{ position: 'relative' }}>
+                <textarea placeholder={t.courseDescriptionPlaceholder || 'Description of the course (optional)'} value={newCourseDescription} onChange={(e) => setNewCourseDescription(e.target.value)} className="input-luxe" rows={3} style={{ background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0', resize: 'vertical', minHeight: '70px', fontFamily: 'inherit', width: '100%', padding: '12px 16px', borderRadius: '12px' }} />
+                <span style={{ position: 'absolute', top: '-8px', right: '12px', background: '#f8fafc', padding: '0 6px', fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>{t.optionalField || 'Optional'}</span>
               </div>
-            )}
-          </div>
-          <button className="btn-luxe primary" onClick={() => setIsAdding(!isAdding)}><Plus size={18} /><span>{t.addCourse}</span></button>
-        </div>
+              <div style={{ position: 'relative' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '12px', border: newCourseFile ? '2px solid #3b82f6' : '1px dashed #cbd5e1', background: newCourseFile ? 'rgba(59, 130, 246, 0.04)' : '#fff', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <Upload size={20} color={newCourseFile ? '#3b82f6' : '#94a3b8'} />
+                  <span style={{ fontSize: '14px', color: newCourseFile ? '#1e293b' : '#64748b', fontWeight: '500' }}>
+                    {newCourseFile
+                      ? newCourseFile.name
+                      : tt('addResourcesOptional', 'Add Resources (PDF/PPTX) — Optional')}
+                  </span>
+                  <input
+                    type="file"
+                    accept=".pdf,.ppt,.pptx"
+                    style={{ display: 'none' }}
+                    onChange={(e) => setNewCourseFile(e.target.files?.[0] || null)}
+                  />
+                  {newCourseFile && (
+                    <button
+                      type="button"
+                      onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); setNewCourseFile(null); }}
+                      style={{
+                        marginLeft: 'auto', background: 'none', border: 'none',
+                        color: '#ef4444', cursor: 'pointer', padding: '2px'
+                      }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </label>
+                <span style={{ position: 'absolute', top: '-8px', right: '12px', background: '#f8fafc', padding: '0 6px', fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>{t.optionalField || 'Optional'}</span>
+              </div>
+              <button type="submit" className="btn-luxe submit" disabled={isCreatingCourse || !newCourseName.trim()} style={{ opacity: (isCreatingCourse || !newCourseName.trim()) ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                {isCreatingCourse ? (<><Loader2 size={18} style={{ animation: 'spinCircle 0.8s linear infinite' }} /> {t.creatingCourse || 'Creating...'}</>) : (t.addCourse)}
+              </button>
+            </div>
+          </form>
+        )}
+        <div className="section-divider" style={{ marginTop: '30px' }}><span className="divider-text" style={{ color: 'black' }}>{t.activeCourses || 'Active Courses'}</span><div className="divider-line"></div></div>
+        <div className="luxe-grid">{activeCourses.length === 0 ? (<div className="empty-state"><BookOpen size={48} color="#475569" /><p>{searchQuery ? tt('noMatchingActiveCourses', 'No matching active courses.') : t.noCourses}</p></div>) : (activeCourses.map(course => renderCourseCard(course)))}</div>
       </div>
-      {isAdding && (
-        <form onSubmit={addCourse} className="add-subject-form luxe-panel" style={{ maxWidth: '550px' }}>
-          <div className="form-header"><h3 style={{ color: 'black' }}>{t.addCourse}</h3></div>
-          <div className="form-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <input type="text" placeholder={t.courseName} value={newCourseName} onChange={(e) => setNewCourseName(e.target.value)} className="input-luxe" autoFocus required style={{ background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0' }} />
-            <div style={{ position: 'relative' }}>
-              <textarea placeholder={t.courseDescriptionPlaceholder || 'Description of the course (optional)'} value={newCourseDescription} onChange={(e) => setNewCourseDescription(e.target.value)} className="input-luxe" rows={3} style={{ background: '#fff', color: '#0f172a', border: '1px solid #e2e8f0', resize: 'vertical', minHeight: '70px', fontFamily: 'inherit', width: '100%', padding: '12px 16px', borderRadius: '12px' }} />
-              <span style={{ position: 'absolute', top: '-8px', right: '12px', background: '#f8fafc', padding: '0 6px', fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>{t.optionalField || 'Optional'}</span>
-            </div>
-            <div style={{ position: 'relative' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderRadius: '12px', border: newCourseFile ? '2px solid #3b82f6' : '1px dashed #cbd5e1', background: newCourseFile ? 'rgba(59, 130, 246, 0.04)' : '#fff', cursor: 'pointer', transition: 'all 0.2s' }}>
-                <Upload size={20} color={newCourseFile ? '#3b82f6' : '#94a3b8'} />
-                <span style={{ fontSize: '14px', color: newCourseFile ? '#1e293b' : '#64748b', fontWeight: '500' }}>
-                  {newCourseFile
-                    ? newCourseFile.name
-                    : (t.addResourcesOptional || 'Add Resources (PDF/PPTX) â€” Optional')}
-                </span>
-                <input
-                  type="file"
-                  accept=".pdf,.ppt,.pptx"
-                  style={{ display: 'none' }}
-                  onChange={(e) => setNewCourseFile(e.target.files?.[0] || null)}
-                />
-                {newCourseFile && (
-                  <button
-                    type="button"
-                    onClick={(ev) => { ev.preventDefault(); ev.stopPropagation(); setNewCourseFile(null); }}
-                    style={{
-                      marginLeft: 'auto', background: 'none', border: 'none',
-                      color: '#ef4444', cursor: 'pointer', padding: '2px'
-                    }}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </label>
-              <span style={{ position: 'absolute', top: '-8px', right: '12px', background: '#f8fafc', padding: '0 6px', fontSize: '11px', color: '#94a3b8', fontWeight: '500' }}>{t.optionalField || 'Optional'}</span>
-            </div>
-            <button type="submit" className="btn-luxe submit" disabled={isCreatingCourse || !newCourseName.trim()} style={{ opacity: (isCreatingCourse || !newCourseName.trim()) ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              {isCreatingCourse ? (<><Loader2 size={18} style={{ animation: 'spinCircle 0.8s linear infinite' }} /> {t.creatingCourse || 'Creating...'}</>) : (t.addCourse)}
-            </button>
-          </div>
-        </form>
-      )}
-      <div className="section-divider" style={{ marginTop: '30px' }}><span className="divider-text" style={{ color: 'black' }}>{t.activeCourses || 'Active Courses'}</span><div className="divider-line"></div></div>
-      <div className="luxe-grid">{activeCourses.length === 0 ? (<div className="empty-state"><BookOpen size={48} color="#475569" /><p>{searchQuery ? "No matching active courses." : t.noCourses}</p></div>) : (activeCourses.map(course => renderCourseCard(course)))}</div>
-      {completedCourses.length > 0 && (<><div className="section-divider" style={{ marginTop: '20px' }}><span className="divider-text" style={{ color: 'black' }}>{t.completedCourses || 'Completed Courses'}</span><div className="divider-line" style={{ background: 'rgba(0,0,0,0.1)' }}></div></div><div className="luxe-grid" style={{ opacity: 0.7 }}>{completedCourses.map(course => renderCourseCard(course))}</div></>)}
+      <StudentGroups
+        t={t}
+        isRtl={isRtl}
+        setCurrentPage={setCurrentPage}
+        setSelectedCourseId={setSelectedCourseId}
+        setSelectedComponentsForQuiz={setSelectedComponentsForQuiz}
+        setActiveGroupQuiz={setActiveGroupQuiz}
+        onDetailModeChange={setIsStudentGroupDetail}
+      />
+      {!isStudentGroupDetail && completedCourses.length > 0 && (<><div className="section-divider" style={{ marginTop: '20px' }}><span className="divider-text" style={{ color: 'black' }}>{t.completedCourses || 'Completed Courses'}</span><div className="divider-line" style={{ background: 'rgba(0,0,0,0.1)' }}></div></div><div className="luxe-grid" style={{ opacity: 0.7 }}>{completedCourses.map(course => renderCourseCard(course))}</div></>)}
     </div>
   );
 }

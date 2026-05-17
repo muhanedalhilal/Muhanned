@@ -19,3 +19,4 @@ class Course(Base):
     owner = relationship("DBUser", back_populates="courses")
     documents = relationship("Document", back_populates="course", cascade="all, delete-orphan")
     knowledge_components = relationship("KnowledgeComponent", back_populates="course", cascade="all, delete-orphan", order_by="KnowledgeComponent.id")
+    groups = relationship("Group", back_populates="course", cascade="all, delete-orphan")

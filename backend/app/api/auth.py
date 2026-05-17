@@ -43,6 +43,47 @@ def _get_or_create_local_user(db: Session, email: str, name: Optional[str] = Non
     db.refresh(user)
     return user
 
+
+def _sync_login_user(db: Session, sb_user) -> DBUser:
+    email = (getattr(sb_user, "email", None) or "").strip().lower()
+    uid = getattr(sb_user, "id", None)
+    if not uid or not email:
+        raise HTTPException(status_code=401, detail="Login succeeded, but the user profile was incomplete.")
+
+    metadata = getattr(sb_user, "user_metadata", None) or {}
+    name = metadata.get("name") or (email.split("@")[0].capitalize() if email else "Massar User")
+    metadata_role = metadata.get("role")
+    safe_role = "teacher" if metadata_role == "teacher" else "student"
+
+    user = db.query(DBUser).filter(DBUser.supabase_auth_id == uid).first() if uid else None
+    if not user and email:
+        user = db.query(DBUser).filter(DBUser.email == email).first()
+
+    if user:
+        changed = False
+        if uid and user.supabase_auth_id != uid:
+            user.supabase_auth_id = uid
+            changed = True
+        if name and user.name != name:
+            user.name = name
+            changed = True
+        if changed:
+            db.commit()
+            db.refresh(user)
+        return user
+
+    user = DBUser(
+        supabase_auth_id=uid,
+        name=name,
+        email=email,
+        role=safe_role
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 def _local_login_response(user: DBUser):
     payload = {
         "sub": user.supabase_auth_id,
@@ -56,7 +97,10 @@ def _local_login_response(user: DBUser):
         "message": "Local development login successful.",
         "access_token": token,
         "token_type": "bearer",
-        "user_id": user.supabase_auth_id
+        "user_id": user.supabase_auth_id,
+        "name": user.name,
+        "email": user.email,
+        "role": user.role
     }
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
@@ -67,7 +111,7 @@ def signup(user: UserSignup, db: Session = Depends(get_db)):
             "email": user.email,
             "password": user.password,
             "options": {
-                "data": {"name": user.name}
+                "data": {"name": user.name, "role": "teacher" if user.role == "teacher" else "student"}
             }
         })
         
@@ -77,11 +121,12 @@ def signup(user: UserSignup, db: Session = Depends(get_db)):
             
         try:
             # 2. Save the matching profile to our PostgreSQL Database table!
+            safe_role = "teacher" if user.role == "teacher" else "student"
             new_db_user = DBUser(
                 supabase_auth_id=response.user.id,
                 name=user.name,
                 email=user.email,
-                role="student"
+                role=safe_role
             )
             db.add(new_db_user)
             db.commit()
@@ -145,12 +190,17 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
         session = response.session
         if not session:
             raise HTTPException(status_code=400, detail="Invalid login credentials")
-            
+
+        db_user = _sync_login_user(db, response.user)
+
         return {
             "message": "Login successful!",
             "access_token": session.access_token,
             "token_type": "bearer",
-            "user_id": response.user.id
+            "user_id": response.user.id,
+            "name": db_user.name,
+            "email": db_user.email,
+            "role": db_user.role
         }
         
     except Exception as e:

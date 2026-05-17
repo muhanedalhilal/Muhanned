@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './index.css';
 
 // Import our beautiful modular components!
@@ -8,6 +8,7 @@ import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
+import InstructorDashboard from './pages/InstructorDashboard';
 import Quiz from './pages/Quiz';
 import ResetPassword from './pages/ResetPassword';
 import Footer from './components/Footer';
@@ -36,15 +37,40 @@ const translations = {
     joinSystem: "Join Massar",
     authSubLogin: "Sign in and continue your learning.",
     authSubSignup: "Complete your profile to begin learning.",
+    continueWithGoogle: "Continue with Google",
+    signUpWithGoogle: "Sign up with Google",
+    or: "or",
+    forgotPassword: "Forgot Password?",
+    resetPassword: "Reset Password",
+    resetPasswordSub: "Enter your email and we'll send you a reset link.",
+    sendResetLink: "Send Reset Link",
+    sending: "Sending...",
+    devResetLink: "Dev Reset Link - Click Here",
+    emailAddress: "Email address",
+    passwordReqs: "Must contain at least 6 characters, 1 capital letter, 1 number, and 1 special character.",
+    passwordMismatch: "Passwords do not match.",
+    successSignup: "Account created successfully! Please check your email to verify your account before signing in.",
+    emailTaken: "An account with this email address already exists. Please log in instead.",
+    authFailed: "Authentication failed. Please check your details and try again.",
+    userNotFound: "Incorrect email or password, or this account does not exist.",
+    serverError: "Server connection failed.",
+    resetSent: "Password reset link sent to your email. Please check your inbox.",
+    resetError: "Failed to send reset link. Please check your email and try again.",
+    genericError: "An unexpected error occurred. Please try again later.",
+    confirmEmailFirst: "Please confirm your email before signing in.",
     fullName: "Full Name",
     email: "Student Email",
     password: "Secure Password",
+    confirmPassword: "Confirm Password",
     signIn: "Sign In",
     signUp: "Sign Up",
     noAccount: "Don't have an account? ",
     haveAccount: "Already have an account? ",
     clickSignUp: "Sign up here",
     clickSignIn: "Sign in here",
+    selectRole: "Account Type",
+    roleStudent: "Student",
+    roleTeacher: "Instructor",
     dashWelcome: "Welcome to your Personal AI Profile",
     dashSub: "Your live learning analytics are securely protected.",
     statMastery: "Overall Knowledge Mastery",
@@ -78,6 +104,7 @@ const translations = {
     resourcesLearningAssets: "Resources & Learning Assets",
     addResources: "Add Resources (PDF/PPTX)",
     addingResource: "Adding Resource...",
+    addingKnowledgeComponent: "Adding Knowledge Components...",
     open: "Open",
     profile: "Profile Management",
     profileSub: "Manage your personal account details securely.",
@@ -152,9 +179,29 @@ const translations = {
     adminActions: "Actions",
     adminSearchEmpty: "No users found matching your search.",
     adminStudent: "Student",
-    adminTeacher: "Teacher",
+    adminTeacher: "Instructor",
     adminAdmin: "Admin",
     adminActive: "Active",
+    instructorDashboardTitle: "Instructor Dashboard",
+    instructorDashboardSub: "Manage your courses and view student progress.",
+    totalStudents: "Total Students",
+    totalInstructors: "Total Instructors",
+    totalCourses: "Total Courses",
+    avgStudentMastery: "Avg. Mastery",
+    noCoursesYetTitle: "No Courses Created",
+    noCoursesYetSub: "Start creating your educational content to see analytics here.",
+    createNewCourse: "Create New Course",
+    coursesTitle: "My Courses",
+    createCourse: "Create Course",
+    groupsTitle: "Student Groups",
+    createGroup: "Create Group",
+    noGroupsYet: "No Groups Created",
+    noGroupsDesc: "Create groups to manage your students easily.",
+    groupName: "Group Name",
+    groupNamePlaceholder: "e.g., Spring 2026 CS101",
+    groupDescription: "Description",
+    groupDescPlaceholder: "A brief description of this group",
+    students: "Students",
     saveTitle: "Save",
     cancelTitle: "Cancel",
     noChartComponents: "Add components to see your progress chart.",
@@ -196,13 +243,97 @@ const translations = {
     quizComplete: "Quiz Complete",
     quizMsgExcellent: "Excellent work!",
     quizMsgGood: "Good effort — keep going!",
-    quizMsgKeep: "Keep studying, you'll get there!",
-    quizScore: "score",
+    quizKeep: "Keep studying, you'll get there!",
+    quizOutstanding: "Outstanding!",
+    quizOutstandingMsg: "You have mastered these concepts!",
+    quizGoodEffort: "Good Effort!",
+    quizGoodEffortMsg: "You are on the right track, keep going!",
+    quizKeepPracticing: "Keep Practicing",
+    quizKeepPracticingMsg: "Review the materials and try again.",
+    quizKnowledgeBreakdown: "Knowledge Breakdown",
+    quizScore: "Score",
     quizCorrect: "Correct",
     quizWrong: "Wrong",
     quizTotal: "Total",
     quizReturn: "Return to Course",
-    quizCorrectSoFar: "correct so far"
+    quizCorrectSoFar: "correct so far",
+    courseFiles: "Course Files",
+    upload: "Upload",
+    files: "files",
+    groups: "groups",
+    noFilesUploaded: "No files uploaded.",
+    noComponentsUploadFirst: "Upload course files to generate components first.",
+    componentNamePlaceholder: "Component name...",
+    failedCreateCourse: "Failed to create course",
+    failedCreateGroup: "Failed to create group",
+    uploadFailed: "Upload failed",
+    groupUploadFailed: "Group upload failed",
+    failedAddComponent: "Failed to add component. Please try again.",
+    saveComponentError: "An error occurred while saving. Please try again.",
+    failedGenerateStudyAid: "Failed to generate study aid.",
+    serverCommunicationError: "An error occurred while communicating with the server.",
+    addComponentButton: "Add Component",
+    failedAssignQuiz: "Failed to assign quiz",
+    failedDeleteCourse: "Failed to delete course",
+    failedDeleteResource: "Failed to delete resource",
+    failedFetchDashboard: "Failed to fetch dashboard data",
+    invalidResourceType: "Invalid file type. Only PDF, PPT, and PPTX are allowed.",
+    errorParsingUpload: "Error parsing upload",
+    selectAll: "Select All",
+    deselectAll: "Deselect All",
+    aiSuggestionsLoading: "AI suggestions loading...",
+    aiSuggestionsAdd: "AI suggestions — click to add",
+    manualTopicPlaceholder: "Or type a topic manually...",
+    generateStudyAid: "Generate Study Aid",
+    summaryDescription: "Text summary of selected topics",
+    mindMapDescription: "Visual interactive mind map",
+    noMatchingActiveCourses: "No matching active courses.",
+    noResourcesForValidation: "No resources uploaded yet. Please upload a file first so topics can be validated.",
+    topicNotFoundInResources: "was not found in your uploaded resources. Only add topics that are covered in your files.",
+    oneTopic: "one topic",
+    twoTopics: "two topics",
+    selected: "selected",
+    selectedCount: "selected",
+    all: "All",
+    avg: "avg",
+    averageMastery: "Average mastery",
+    avgMasteryByGroup: "Avg. Mastery by Group",
+    groupAnalytics: "Group Analytics",
+    joinQrCode: "Join QR Code",
+    members: "Members",
+    noStudentsJoined: "No students have joined yet.",
+    sharedResources: "Shared Resources",
+    uploadFilesWillAppear: "Upload course files above; they will appear here automatically.",
+    assignAiQuiz: "Assign AI Quiz",
+    quizTitle: "Quiz title",
+    quizLabel: "Quiz",
+    assignQuiz: "Assign Quiz",
+    defaultAllComponents: "Default: all components",
+    chooseComponents: "Choose components",
+    studentProgress: "Student Progress",
+    noComponentProgress: "No component progress yet.",
+    selectStudentProgress: "Select a student to inspect progress.",
+    publicGroupChat: "Public Group Chat",
+    privateStudentChat: "Private Student Chat",
+    privateChatWithInstructor: "Private Chat With Instructor",
+    selectStudentFirst: "Select a student first.",
+    noMessagesYet: "No messages yet.",
+    writeMessage: "Write a message...",
+    studentGroupsTitle: "My Groups",
+    studentGroupsSubtitle: "Join with a code or scan the QR code to access group resources.",
+    join: "Join",
+    noGroupsJoined: "You have not joined any groups yet.",
+    quizzes: "Quizzes",
+    resources: "Resources",
+    assignedQuizzes: "Assigned Quizzes",
+    noAssignedQuizzes: "No assigned quizzes yet.",
+    answered: "answered",
+    continue: "Continue",
+    start: "Start",
+    unableJoinGroup: "Unable to join group.",
+    qrUnsupported: "QR scanning is not supported in this browser. Type the join code instead.",
+    cameraStartError: "Unable to start camera scanner.",
+    copyCode: "Copy join code"
   },
   ar: {
     appName: "مسار",
@@ -224,15 +355,40 @@ const translations = {
     joinSystem: "انضم إلى مسار",
     authSubLogin: "سجل الدخول وأكمل تعلمك",
     authSubSignup: "أنشئ حسابك وابدأ التعلم الآن.",
+    continueWithGoogle: "المتابعة باستخدام Google",
+    signUpWithGoogle: "التسجيل باستخدام Google",
+    or: "أو",
+    forgotPassword: "نسيت كلمة المرور؟",
+    resetPassword: "إعادة تعيين كلمة المرور",
+    resetPasswordSub: "أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.",
+    sendResetLink: "إرسال رابط إعادة التعيين",
+    sending: "جاري الإرسال...",
+    devResetLink: "رابط الاستعادة للمطورين - اضغط هنا",
+    emailAddress: "البريد الإلكتروني",
+    passwordReqs: "يجب أن تحتوي كلمة المرور على 6 أحرف على الأقل، وحرف كبير، ورقم، ورمز خاص.",
+    passwordMismatch: "كلمتا المرور غير متطابقتين.",
+    successSignup: "تم إنشاء الحساب بنجاح! يرجى التحقق من بريدك الإلكتروني لتفعيل حسابك قبل تسجيل الدخول.",
+    emailTaken: "يوجد حساب مسجل بهذا البريد الإلكتروني. يرجى تسجيل الدخول بدلاً من ذلك.",
+    authFailed: "فشلت المصادقة. يرجى التحقق من بياناتك والمحاولة مرة أخرى.",
+    userNotFound: "البريد الإلكتروني أو كلمة المرور غير صحيحة، أو أن هذا الحساب غير موجود.",
+    serverError: "فشل الاتصال بالخادم.",
+    resetSent: "تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد.",
+    resetError: "فشل إرسال رابط إعادة التعيين. يرجى التحقق من البريد الإلكتروني والمحاولة مرة أخرى.",
+    genericError: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.",
+    confirmEmailFirst: "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.",
     fullName: "الاسم الكامل",
     email: "البريد الإلكتروني",
     password: "كلمة المرور",
+    confirmPassword: "تأكيد كلمة المرور",
     signIn: "دخول",
     signUp: "إنشاء حساب",
     noAccount: "ليس لديك حساب؟ ",
     haveAccount: "لديك حساب بالفعل؟ ",
     clickSignUp: "أنشئ حساباً",
     clickSignIn: "سجّل دخولك",
+    selectRole: "نوع الحساب",
+    roleStudent: "طالب",
+    roleTeacher: "معلم",
     dashWelcome: "مرحباً بك في لوحة تحكمك الذكية",
     dashSub: "بيانات تعلّمك محفوظة وآمنة للوصول السريع.",
     statMastery: "مستوى الإتقان الكلي",
@@ -267,6 +423,7 @@ const translations = {
     resourcesLearningAssets: "المكتبة المعرفية",
     addResources: "إرفاق مصادر (PDF/PPTX)",
     addingResource: "جاري المعالجة والإرفاق...",
+    addingKnowledgeComponent: "جاري إضافة المكونات المعرفية...",
     open: "عرض",
     profile: "إعدادات الحساب",
     profileSub: "أدر بياناتك الشخصية وحافظ على أمان حسابك.",
@@ -343,6 +500,26 @@ const translations = {
     adminTeacher: "معلم",
     adminAdmin: "مشرف",
     adminActive: "نشط",
+    instructorDashboardTitle: "لوحة تحكم المعلم",
+    instructorDashboardSub: "أدر موادك الدراسية وتابع تقدم الطلاب.",
+    totalStudents: "إجمالي الطلاب",
+    totalInstructors: "إجمالي المدربين",
+    totalCourses: "إجمالي المواد",
+    avgStudentMastery: "متوسط إتقان الطلاب",
+    noCoursesYetTitle: "لم يتم إنشاء أي مواد بعد",
+    noCoursesYetSub: "ابدأ بإنشاء محتواك التعليمي لرؤية الإحصائيات هنا.",
+    createNewCourse: "إنشاء مادة جديدة",
+    coursesTitle: "موادي الدراسية",
+    createCourse: "إنشاء مادة",
+    groupsTitle: "مجموعات الطلاب",
+    createGroup: "إنشاء مجموعة",
+    noGroupsYet: "لم يتم إنشاء أي مجموعات",
+    noGroupsDesc: "قم بإنشاء مجموعات لإدارة طلابك بسهولة.",
+    groupName: "اسم المجموعة",
+    groupNamePlaceholder: "مثال: ربيع 2026 حاسب 101",
+    groupDescription: "الوصف",
+    groupDescPlaceholder: "وصف موجز لهذه المجموعة",
+    students: "طلاب",
     saveTitle: "حفظ",
     cancelTitle: "إلغاء",
     noChartComponents: "أضف بعض الأقسام لعرض رسم التقدم البياني الخاص بك.",
@@ -384,14 +561,98 @@ const translations = {
     quizComplete: "اكتمل الاختبار",
     quizMsgExcellent: "عمل ممتاز!",
     quizMsgGood: "مجهود جيد - استمر!",
-    quizMsgKeep: "استمر في التعلم، ستصل لهدفك!",
+    quizKeep: "استمر في التعلم، ستصل لهدفك!",
+    quizOutstanding: "أداء استثنائي!",
+    quizOutstandingMsg: "لقد أتقنت هذه المفاهيم بجدارة!",
+    quizGoodEffort: "مجهود جيد!",
+    quizGoodEffortMsg: "أنت على الطريق الصحيح، استمر!",
+    quizKeepPracticing: "استمر في التدرب",
+    quizKeepPracticingMsg: "راجع المواد وحاول مرة أخرى.",
+    quizKnowledgeBreakdown: "تحليل المعرفة التفصيلي",
     quizScore: "النتيجة",
     quizCorrect: "صحيحة",
     quizWrong: "خاطئة",
     quizTotal: "المجموع",
     quizReturn: "العودة للمادة",
     quizCorrectSoFar: "إجابات صحيحة حتى الآن",
-    endQuiz: "إنهاء الاختبار"
+    endQuiz: "إنهاء الاختبار",
+    courseFiles: "ملفات المادة",
+    upload: "رفع",
+    files: "ملفات",
+    groups: "مجموعات",
+    noFilesUploaded: "لم يتم رفع أي ملفات بعد.",
+    noComponentsUploadFirst: "ارفع ملفات المادة أولاً حتى يتم إنشاء المكونات.",
+    componentNamePlaceholder: "اسم المكون...",
+    failedCreateCourse: "تعذر إنشاء المادة",
+    failedCreateGroup: "تعذر إنشاء المجموعة",
+    uploadFailed: "تعذر رفع الملف",
+    groupUploadFailed: "تعذر رفع مورد المجموعة",
+    failedAddComponent: "تعذر إضافة المكون. يرجى المحاولة مرة أخرى.",
+    saveComponentError: "حدث خطأ أثناء الحفظ. يرجى المحاولة مرة أخرى.",
+    failedGenerateStudyAid: "تعذر إنشاء المادة الدراسية.",
+    serverCommunicationError: "حدث خطأ أثناء الاتصال بالخادم.",
+    addComponentButton: "إضافة مكون",
+    failedAssignQuiz: "تعذر تعيين الاختبار",
+    failedDeleteCourse: "تعذر حذف المادة",
+    failedDeleteResource: "تعذر حذف المورد",
+    failedFetchDashboard: "تعذر جلب بيانات اللوحة",
+    invalidResourceType: "نوع الملف غير مدعوم. الملفات المسموحة: PDF وPPT وPPTX.",
+    errorParsingUpload: "حدث خطأ أثناء معالجة الرفع",
+    selectAll: "تحديد الكل",
+    deselectAll: "إلغاء التحديد",
+    aiSuggestionsLoading: "جار اقتراح مواضيع بالذكاء الاصطناعي...",
+    aiSuggestionsAdd: "اقتراحات الذكاء الاصطناعي — انقر للإضافة",
+    manualTopicPlaceholder: "أو اكتب موضوعاً يدوياً...",
+    generateStudyAid: "إنشاء مادة دراسية",
+    summaryDescription: "ملخص نصي للمواضيع المحددة",
+    mindMapDescription: "خريطة ذهنية تفاعلية",
+    noMatchingActiveCourses: "لا توجد مواد نشطة مطابقة.",
+    noResourcesForValidation: "لم يتم رفع أي مورد بعد. يرجى رفع ملف أولاً حتى يمكن التحقق من المواضيع.",
+    topicNotFoundInResources: "غير موجود ضمن الموارد المرفوعة. أضف فقط المواضيع الموجودة في ملفاتك.",
+    oneTopic: "موضوع واحد",
+    twoTopics: "موضوعان",
+    selected: "محدد",
+    selectedCount: "محددة",
+    all: "الكل",
+    avg: "متوسط",
+    averageMastery: "متوسط الإتقان",
+    avgMasteryByGroup: "متوسط الإتقان حسب المجموعة",
+    groupAnalytics: "تحليلات المجموعة",
+    joinQrCode: "رمز الانضمام QR",
+    members: "الأعضاء",
+    noStudentsJoined: "لم ينضم أي طالب بعد.",
+    sharedResources: "الموارد المشتركة",
+    uploadFilesWillAppear: "ارفع ملفات المادة بالأعلى وستظهر هنا تلقائياً.",
+    assignAiQuiz: "تعيين اختبار ذكي",
+    quizTitle: "عنوان الاختبار",
+    quizLabel: "اختبار",
+    assignQuiz: "تعيين الاختبار",
+    defaultAllComponents: "الافتراضي: كل المكونات",
+    chooseComponents: "اختر المكونات",
+    studentProgress: "تقدم الطالب",
+    noComponentProgress: "لا يوجد تقدم للمكونات بعد.",
+    selectStudentProgress: "اختر طالباً لعرض تقدمه.",
+    publicGroupChat: "محادثة المجموعة",
+    privateStudentChat: "محادثة خاصة مع الطالب",
+    privateChatWithInstructor: "محادثة خاصة مع المعلم",
+    selectStudentFirst: "اختر طالباً أولاً.",
+    noMessagesYet: "لا توجد رسائل بعد.",
+    writeMessage: "اكتب رسالة...",
+    studentGroupsTitle: "مجموعاتي",
+    studentGroupsSubtitle: "انضم بالكود أو امسح رمز QR للوصول إلى موارد المجموعة.",
+    join: "انضمام",
+    noGroupsJoined: "لم تنضم إلى أي مجموعة بعد.",
+    quizzes: "الاختبارات",
+    resources: "الموارد",
+    assignedQuizzes: "الاختبارات المعينة",
+    noAssignedQuizzes: "لا توجد اختبارات معينة بعد.",
+    answered: "تمت الإجابة",
+    continue: "متابعة",
+    start: "ابدأ",
+    unableJoinGroup: "تعذر الانضمام إلى المجموعة.",
+    qrUnsupported: "مسح QR غير مدعوم في هذا المتصفح. اكتب كود الانضمام بدلاً من ذلك.",
+    cameraStartError: "تعذر تشغيل ماسح الكاميرا.",
+    copyCode: "نسخ كود الانضمام"
   }
 };
 
@@ -408,6 +669,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginView, setIsLoginView] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTeacher, setIsTeacher] = useState(false);
   const [currentUser, setCurrentUser] = useState({ name: 'Student User', email: '' });
   const [authToken, setAuthToken] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -422,6 +684,17 @@ function App() {
     return saved ? saved : null;
   });
   const [selectedComponentsForQuiz, setSelectedComponentsForQuiz] = useState([]);
+  const [activeGroupQuiz, setActiveGroupQuiz] = useState(null);
+  const refreshCoursesRef = useRef(null);
+
+  // Persist selectedCourseId whenever it changes
+  useEffect(() => {
+    if (selectedCourseId) {
+      localStorage.setItem('massar_selected_course', selectedCourseId);
+    } else {
+      localStorage.removeItem('massar_selected_course');
+    }
+  }, [selectedCourseId]);
 
   // Persist selectedCourseId whenever it changes
   useEffect(() => {
@@ -442,7 +715,8 @@ function App() {
         setAuthToken(sessionData.token);
         setCurrentUser({ name: sessionData.name, email: sessionData.email });
         setIsAdmin(sessionData.role === 'admin');
-        setCurrentPage(sessionData.role === 'admin' ? 'admin' : 'dashboard');
+        setIsTeacher(sessionData.role === 'teacher');
+        setCurrentPage(sessionData.role === 'admin' ? 'admin' : (sessionData.role === 'teacher' ? 'instructor' : 'dashboard'));
       } catch (error) {
         console.error("Failed to parse session", error);
         localStorage.removeItem('massar_auth');
@@ -528,6 +802,7 @@ function App() {
     localStorage.removeItem('massar_token');
     setIsLoggedIn(false);
     setIsAdmin(false);
+    setIsTeacher(false);
     setAuthToken(null);
     setCurrentUser({ name: 'Student User', email: '' });
     setCurrentPage('home');
@@ -547,7 +822,8 @@ function App() {
     setCurrentUser({ name: defaultName, email: email || 'student@massar.edu' });
     // Use the actual role from the backend instead of guessing from email
     setIsAdmin(role === 'admin');
-    setCurrentPage(role === 'admin' ? 'admin' : 'dashboard');
+    setIsTeacher(role === 'teacher');
+    setCurrentPage(role === 'admin' ? 'admin' : (role === 'teacher' ? 'instructor' : 'dashboard'));
 
     // Save to local storage to persist session
     localStorage.setItem('massar_auth', JSON.stringify({
@@ -619,9 +895,15 @@ function App() {
 
           {isLoggedIn && (
             <>
-              {!isAdmin && (
+              {!isAdmin && !isTeacher && (
                 <button className={`nav-link ${currentPage === 'dashboard' ? 'active' : ''}`} onClick={() => { setCurrentPage('dashboard'); setIsMobileMenuOpen(false); setSelectedCourseId(null); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
                   <LayoutDashboard size={16} /> {t.dashboard}
+                </button>
+              )}
+
+              {isTeacher && (
+                <button className={`nav-link ${currentPage === 'instructor' ? 'active' : ''}`} onClick={() => { setCurrentPage('instructor'); setIsMobileMenuOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '5px', justifyContent: 'center' }}>
+                  <LayoutDashboard size={16} /> {t.instructorDashboardTitle || 'Instructor Dashboard'}
                 </button>
               )}
 
@@ -681,7 +963,7 @@ function App() {
         )}
 
         {/* Dashboard stays mounted to preserve courses state — hidden via CSS when not active */}
-        {isLoggedIn && !isAdmin && (
+        {isLoggedIn && !isAdmin && !isTeacher && (
           <div style={{ display: (currentPage === 'dashboard') ? 'contents' : 'none' }}>
             <Dashboard
               t={t}
@@ -692,12 +974,18 @@ function App() {
               setCurrentPage={setCurrentPage}
               selectedComponentsForQuiz={selectedComponentsForQuiz}
               setSelectedComponentsForQuiz={setSelectedComponentsForQuiz}
+              setActiveGroupQuiz={setActiveGroupQuiz}
+              onRefreshReady={(fn) => { refreshCoursesRef.current = fn; }}
             />
           </div>
         )}
 
         {currentPage === 'admin' && isLoggedIn && isAdmin && (
           <AdminDashboard t={t} isRtl={isRtl} authToken={authToken} />
+        )}
+
+        {currentPage === 'instructor' && isLoggedIn && isTeacher && (
+          <InstructorDashboard t={t} isRtl={isRtl} />
         )}
 
         {currentPage === 'quiz' && isLoggedIn && (
@@ -708,6 +996,9 @@ function App() {
             selectedComponents={selectedComponentsForQuiz}
             selectedCourseId={selectedCourseId}
             setSelectedCourseId={setSelectedCourseId}
+            activeGroupQuiz={activeGroupQuiz}
+            clearActiveGroupQuiz={() => setActiveGroupQuiz(null)}
+            onQuizComplete={() => { if (refreshCoursesRef.current) refreshCoursesRef.current(); }}
           />
         )}
 

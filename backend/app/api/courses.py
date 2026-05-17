@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+﻿from fastapi import APIRouter, Depends, HTTPException, Response, status
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -16,9 +16,12 @@ from app.models.course import Course
 from app.models.db_user import DBUser
 from app.models.document import Document
 from app.models.knowledge_component import KnowledgeComponent
+from app.models.group import Group, GroupMembership, GroupStudentProgress
 from app.core.supabase_client import supabase
 from app.core.ai_service import suggest_components_for_course, validate_and_generate_component, fallback_kcs_for_resource
 from app.core.course_images import build_course_image_url, build_course_image_fallback_url
+from app.core.document_links import document_view_url
+from app.core.group_codes import barcode_data_url, barcode_svg_for_code, generate_unique_join_code, is_simple_join_code
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 COVER_PIPELINE_VERSION = "2026-05-06-v3"
@@ -33,7 +36,7 @@ class CourseComponentResponse(BaseModel):
     text: str
     content: str
     progress: int = 0
-    
+
     class Config:
         orm_mode = True
 
@@ -42,7 +45,23 @@ class CourseResourceResponse(BaseModel):
     text: str
     type: str
     fileUrl: Optional[str] = None
-    
+
+    class Config:
+        orm_mode = True
+
+class GroupCreate(BaseModel):
+    name: str
+
+class GroupResponse(BaseModel):
+    id: int
+    name: str
+    studentCount: int = 0
+    averageMastery: int = 0
+    created_at: datetime
+    joinCode: Optional[str] = None
+    barcodeSvg: Optional[str] = None
+    barcodeDataUrl: Optional[str] = None
+
     class Config:
         orm_mode = True
 
@@ -54,10 +73,11 @@ class CourseResponse(BaseModel):
     created_at: datetime
     image_url: Optional[str] = None
     image_fallback_url: Optional[str] = None
-    
+
     resourceList: List[CourseResourceResponse] = []
     componentList: List[CourseComponentResponse] = []
-    
+    groups: List[GroupResponse] = []
+
     class Config:
         orm_mode = True
 
@@ -221,21 +241,46 @@ def _ensure_document_components(course: Course, current_user: DBUser, db: Sessio
     return created
 
 
+def _group_average_mastery(group: Group, db: Session, component_ids: list[int]) -> int:
+    student_ids = [
+        row[0] for row in db.query(GroupMembership.student_id).filter(
+            GroupMembership.group_id == group.id
+        ).all()
+    ]
+    if not student_ids or not component_ids:
+        return 0
+
+    progress_rows = db.query(
+        GroupStudentProgress.student_id,
+        GroupStudentProgress.knowledge_component_id,
+        GroupStudentProgress.mastery_prob,
+    ).filter(
+        GroupStudentProgress.group_id == group.id,
+        GroupStudentProgress.student_id.in_(student_ids),
+        GroupStudentProgress.knowledge_component_id.in_(component_ids),
+    ).all()
+
+    progress_by_student = {student_id: {} for student_id in student_ids}
+    for student_id, component_id, mastery_prob in progress_rows:
+        progress_by_student.setdefault(student_id, {})[component_id] = mastery_prob or 0.1
+
+    student_averages = []
+    for student_id in student_ids:
+        component_total = sum(progress_by_student.get(student_id, {}).get(component_id, 0.1) for component_id in component_ids)
+        student_averages.append(component_total / len(component_ids))
+
+    return round((sum(student_averages) / len(student_averages)) * 100)
+
+
 def _course_to_response(course: Course, db: Session | None = None) -> CourseResponse:
     resources = []
     documents = course.documents if db is None else db.query(Document).filter(Document.course_id == course.id).order_by(Document.id).all()
     for document in documents:
-        file_url = None
-        if document.supabase_path:
-            try:
-                file_url = supabase.storage.from_("documents").get_public_url(document.supabase_path)
-            except Exception:
-                pass
         resources.append({
             "id": document.id,
             "text": document.filename,
             "type": document.file_type,
-            "fileUrl": file_url
+            "fileUrl": document_view_url(document)
         })
 
     knowledge_components = course.knowledge_components if db is None else db.query(KnowledgeComponent).filter(KnowledgeComponent.course_id == course.id).order_by(KnowledgeComponent.id).all()
@@ -248,6 +293,22 @@ def _course_to_response(course: Course, db: Session | None = None) -> CourseResp
         }
         for kc in knowledge_components
     ]
+    component_ids = [component["id"] for component in components]
+
+    course_groups = course.groups if db is None else db.query(Group).filter(Group.course_id == course.id).order_by(Group.id).all()
+    groups = [
+        {
+            "id": g.id,
+            "name": g.name,
+            "studentCount": len(g.memberships) if db is None else db.query(GroupMembership).filter(GroupMembership.group_id == g.id).count(),
+            "averageMastery": _group_average_mastery(g, db, component_ids) if db is not None else 0,
+            "created_at": g.created_at,
+            "joinCode": g.join_code,
+            "barcodeSvg": barcode_svg_for_code(g.join_code) if g.join_code else None,
+            "barcodeDataUrl": barcode_data_url(g.join_code) if g.join_code else None,
+        }
+        for g in course_groups
+    ]
 
     return CourseResponse(
         id=course.id,
@@ -258,8 +319,22 @@ def _course_to_response(course: Course, db: Session | None = None) -> CourseResp
         image_url=_course_image_url(course),
         image_fallback_url=_course_image_fallback_url(course),
         resourceList=resources,
-        componentList=components
+        componentList=components,
+        groups=groups
     )
+
+
+def _ensure_course_group_codes(course: Course, db: Session):
+    changed = False
+    groups = db.query(Group).filter(Group.course_id == course.id).all()
+    for group in groups:
+        if not is_simple_join_code(group.join_code):
+            group.join_code = generate_unique_join_code(db, Group)
+            db.add(group)
+            changed = True
+    if changed:
+        db.commit()
+
 
 @router.get("/", response_model=List[CourseResponse])
 def get_courses(
@@ -270,6 +345,7 @@ def get_courses(
     courses = db.query(Course).filter(Course.user_id == current_user.id).all()
     for course in courses:
         _ensure_document_components(course, current_user, db)
+        _ensure_course_group_codes(course, db)
     return [_course_to_response(course, db) for course in courses]
 
 @router.post("/", response_model=CourseResponse)
@@ -289,6 +365,41 @@ def create_course(
     db.commit()
     db.refresh(new_course)
     return _course_to_response(new_course, db)
+
+@router.post("/{course_id}/groups", response_model=GroupResponse)
+def create_course_group(
+    course_id: int,
+    group_in: GroupCreate,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a new group in a course."""
+    if current_user.role not in {"teacher", "admin"}:
+        raise HTTPException(status_code=403, detail="Instructor access required")
+
+    course = db.query(Course).filter(Course.id == course_id, Course.user_id == current_user.id).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    new_group = Group(
+        name=group_in.name,
+        course_id=course.id,
+        join_code=generate_unique_join_code(db, Group)
+    )
+    db.add(new_group)
+    db.commit()
+    db.refresh(new_group)
+
+    return GroupResponse(
+        id=new_group.id,
+        name=new_group.name,
+        studentCount=0,
+        averageMastery=0,
+        created_at=new_group.created_at,
+        joinCode=new_group.join_code,
+        barcodeSvg=barcode_svg_for_code(new_group.join_code),
+        barcodeDataUrl=barcode_data_url(new_group.join_code)
+    )
 
 @router.get("/{course_id}/image-status")
 def get_course_image_status(
@@ -365,7 +476,7 @@ def delete_course(
     course = db.query(Course).filter(Course.id == course_id, Course.user_id == current_user.id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
-    
+
     db.delete(course)
     db.commit()
     return {"message": "Course deleted successfully"}
@@ -380,13 +491,7 @@ def get_course_resources(
     docs = db.query(Document).filter(Document.course_id == course_id, Document.user_id == current_user.id).all()
     res = []
     for d in docs:
-        file_url = None
-        if d.supabase_path:
-            try:
-                file_url = supabase.storage.from_("documents").get_public_url(d.supabase_path)
-            except Exception:
-                pass
-        res.append({"id": d.id, "text": d.filename, "type": d.file_type, "fileUrl": file_url})
+        res.append({"id": d.id, "text": d.filename, "type": d.file_type, "fileUrl": document_view_url(d)})
     return res
 
 @router.get("/{course_id}/components")
@@ -419,12 +524,36 @@ def suggest_components(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    suggestions = suggest_components_for_course(course.name, body.existing_topics)
+    # Fetch actual KC content â€” try course_id first, fall back to document-linked KCs
+    existing_kcs = db.query(KnowledgeComponent).filter(
+        KnowledgeComponent.course_id == course_id,
+        KnowledgeComponent.user_id == current_user.id
+    ).all()
+
+    if not existing_kcs:
+        from app.models.document import Document as Doc
+        doc_ids = [d.id for d in db.query(Doc).filter(
+            Doc.course_id == course_id,
+            Doc.user_id == current_user.id
+        ).all()]
+        if doc_ids:
+            existing_kcs = db.query(KnowledgeComponent).filter(
+                KnowledgeComponent.document_id.in_(doc_ids)
+            ).all()
+
+    existing_kc_data = [
+        {"topic": kc.topic, "content": kc.content}
+        for kc in existing_kcs
+        if kc.topic and kc.content
+    ]
+
+    suggestions = suggest_components_for_course(course.name, body.existing_topics, existing_kc_data)
     return {"suggestions": suggestions}
 
 
 class AddManualComponentRequest(BaseModel):
     topic: str
+    is_suggestion: bool = False
 
 class AddManualComponentResponse(BaseModel):
     id: int
@@ -448,7 +577,43 @@ def add_manual_component(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    result = validate_and_generate_component(course.name, body.topic.strip())
+    # Fetch existing KCs â€” try course_id first, fall back to document-linked KCs
+    # (course_id on KC may be NULL for older uploads)
+    existing_kcs = db.query(KnowledgeComponent).filter(
+        KnowledgeComponent.course_id == course_id,
+        KnowledgeComponent.user_id == current_user.id
+    ).limit(15).all()
+
+    from app.models.document import Document as Doc
+    doc_ids = [d.id for d in db.query(Doc).filter(
+        Doc.course_id == course_id,
+        Doc.user_id == current_user.id
+    ).all()]
+    has_documents = len(doc_ids) > 0
+
+    # If none found via course_id, try via documents that belong to this course
+    if not existing_kcs and has_documents:
+        print(f"[debug] Course {course_id} has docs: {doc_ids}")
+        existing_kcs = db.query(KnowledgeComponent).filter(
+            KnowledgeComponent.document_id.in_(doc_ids)
+        ).limit(15).all()
+        print(f"[debug] KCs from doc_ids: {len(existing_kcs)}")
+
+    existing_kc_data = [
+        {"topic": kc.topic, "content": kc.content or ""}
+        for kc in existing_kcs
+        if kc.topic
+    ]
+
+    print(f"[validate] course_id={course_id} user_id={current_user.id} found {len(existing_kcs)} KCs, {len(existing_kc_data)} with topics for validation")
+
+    result = validate_and_generate_component(
+        course.name,
+        body.topic.strip(),
+        existing_kc_data,
+        is_suggestion=body.is_suggestion,
+        has_documents=has_documents
+    )
 
     if not result.get("valid"):
         raise HTTPException(
@@ -459,7 +624,7 @@ def add_manual_component(
     # Persist the new manually-added KC (no source document)
     # We use document_id of the first document of the course if available, else create a sentinel approach:
     # Actually KnowledgeComponent.document_id is non-nullable, so find an existing doc or raise.
-    # Use a nullable workaround: we'll store document_id = None using a nullable column. 
+    # Use a nullable workaround: we'll store document_id = None using a nullable column.
     # Since the model has nullable=False, we pick the first doc if present, else we reject.
     existing_doc = db.query(Document).filter(
         Document.course_id == course_id,
@@ -467,7 +632,7 @@ def add_manual_component(
     ).first()
 
     if not existing_doc:
-        # No document uploaded yet — still allow by using a placeholder document approach
+        # No document uploaded yet â€” still allow by using a placeholder document approach
         # Create a virtual doc entry for manually-added KCs
         from app.models.document import Document as Doc
         placeholder = Doc(

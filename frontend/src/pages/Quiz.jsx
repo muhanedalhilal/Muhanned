@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import {
   ArrowLeft, CheckCircle2, XCircle, Trophy, Medal,
@@ -19,12 +19,16 @@ function Bar({ pct, color, delay = 0 }) {
   );
 }
 
-export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, selectedCourseId, setSelectedCourseId, selectedComponentsData = [] }) {
+export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, selectedCourseId, setSelectedCourseId, selectedComponentsData = [], activeGroupQuiz = null, clearActiveGroupQuiz, onQuizComplete }) {
 
   // Go back to the course detail view (not command center)
   const navigateBack = () => {
+    if (onQuizComplete) onQuizComplete(); // refresh course mastery in Dashboard
+    if (activeGroupQuiz) {
+      clearActiveGroupQuiz?.();
+      setSelectedCourseId?.(null);
+    }
     setCurrentPage('dashboard');
-    // selectedCourseId stays set → Dashboard will show the course view
     window.scrollTo({ top: 0, behavior: 'instant' });
   };
 
@@ -45,15 +49,38 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
   const [startMasteryMap, setStartMasteryMap] = useState({});
   const [isPrefetching, setIsPrefetching] = useState(false);
   const [componentMetadata, setComponentMetadata] = useState([]);
+  const [activeQuizComponentIds, setActiveQuizComponentIds] = useState([]);
 
   useEffect(() => {
-    if (selectedComponents.length === 0) {
+    const isAssignedQuiz = Boolean(activeGroupQuiz?.groupId && activeGroupQuiz?.assignmentId);
+    if (!isAssignedQuiz && selectedComponents.length === 0) {
       setError('No components selected for the quiz.');
       setLoading(false);
       return;
     }
     const fetchQuiz = async () => {
       try {
+        if (isAssignedQuiz) {
+          const quizRes = await api.post('/quiz/generate', {
+            group_id: activeGroupQuiz.groupId,
+            assignment_id: activeGroupQuiz.assignmentId,
+          });
+
+          if (quizRes.ok && quizRes.data && quizRes.data.length > 0) {
+            const ids = [...new Set(quizRes.data.map(question => question.kc_id))];
+            setActiveQuizComponentIds(ids);
+            setQuestions(quizRes.data);
+            setAverageMastery(activeGroupQuiz.attempt?.averageMastery || 0);
+            const initialMap = {};
+            ids.forEach(id => initialMap[id] = ((activeGroupQuiz.attempt?.averageMastery || 10) / 100));
+            setKcMasteryMap(initialMap);
+            setStartMasteryMap(initialMap);
+          } else {
+            setError(quizRes.message || 'Could not generate quiz.');
+          }
+          return;
+        }
+
         const [compRes, quizRes] = await Promise.all([
           api.get(`/courses/${selectedCourseId}/components`),
           api.post('/quiz/generate', { kc_ids: selectedComponents })
@@ -62,6 +89,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
         if (compRes.ok && compRes.data) {
           const selected = compRes.data.filter(c => selectedComponents.includes(c.id));
           setComponentMetadata(selected);
+          setActiveQuizComponentIds(selected.map(c => c.id));
           const sum = selected.reduce((acc, curr) => acc + curr.progress, 0);
           setAverageMastery(selected.length > 0 ? (sum / selected.length) : 0);
 
@@ -83,7 +111,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
       }
     };
     fetchQuiz();
-  }, [selectedComponents]);
+  }, [selectedComponents, activeGroupQuiz?.groupId, activeGroupQuiz?.assignmentId]);
 
   const handleSelect = async (idx) => {
     if (showResult) return;
@@ -121,15 +149,18 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
     const updatedMap = { ...kcMasteryMap, [kcId]: p_new };
     setKcMasteryMap(updatedMap);
 
-    const sumMastery = selectedComponents.reduce((acc, id) => acc + (updatedMap[id] || 0.1), 0);
-    const avgMastery = sumMastery / selectedComponents.length;
+    const componentIdsForQuiz = activeQuizComponentIds.length ? activeQuizComponentIds : selectedComponents;
+    const sumMastery = componentIdsForQuiz.reduce((acc, id) => acc + (updatedMap[id] || 0.1), 0);
+    const avgMastery = sumMastery / Math.max(componentIdsForQuiz.length, 1);
     setAverageMastery(avgMastery * 100);
 
     // --- Fire and forget submission to natively sync with DB ---
     try {
       const res = await api.post('/quiz/submit', {
         answers: [ansRcd],
-        selected_kc_ids: selectedComponents
+        selected_kc_ids: componentIdsForQuiz,
+        group_id: activeGroupQuiz?.groupId,
+        assignment_id: activeGroupQuiz?.assignmentId,
       });
       if (res.ok && res.data && res.data.kcs) {
         // Backend returned authoritative values, optionally sync if needed (though math matches)
@@ -139,7 +170,10 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
         } else if (questions.length - currentIdx <= 4 && !isPrefetching) {
           // Silently prefetch the next batch in the background to ensure fluent UX
           setIsPrefetching(true);
-          api.post('/quiz/generate', { kc_ids: selectedComponents }).then(nextBatch => {
+          api.post('/quiz/generate', activeGroupQuiz ? {
+            group_id: activeGroupQuiz.groupId,
+            assignment_id: activeGroupQuiz.assignmentId,
+          } : { kc_ids: selectedComponents }).then(nextBatch => {
             if (nextBatch.ok && nextBatch.data && nextBatch.data.length > 0) {
               setQuestions(prev => [...prev, ...nextBatch.data]);
             }
@@ -169,7 +203,10 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
       // Fallback: If prefetch failed or didn't trigger, fetch once more synchronously
       setIsPrefetching(true);
       try {
-        const nextBatch = await api.post('/quiz/generate', { kc_ids: selectedComponents });
+        const nextBatch = await api.post('/quiz/generate', activeGroupQuiz ? {
+          group_id: activeGroupQuiz.groupId,
+          assignment_id: activeGroupQuiz.assignmentId,
+        } : { kc_ids: selectedComponents });
         if (nextBatch.ok && nextBatch.data && nextBatch.data.length > 0) {
           setQuestions(prev => [...prev, ...nextBatch.data]);
           setCurrentIdx(i => i + 1);
@@ -191,9 +228,9 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
     setQuizFinished(true);
   };
 
-  /* ─────────────────────────────────────────
-     LOADING  — clean spinner card
-  ───────────────────────────────────────── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+     LOADING  â€” clean spinner card
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (loading) {
     return (
       <div style={{
@@ -229,9 +266,9 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
     );
   }
 
-  /* ─────────────────────────────────────────
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
      ERROR STATE
-  ───────────────────────────────────────── */
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (error || questions.length === 0) {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -266,9 +303,9 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
     );
   }
 
-  /* ─────────────────────────────────────────
-     RESULTS  — clean scorecard
-  ───────────────────────────────────────── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+     RESULTS  â€” clean scorecard
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   if (quizFinished) {
     const actTotal = Math.max(totalAnswered, 1); // Avoid division by zero
     const pct = Math.round((score / actTotal) * 100);
@@ -361,6 +398,11 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {localBreakdown.map((kc, i) => {
                     const kcColor = kc.pct >= 80 ? '#10b981' : kc.pct >= 50 ? '#f59e0b' : '#ef4444';
+                    const deltaColor = kc.masteryDelta > 0 ? '#10b981' : (kc.masteryDelta < 0 ? '#ef4444' : '#64748b');
+                    const deltaBg = kc.masteryDelta > 0 ? '#f0fdf4' : (kc.masteryDelta < 0 ? '#fef2f2' : '#f8fafc');
+                    const deltaBorder = kc.masteryDelta > 0 ? '#bbf7d0' : (kc.masteryDelta < 0 ? '#fecaca' : '#e2e8f0');
+                    const DeltaIcon = kc.masteryDelta > 0 ? TrendingUp : (kc.masteryDelta < 0 ? TrendingDown : null);
+                    const deltaLabel = kc.masteryDelta > 0 ? `+${kc.masteryDelta}%` : (kc.masteryDelta < 0 ? `${kc.masteryDelta}%` : 'No change');
 
                     return (
                       <div key={i} style={{ padding: '28px', borderRadius: '20px', border: '1px solid #f1f5f9', background: '#fafbff', animation: `fadeIn 0.4s ease ${i * 80}ms both` }}>
@@ -381,15 +423,19 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
                                 {t.quizMastery || 'Mastery'}: <span style={{ color: '#1e293b', fontSize: '18px' }}>{kc.masteryNow}%</span>
                                 <span style={{
                                   marginLeft: '12px',
-                                  color: kc.masteryDelta > 0 ? '#10b981' : (kc.masteryDelta < 0 ? '#ef4444' : '#64748b'),
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  color: deltaColor,
                                   fontWeight: '900',
                                   fontSize: '15px',
-                                  background: kc.masteryDelta > 0 ? '#f0fdf4' : (kc.masteryDelta < 0 ? '#fef2f2' : '#f8fafc'),
+                                  background: deltaBg,
                                   padding: '4px 10px',
                                   borderRadius: '8px',
-                                  border: `1px solid ${kc.masteryDelta > 0 ? '#bbf7d0' : (kc.masteryDelta < 0 ? '#fecaca' : '#e2e8f0')}`
+                                  border: `1px solid ${deltaBorder}`
                                 }}>
-                                  {kc.masteryDelta > 0 ? `↑ +${kc.masteryDelta}%` : (kc.masteryDelta < 0 ? `↓ ${kc.masteryDelta}%` : 'No Change (0%)')}
+                                  {DeltaIcon && <DeltaIcon size={14} strokeWidth={3} />}
+                                  {deltaLabel}
                                 </span>
                               </span>
                             </div>
@@ -409,11 +455,11 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
     );
   }
 
-  /* ─────────────────────────────────────────
-     ACTIVE QUIZ — clean card design
-  ───────────────────────────────────────── */
+  /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+     ACTIVE QUIZ â€” clean card design
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const currentQ = questions[currentIdx];
-  const LETTERS = ['A', 'B', 'C', 'D'];
+  const LETTERS = isRtl ? ['Ø£', 'Ø¨', 'Ø¬', 'Ø¯'] : ['A', 'B', 'C', 'D'];
 
   return (
     <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', padding: '0 24px 40px', animation: 'fadeIn 0.3s ease' }}>
