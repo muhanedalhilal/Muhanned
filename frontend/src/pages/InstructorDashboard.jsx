@@ -220,30 +220,103 @@ export default function InstructorDashboard({ t, isRtl }) {
     };
 
     init();
-    const socket = new WebSocket(api.wsUrl('/groups/ws'));
-    socket.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
-      const active = selectedGroupRef.current;
-      if (payload.type === 'group_public_message' && active?.id === payload.groupId) {
-        if (showGroupChatRef.current) {
-          setPublicMessages(prev => prev.some(msg => msg.id === payload.message.id) ? prev : [...prev, payload.message]);
-        } else {
-          setUnreadPublicCount(prev => prev + 1);
+    
+    let socket = null;
+    let reconnectTimeout = null;
+    let isDisposed = false;
+
+    const connectWS = () => {
+      if (isDisposed) return;
+
+      socket = new WebSocket(api.wsUrl('/groups/ws'));
+
+      socket.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          const active = selectedGroupRef.current;
+
+          if (payload.type === 'group_public_message' && active?.id === payload.groupId) {
+            if (showGroupChatRef.current) {
+              setPublicMessages(prev => prev.some(msg => msg.id === payload.message.id) ? prev : [...prev, payload.message]);
+            } else {
+              setUnreadPublicCount(prev => prev + 1);
+            }
+          }
+          if (payload.type === 'group_private_message' && active?.id === payload.groupId) {
+            const activeStudentId = selectedStudentIdRef.current ? Number(selectedStudentIdRef.current) : null;
+            if (!payload.studentId || !activeStudentId || Number(payload.studentId) === activeStudentId) {
+              setPrivateMessages(prev => prev.some(msg => msg.id === payload.message.id) ? prev : [...prev, payload.message]);
+            }
+          }
+          if (['group_member_joined', 'group_member_added', 'group_member_removed', 'group_resource_created', 'group_progress_updated', 'group_quiz_assigned'].includes(payload.type)) {
+            fetchCourses();
+            if (active?.id === payload.groupId) loadGroupDetail(active.id, selectedStudentIdRef.current);
+          }
+        } catch (err) {
+          console.error('Error processing WebSocket message:', err);
         }
-      }
-      if (payload.type === 'group_private_message' && active?.id === payload.groupId) {
-        const activeStudentId = selectedStudentIdRef.current ? Number(selectedStudentIdRef.current) : null;
-        if (!payload.studentId || !activeStudentId || Number(payload.studentId) === activeStudentId) {
-          setPrivateMessages(prev => prev.some(msg => msg.id === payload.message.id) ? prev : [...prev, payload.message]);
+      };
+
+      socket.onclose = () => {
+        if (!isDisposed) {
+          reconnectTimeout = setTimeout(connectWS, 3000);
         }
-      }
-      if (['group_member_joined', 'group_member_added', 'group_member_removed', 'group_resource_created', 'group_progress_updated', 'group_quiz_assigned'].includes(payload.type)) {
-        fetchCourses();
-        if (active?.id === payload.groupId) loadGroupDetail(active.id, selectedStudentIdRef.current);
-      }
+      };
+
+      socket.onerror = () => {
+        socket.close();
+      };
     };
-    return () => socket.close();
+
+    connectWS();
+
+    return () => {
+      isDisposed = true;
+      if (socket) socket.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!selectedGroup) return;
+
+    const interval = setInterval(async () => {
+      const groupId = selectedGroup.id;
+      const studentId = selectedStudentId;
+
+      // Poll public messages
+      const publicRes = await api.get(`/groups/${groupId}/messages/public`);
+      if (publicRes.ok) {
+        setPublicMessages(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(publicRes.data)) {
+            if (!showGroupChatRef.current) {
+              const diff = publicRes.data.length - prev.length;
+              if (diff > 0) {
+                setUnreadPublicCount(c => c + diff);
+              }
+            }
+            return publicRes.data;
+          }
+          return prev;
+        });
+      }
+
+      // Poll private messages
+      if (studentId) {
+        const privateRes = await api.get(`/groups/${groupId}/messages/private/${studentId}`);
+        if (privateRes.ok) {
+          setPrivateMessages(prev => {
+            if (JSON.stringify(prev) !== JSON.stringify(privateRes.data)) {
+              return privateRes.data;
+            }
+            return prev;
+          });
+        }
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [selectedGroup?.id, selectedStudentId]);
 
   useEffect(() => {
     if (!selectedCourse) return;

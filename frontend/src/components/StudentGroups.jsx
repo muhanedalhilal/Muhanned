@@ -168,28 +168,94 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
 
   useEffect(() => {
     loadGroups();
-    const socket = new WebSocket(api.wsUrl('/groups/ws'));
-    socket.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
-      const active = selectedGroupRef.current;
-      if (payload.type === 'group_public_message' && active?.id === payload.groupId) {
-        setPublicMessages(prev => prev.some(msg => msg.id === payload.message.id) ? prev : [...prev, payload.message]);
-      }
-      if (payload.type === 'group_private_message' && active?.id === payload.groupId) {
-        setPrivateMessages(prev => prev.some(msg => msg.id === payload.message.id) ? prev : [...prev, payload.message]);
-      }
-      if (payload.type === 'group_member_removed' && active?.id === payload.groupId && active?.viewer?.id === payload.studentId) {
-        clearActiveGroup();
-        loadGroups();
-        return;
-      }
-      if (['group_member_joined', 'group_member_added', 'group_member_removed', 'group_resource_created', 'group_progress_updated', 'group_quiz_assigned'].includes(payload.type)) {
-        loadGroups();
-        if (active?.id === payload.groupId) loadGroup(active.id, false);
-      }
+    
+    let socket = null;
+    let reconnectTimeout = null;
+    let isDisposed = false;
+
+    const connectWS = () => {
+      if (isDisposed) return;
+      
+      socket = new WebSocket(api.wsUrl('/groups/ws'));
+
+      socket.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          const active = selectedGroupRef.current;
+          
+          if (payload.type === 'group_public_message' && active?.id === payload.groupId) {
+            setPublicMessages(prev => prev.some(msg => msg.id === payload.message.id) ? prev : [...prev, payload.message]);
+          }
+          if (payload.type === 'group_private_message' && active?.id === payload.groupId) {
+            setPrivateMessages(prev => prev.some(msg => msg.id === payload.message.id) ? prev : [...prev, payload.message]);
+          }
+          if (payload.type === 'group_member_removed' && active?.id === payload.groupId && active?.viewer?.id === payload.studentId) {
+            clearActiveGroup();
+            loadGroups();
+            return;
+          }
+          if (['group_member_joined', 'group_member_added', 'group_member_removed', 'group_resource_created', 'group_progress_updated', 'group_quiz_assigned'].includes(payload.type)) {
+            loadGroups();
+            if (active?.id === payload.groupId) loadGroup(active.id, false);
+          }
+        } catch (err) {
+          console.error('Error processing WebSocket message:', err);
+        }
+      };
+
+      socket.onclose = () => {
+        if (!isDisposed) {
+          reconnectTimeout = setTimeout(connectWS, 3000);
+        }
+      };
+
+      socket.onerror = () => {
+        socket.close();
+      };
     };
-    return () => socket.close();
+
+    connectWS();
+
+    return () => {
+      isDisposed = true;
+      if (socket) socket.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!selectedGroup) return;
+
+    const interval = setInterval(async () => {
+      const groupId = selectedGroup.id;
+      const viewerId = selectedGroup.viewer?.id;
+      
+      const [publicRes, privateRes] = await Promise.all([
+        api.get(`/groups/${groupId}/messages/public`),
+        viewerId ? api.get(`/groups/${groupId}/messages/private/${viewerId}`) : Promise.resolve(null),
+      ]);
+
+      if (publicRes?.ok) {
+        setPublicMessages(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(publicRes.data)) {
+            return publicRes.data;
+          }
+          return prev;
+        });
+      }
+
+      if (privateRes?.ok) {
+        setPrivateMessages(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(privateRes.data)) {
+            return privateRes.data;
+          }
+          return prev;
+        });
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [selectedGroup]);
 
   const joinGroup = async (codeOverride = '') => {
     const code = (codeOverride || joinCode).trim();
