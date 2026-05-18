@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -272,6 +272,18 @@ def _group_average_mastery(group: Group, db: Session, component_ids: list[int]) 
     return round((sum(student_averages) / len(student_averages)) * 100)
 
 
+def _component_course_average_mastery(component_id: int, db: Session | None = None) -> int:
+    if db is None:
+        return 0
+    progress_rows = db.query(GroupStudentProgress.mastery_prob).filter(
+        GroupStudentProgress.knowledge_component_id == component_id
+    ).all()
+    if not progress_rows:
+        return 0
+    total = sum(row[0] or 0.1 for row in progress_rows)
+    return round((total / len(progress_rows)) * 100)
+
+
 def _course_to_response(course: Course, db: Session | None = None) -> CourseResponse:
     resources = []
     documents = course.documents if db is None else db.query(Document).filter(Document.course_id == course.id).order_by(Document.id).all()
@@ -289,7 +301,8 @@ def _course_to_response(course: Course, db: Session | None = None) -> CourseResp
             "id": kc.id,
             "text": kc.topic,
             "content": kc.content,
-            "progress": int((kc.mastery_prob or 0.1) * 100)
+            "progress": int((kc.mastery_prob or 0.1) * 100),
+            "averageMastery": _component_course_average_mastery(kc.id, db)
         }
         for kc in knowledge_components
     ]
@@ -343,9 +356,6 @@ def get_courses(
 ):
     """Get all courses for the current user."""
     courses = db.query(Course).filter(Course.user_id == current_user.id).all()
-    for course in courses:
-        _ensure_document_components(course, current_user, db)
-        _ensure_course_group_codes(course, db)
     return [_course_to_response(course, db) for course in courses]
 
 @router.post("/", response_model=CourseResponse)

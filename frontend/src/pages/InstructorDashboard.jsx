@@ -24,9 +24,9 @@ function senderRoleClass(message) {
   return instructorRoles.has(message.sender?.role) ? 'instructor' : 'student';
 }
 
-function ChatPanel({ title, icon, messages, value, onChange, setValue, onSend, disabled = false, isSending = false, isRtl = false, emptyText, disabledText, placeholder }) {
+function ChatPanel({ title, icon, messages, value, onChange, setValue, onSend, disabled = false, isSending = false, isRtl = false, emptyText, disabledText, placeholder, isLoading = false }) {
   const handleChange = onChange || setValue;
-  const isBlocked = disabled || isSending;
+  const isBlocked = disabled || isSending || isLoading;
   const scrollContainerRef = useRef(null);
 
   useEffect(() => {
@@ -42,7 +42,11 @@ function ChatPanel({ title, icon, messages, value, onChange, setValue, onSend, d
     <div className="dashboard-tool-card">
       <h4 style={{ margin: '0 0 10px', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>{icon}{title}</h4>
       <div ref={scrollContainerRef} style={{ minHeight: '200px', maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '10px', paddingRight: isRtl ? '0' : '4px', paddingLeft: isRtl ? '4px' : '0' }}>
-        {messages.length === 0 ? (
+        {isLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 'auto' }}>
+            <Loader2 size={24} className="spin-icon" color="#3b82f6" />
+          </div>
+        ) : messages.length === 0 ? (
           <p style={{ color: '#94a3b8', margin: 0, textAlign: 'center', marginTop: 'auto', marginBottom: 'auto' }}>{disabled ? disabledText : emptyText}</p>
         ) : messages.map(message => {
           const isMine = senderRoleClass(message) === 'instructor';
@@ -102,6 +106,8 @@ export default function InstructorDashboard({ t, isRtl }) {
   const [privateMessage, setPrivateMessage] = useState('');
   const [isSendingPublic, setIsSendingPublic] = useState(false);
   const [isSendingPrivate, setIsSendingPrivate] = useState(false);
+  const [isPublicLoading, setIsPublicLoading] = useState(false);
+  const [isPrivateLoading, setIsPrivateLoading] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [studentEmail, setStudentEmail] = useState('');
   const [studentEmailError, setStudentEmailError] = useState('');
@@ -166,8 +172,10 @@ export default function InstructorDashboard({ t, isRtl }) {
     setPrivateMessages([]);
     // Fetch private messages in the background — don't await
     if (studentId) {
+      setIsPrivateLoading(true);
       api.get(`/groups/${groupId}/messages/private/${studentId}`).then(privateRes => {
         if (privateRes.ok) setPrivateMessages(privateRes.data);
+        setIsPrivateLoading(false);
       });
     }
     return true;
@@ -565,9 +573,11 @@ export default function InstructorDashboard({ t, isRtl }) {
     selectedStudentIdRef.current = normalizedStudentId;
     setActiveView('studentDetails');
     if (!selectedGroup) return;
+    setIsPrivateLoading(true);
     const res = await api.get(`/groups/${selectedGroup.id}/messages/private/${normalizedStudentId}`);
     if (res.ok) setPrivateMessages(res.data);
     else setPrivateMessages([]);
+    setIsPrivateLoading(false);
   };
 
   const deleteComponent = async (courseId, compId) => {
@@ -970,8 +980,10 @@ export default function InstructorDashboard({ t, isRtl }) {
               if (opening) {
                 setUnreadPublicCount(0);
                 if (publicMessages.length === 0 && selectedGroup) {
+                  setIsPublicLoading(true);
                   const res = await api.get(`/groups/${selectedGroup.id}/messages/public`);
                   if (res.ok) setPublicMessages(res.data);
+                  setIsPublicLoading(false);
                 }
               }
               setShowGroupChat(opening);
@@ -986,7 +998,7 @@ export default function InstructorDashboard({ t, isRtl }) {
             </button>
           </div>
           {showGroupChat && (
-            <ChatPanel title="" icon={null} messages={publicMessages} value={publicMessage} setValue={setPublicMessage} onSend={sendPublicMessage} isSending={isSendingPublic} isRtl={isRtl} emptyText={tt('noMessagesYet', 'No messages yet.')} disabledText="" placeholder={tt('writeMessage', 'Write a message...')} />
+            <ChatPanel title="" icon={null} messages={publicMessages} value={publicMessage} setValue={setPublicMessage} onSend={sendPublicMessage} isSending={isSendingPublic} isRtl={isRtl} emptyText={tt('noMessagesYet', 'No messages yet.')} disabledText="" placeholder={tt('writeMessage', 'Write a message...')} isLoading={isPublicLoading} />
           )}
         </div>
 
@@ -1088,6 +1100,7 @@ export default function InstructorDashboard({ t, isRtl }) {
             emptyText={tt('noMessagesYet', 'No messages yet.')}
             disabledText={tt('selectStudentFirst', 'Select a student first.')}
             placeholder={tt('writeMessage', 'Write a message...')}
+            isLoading={isPrivateLoading}
           />
         </div>
 

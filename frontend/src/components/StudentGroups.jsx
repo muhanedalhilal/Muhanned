@@ -24,10 +24,11 @@ function senderRoleClass(message) {
   return instructorRoles.has(message.sender?.role) ? 'instructor' : 'student';
 }
 
-function ChatBox({ title, icon, messages, value, onChange, setValue, onSend, emptyText, placeholder, isRtl, isSending = false }) {
+function ChatBox({ title, icon, messages, value, onChange, setValue, onSend, emptyText, placeholder, isRtl, isSending = false, isLoading = false }) {
   const handleChange = onChange || setValue;
   const scrollContainerRef = useRef(null);
   const [isOpen, setIsOpen] = useState(false);
+  const isBlocked = isSending || isLoading;
 
   useEffect(() => {
     if (isOpen && scrollContainerRef.current) {
@@ -60,7 +61,11 @@ function ChatBox({ title, icon, messages, value, onChange, setValue, onSend, emp
       {isOpen && (
         <div style={{ padding: '0 22px 20px', display: 'flex', flexDirection: 'column' }}>
           <div ref={scrollContainerRef} style={{ minHeight: '180px', maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '14px', paddingRight: isRtl ? '0' : '4px', paddingLeft: isRtl ? '4px' : '0' }}>
-            {messages.length === 0 ? (
+            {isLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: 'auto' }}>
+                <Loader2 size={24} className="spin-icon" color="#3b82f6" />
+              </div>
+            ) : messages.length === 0 ? (
               <p style={{ color: '#94a3b8', margin: 'auto 0', textAlign: 'center' }}>{emptyText}</p>
             ) : messages.map(message => {
               const isInstructor = senderRoleClass(message) === 'instructor';
@@ -87,9 +92,9 @@ function ChatBox({ title, icon, messages, value, onChange, setValue, onSend, emp
               );
             })}
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); if (!isSending) onSend(); }} style={{ display: 'flex', gap: '8px' }}>
-            <input disabled={isSending} value={value} onChange={(e) => handleChange?.(e.target.value)} placeholder={placeholder} autoComplete="off" dir={isRtl ? 'rtl' : 'ltr'} style={{ flex: 1, border: '1px solid #cbd5e1', borderRadius: '10px', padding: '11px 14px', opacity: isSending ? 0.6 : 1, fontSize: '15px' }} />
-            <button type="submit" disabled={isSending} className="btn-luxe primary" style={{ padding: '10px 16px', minWidth: '50px' }}>
+          <form onSubmit={(e) => { e.preventDefault(); if (!isBlocked) onSend(); }} style={{ display: 'flex', gap: '8px' }}>
+            <input disabled={isBlocked} value={value} onChange={(e) => handleChange?.(e.target.value)} placeholder={placeholder} autoComplete="off" dir={isRtl ? 'rtl' : 'ltr'} style={{ flex: 1, border: '1px solid #cbd5e1', borderRadius: '10px', padding: '11px 14px', opacity: isBlocked ? 0.6 : 1, fontSize: '15px' }} />
+            <button type="submit" disabled={isBlocked} className="btn-luxe primary" style={{ padding: '10px 16px', minWidth: '50px' }}>
               {isSending ? <Loader2 size={18} className="spin-icon" /> : <Send size={18} />}
             </button>
           </form>
@@ -103,6 +108,8 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
   const tt = (key, fallback) => t?.[key] || fallback;
   const label = (key, en, ar) => tt(key, isRtl ? ar : en);
   const [groups, setGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(true);
+  const [chatLoading, setChatLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [groupView, setGroupView] = useState('list');
   const [joinCode, setJoinCode] = useState('');
@@ -132,7 +139,9 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
   };
 
   const loadGroups = async () => {
+    setGroupsLoading(true);
     const res = await api.get('/groups/my');
+    setGroupsLoading(false);
     if (!res.ok) return;
 
     const nextGroups = res.data || [];
@@ -157,12 +166,14 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
     selectedGroupRef.current = res.data;
     if (navigate) setGroupView('detail');
 
+    setChatLoading(true);
     const [publicRes, privateRes] = await Promise.all([
       api.get(`/groups/${groupId}/messages/public`),
       res.data.viewer?.id ? api.get(`/groups/${groupId}/messages/private/${res.data.viewer.id}`) : Promise.resolve(null),
     ]);
     setPublicMessages(publicRes?.ok ? publicRes.data : []);
     setPrivateMessages(privateRes?.ok ? privateRes.data : []);
+    setChatLoading(false);
     return true;
   };
 
@@ -436,8 +447,8 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
                 </button>
                 {showChat && (
                   <div className="student-chat-grid" style={{ padding: '0 20px 20px' }}>
-                    <ChatBox isRtl={isRtl} title={tt('publicGroupChat', 'Public Group Chat')} icon={<MessageSquare size={20} color="#3b82f6" />} messages={publicMessages} value={publicText} setValue={setPublicText} onSend={sendPublic} isSending={isSendingPublic} emptyText={tt('noMessagesYet', 'No messages yet.')} placeholder={tt('writeMessage', 'Write a message...')} />
-                    <ChatBox isRtl={isRtl} title={tt('privateChatWithInstructor', 'Private Chat With Instructor')} icon={<Lock size={20} color="#f59e0b" />} messages={privateMessages} value={privateText} setValue={setPrivateText} onSend={sendPrivate} isSending={isSendingPrivate} emptyText={tt('noMessagesYet', 'No messages yet.')} placeholder={tt('writeMessage', 'Write a message...')} />
+                    <ChatBox isRtl={isRtl} title={tt('publicGroupChat', 'Public Group Chat')} icon={<MessageSquare size={20} color="#3b82f6" />} messages={publicMessages} value={publicText} setValue={setPublicText} onSend={sendPublic} isSending={isSendingPublic} emptyText={tt('noMessagesYet', 'No messages yet.')} placeholder={tt('writeMessage', 'Write a message...')} isLoading={chatLoading} />
+                    <ChatBox isRtl={isRtl} title={tt('privateChatWithInstructor', 'Private Chat With Instructor')} icon={<Lock size={20} color="#f59e0b" />} messages={privateMessages} value={privateText} setValue={setPrivateText} onSend={sendPrivate} isSending={isSendingPrivate} emptyText={tt('noMessagesYet', 'No messages yet.')} placeholder={tt('writeMessage', 'Write a message...')} isLoading={chatLoading} />
                   </div>
                 )}
               </div>
@@ -519,7 +530,14 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
           </div>
 
           <div className="student-group-tabs student-group-list-grid" aria-label={label('joinedGroups', 'Joined groups', 'Joined groups')} style={{ marginTop: '25px' }}>
-            {groups.length === 0 ? (
+            {groupsLoading ? (
+              Array.from({ length: 2 }).map((_, idx) => (
+                <div key={idx} className="student-group-tab student-group-list-card" style={{ minHeight: '110px', background: '#f1f5f9', opacity: 0.6, animation: 'pulse 1.5s infinite ease-in-out', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '8px', padding: '20px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#cbd5e1' }} />
+                  <div style={{ width: '50%', height: '16px', borderRadius: '4px', background: '#cbd5e1' }} />
+                </div>
+              ))
+            ) : groups.length === 0 ? (
               <div className="student-empty-state">{tt('noGroupsJoined', 'You have not joined any groups yet.')}</div>
             ) : groups.map(group => (
               <button key={group.id} disabled={openingGroupId === group.id} onClick={() => openStudentGroup(group.id)} className="student-group-tab student-group-list-card" aria-label={`${tt('studentGroupsTitle', 'My Groups')}: ${group.name}`}>

@@ -1,4 +1,4 @@
-﻿import os
+import os
 import google.generativeai as genai
 import json
 import re
@@ -113,8 +113,8 @@ def generate_kcs_from_text(text: str) -> list[dict]:
 
     genai.configure(api_key=api_key)
 
-    # Using gemini-2.5-pro which is the correct current model in the API
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    # Using gemini-2.5-flash which is the correct optimized model in the API for sub-second responses
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     prompt = f"""
     You are an expert educational AI.
@@ -151,7 +151,7 @@ def generate_kcs_from_file(file_path: str, mime_type: str | None = None, filenam
         return []
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     uploaded_file = None
 
     prompt = """
@@ -207,7 +207,7 @@ def generate_quiz_from_kcs(kcs: list[dict]) -> list[dict]:
         return []
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     # Format KCs for the prompt
     kcs_text = "\n\n".join([f"ID: {kc['id']}\nTopic: {kc['topic']}\nContent: {kc['content']}\nMastery Probability: {kc['mastery_prob']}" for kc in kcs])
@@ -257,7 +257,7 @@ def suggest_components_for_course(course_name: str, existing_topics: list[str], 
         return []
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     existing_str = ", ".join(existing_topics) if existing_topics else "None yet"
 
@@ -267,37 +267,41 @@ def suggest_components_for_course(course_name: str, existing_topics: list[str], 
         for kc in existing_kc_data[:15]:  # cap to avoid huge prompts
             content_lines.append(f"- {kc['topic']}: {kc['content'][:300]}")
         resource_context = (
-            "ØªØ­ØªÙˆÙŠ Ø§Ù„Ø¯ÙˆØ±Ø© Ø¨Ø§Ù„ÙØ¹Ù„ Ø¹Ù„Ù‰ Ø§Ù„Ù…Ø¹Ø±ÙØ© Ø§Ù„ØªØ§Ù„ÙŠØ© Ø§Ù„Ù…Ø³ØªØ®Ø±Ø¬Ø© Ù…Ù† Ø§Ù„Ù…ÙˆØ§Ø±Ø¯ Ø§Ù„Ù…Ø±ÙÙˆØ¹Ø©:\n"
+            "The course currently contains the following knowledge extracted from uploaded resources:\n"
             + "\n".join(content_lines)
         )
         grounding_instruction = (
-            "Ø§Ø¨Ù†Ù Ø§Ù‚ØªØ±Ø§Ø­Ø§ØªÙƒ Ø¨Ø´ÙƒÙ„ ØµØ§Ø±Ù… Ø¹Ù„Ù‰ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø£Ø¹Ù„Ø§Ù‡ Ù…Ù† Ø§Ù„Ù…ÙˆØ§Ø±Ø¯ Ø§Ù„Ù…Ø±ÙÙˆØ¹Ø©. "
-            "Ù„Ø§ ØªØ®ØªØ±Ø¹ Ù…ÙˆØ§Ø¶ÙŠØ¹ Ù…Ù† Ø§Ø³Ù… Ø§Ù„Ø¯ÙˆØ±Ø© Ø£Ùˆ Ø§Ù„Ù…Ø¹Ø±ÙØ© Ø§Ù„Ø¹Ø§Ù…Ø©. "
-            "Ø§Ù‚ØªØ±Ø­ Ù…ÙˆØ§Ø¶ÙŠØ¹ ØªÙˆØ³Ø¹ Ø£Ùˆ ØªÙƒÙ…Ù„ Ù…Ù†Ø·Ù‚ÙŠÙ‹Ø§ Ù…Ø§ Ù‡Ùˆ Ù…ÙˆØ¬ÙˆØ¯ Ø¨Ø§Ù„ÙØ¹Ù„ ÙÙŠ Ø§Ù„Ù…ÙˆØ§Ø¯ Ø§Ù„Ù…Ø±ÙÙˆØ¹Ø©."
+            "Strictly base your suggestions on the content above from the uploaded resources. "
+            "Do not invent topics from the course name alone. "
+            "Suggest topics that logically expand or complete what is already present in the uploaded materials."
         )
     else:
         resource_context = ""
         grounding_instruction = (
-            "Ù†Ø¸Ø±Ù‹Ø§ Ù„Ø¹Ø¯Ù… Ø±ÙØ¹ Ø£ÙŠ Ù…ÙˆØ§Ø±Ø¯ Ø¨Ø¹Ø¯ØŒ Ø§Ù‚ØªØ±Ø­ Ù…ÙˆØ§Ø¶ÙŠØ¹ Ø°Ø§Øª ØµÙ„Ø© Ø¹Ø§Ù…Ø© Ø¨Ù‡Ø°Ù‡ Ø§Ù„Ø¯ÙˆØ±Ø©."
+            "Since no resources are uploaded yet, suggest general relevant topics for this course."
         )
 
     prompt = f"""
-    Ø£Ù†Øª Ø®Ø¨ÙŠØ± ÙÙŠ ØªØµÙ…ÙŠÙ… Ø§Ù„Ù…Ù†Ø§Ù‡Ø¬.
-    ÙŠØ¯Ø±Ø³ Ø§Ù„Ø·Ø§Ù„Ø¨ Ø¯ÙˆØ±Ø© ØªØ³Ù…Ù‰: "{course_name}".
-    Ù„Ø¯ÙŠÙ‡Ù… Ø¨Ø§Ù„ÙØ¹Ù„ Ù…ÙˆØ§Ø¶ÙŠØ¹ Ø§Ù„Ù…ÙƒÙˆÙ†Ø§Øª Ø§Ù„Ù…Ø¹Ø±ÙÙŠØ© Ø§Ù„ØªØ§Ù„ÙŠØ©: {existing_str}.
+    You are an expert curriculum designer.
+    The course name is: "{course_name}".
+    Existing Knowledge Component topics: {existing_str}.
 
     {resource_context}
 
     {grounding_instruction}
 
-    Ø§Ù‚ØªØ±Ø­ Ø¨Ø§Ù„Ø¶Ø¨Ø· 3 Ù…ÙˆØ§Ø¶ÙŠØ¹ Ø¬Ø¯ÙŠØ¯Ø© ÙˆÙ…ØªÙ…ÙŠØ²Ø© Ù„Ù„Ù…ÙƒÙˆÙ†Ø§Øª Ø§Ù„Ù…Ø¹Ø±ÙÙŠØ© Ù„ÙŠØ³Øª Ù…ÙˆØ¬ÙˆØ¯Ø© Ø¨Ø§Ù„ÙØ¹Ù„ ÙÙŠ Ø§Ù„Ù‚Ø§Ø¦Ù…Ø© Ø£Ø¹Ù„Ø§Ù‡.
-    ØªØ¹Ù„ÙŠÙ…Ø§Øª Ø§Ù„Ù„ØºØ©: ÙŠØ¬Ø¨ Ø£Ù† ØªÙƒÙˆÙ† Ø§Ù„Ù…ÙˆØ§Ø¶ÙŠØ¹ ÙˆØ§Ù„Ù…Ø¨Ø±Ø±Ø§Øª Ø¨Ù†ÙØ³ Ù„ØºØ© Ø§Ø³Ù… Ø§Ù„Ø¯ÙˆØ±Ø© ÙˆØ§Ù„Ù…ÙˆØ§Ø¶ÙŠØ¹ Ø§Ù„Ù…ÙˆØ¬ÙˆØ¯Ø© (Ø¹Ø±Ø¨ÙŠ Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø¨Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©ØŒ Ø£Ùˆ Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠ Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø¨Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠØ©).
-    Ù‚Ù… Ø¨Ø¥Ø±Ø¬Ø§Ø¹ Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø¨ØªÙ†Ø³ÙŠÙ‚ Ù…ØµÙÙˆÙØ© JSON ÙÙ‚Ø· Ù…Ù† ÙƒØ§Ø¦Ù†Ø§Øª ØªØ­ØªÙˆÙŠ Ø¹Ù„Ù‰ Ù…ÙØªØ§Ø­ÙŠÙ† Ø¨Ø§Ù„Ø¶Ø¨Ø·:
-    - "topic": Ø§Ø³Ù… Ù…ÙˆØ¶ÙˆØ¹ Ù‚ØµÙŠØ± ÙˆÙˆØ§Ø¶Ø­ (Ø¨Ø­Ø¯ Ø£Ù‚ØµÙ‰ 8 ÙƒÙ„Ù…Ø§Øª)
-    - "rationale": Ø¬Ù…Ù„Ø© ÙˆØ§Ø­Ø¯Ø© ØªØ´Ø±Ø­ Ø³Ø¨Ø¨ Ø£Ù‡Ù…ÙŠØªÙ‡
-    Ù„Ø§ ØªÙ‚Ù… Ø¨ØªØºÙ„ÙŠÙ JSON Ø¨ÙƒØªÙ„ Ù…Ø§Ø±ÙƒØ¯Ø§ÙˆÙ†ØŒ ÙÙ‚Ø· Ø£Ø±Ø¬Ø¹ JSON Ø§Ù„Ø®Ø§Ù….
+    Suggest exactly 3 new and distinct Knowledge Component topics that are not already in the list above.
+    
+    CRITICAL LANGUAGE INSTRUCTION: 
+    You MUST detect the language of the course name and existing topics (e.g., English, Arabic). 
+    Your entire JSON response (both "topic" and "rationale" values) MUST be written in that exact same language.
+    If the content is in English, respond in English. If Arabic, respond in Arabic.
+    
+    Return the result strictly as a JSON array of objects with exactly two keys:
+    - "topic": a short, clear topic name (max 8 words)
+    - "rationale": a single sentence explaining why it is important
+    Do not wrap the JSON in markdown blocks, just return raw JSON.
     """
-
     try:
         response = model.generate_content(prompt)
         response_text = response.text.strip()
@@ -366,7 +370,7 @@ def validate_and_generate_component(course_name: str, topic: str, existing_kc_da
 
     # --- Step 2: AI Generation / Semantic validation ---
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     if is_suggestion:
         prompt = f"""Ø£Ù†Øª Ø°ÙƒØ§Ø¡ Ø§ØµØ·Ù†Ø§Ø¹ÙŠ ØªØ¹Ù„ÙŠÙ…ÙŠ. ÙŠØ¶ÙŠÙ Ø·Ø§Ù„Ø¨ Ø§Ù„Ù…ÙˆØ¶ÙˆØ¹ Ø§Ù„Ù…Ù‚ØªØ±Ø­ ÙˆØ§Ù„Ù…Ø¹ØªÙ…Ø¯ Ù…Ø³Ø¨Ù‚Ù‹Ø§: "{topic}" Ø¥Ù„Ù‰ Ø¯ÙˆØ±ØªÙ‡: "{course_name}".
@@ -434,7 +438,7 @@ def generate_summary_from_kcs(kcs: list[dict]) -> str:
         return "AI service not configured."
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     kcs_text = "\n\n".join([f"Topic: {kc['topic']}\nContent: {kc['content']}" for kc in kcs])
 
@@ -464,7 +468,7 @@ def generate_mind_map_from_kcs(kcs: list[dict]) -> str:
         return "AI service not configured."
 
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-2.5-pro")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     kcs_text = "\n\n".join([f"Topic: {kc['topic']}\nContent: {kc['content']}" for kc in kcs])
 

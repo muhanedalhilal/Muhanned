@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { BookOpen, Calculator, Globe, Code, PenTool, FlaskConical, Plus, Trash2, CheckCircle2, Search, ArrowLeft, Check, PlayCircle, BarChart3, Library, Layers, Wand2, Loader2, ImageIcon, FileText, Upload, Network, X, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import ReactMarkdown from 'react-markdown';
@@ -1278,7 +1278,24 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
           </form>
         )}
         <div className="section-divider" style={{ marginTop: '30px' }}><span className="divider-text" style={{ color: 'black' }}>{t.activeCourses || 'Active Courses'}</span><div className="divider-line"></div></div>
-        <div className="luxe-grid">{activeCourses.length === 0 ? (<div className="empty-state"><BookOpen size={48} color="#475569" /><p>{searchQuery ? tt('noMatchingActiveCourses', 'No matching active courses.') : t.noCourses}</p></div>) : (activeCourses.map(course => renderCourseCard(course)))}</div>
+        <div className="luxe-grid">
+          {dashboardLoading ? (
+            Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="luxe-panel dashboard-surface" style={{ minHeight: '190px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.05)', background: '#f8fafc', opacity: 0.6, animation: 'pulse 1.5s infinite ease-in-out' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#cbd5e1' }} />
+                <div style={{ width: '60%', height: '20px', borderRadius: '4px', background: '#cbd5e1' }} />
+                <div style={{ width: '80%', height: '14px', borderRadius: '4px', background: '#cbd5e1' }} />
+              </div>
+            ))
+          ) : activeCourses.length === 0 ? (
+            <div className="empty-state">
+              <BookOpen size={48} color="#475569" />
+              <p>{searchQuery ? tt('noMatchingActiveCourses', 'No matching active courses.') : t.noCourses}</p>
+            </div>
+          ) : (
+            activeCourses.map(course => renderCourseCard(course))
+          )}
+        </div>
       </div>
       <StudentGroups
         t={t}
