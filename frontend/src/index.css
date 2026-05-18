@@ -4513,14 +4513,31 @@ body {
   border-radius: 16px;
   border: 1px solid #e2e8f0;
   cursor: pointer;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   color: inherit;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.dashboard-course-tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.4s ease;
 }
 
 .dashboard-course-tile:hover {
-  transform: translateY(-3px);
-  border-color: rgba(59, 130, 246, 0.42);
-  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.12);
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(59, 130, 246, 0.6);
+  box-shadow: 0 25px 50px rgba(59, 130, 246, 0.15), 0 10px 20px rgba(0, 0, 0, 0.04);
+}
+
+.dashboard-course-tile:hover::before {
+  opacity: 1;
 }
 
 .student-groups-panel {

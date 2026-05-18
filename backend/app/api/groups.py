@@ -422,7 +422,6 @@ def _serialize_group(db: Session, group: Group, viewer: DBUser, include_detail: 
             visible_members = members
         elif is_member:
             own_progress = _student_progress(db, group.id, viewer)
-            own_progress["components"] = []
             visible_members = [own_progress]
         else:
             visible_members = []
@@ -494,6 +493,31 @@ def get_group(
 ):
     group = _group_for_participant(db, group_id, current_user)
     return _serialize_group(db, group, current_user, include_detail=True)
+
+
+@router.delete("/{group_id}")
+async def delete_group(
+    group_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    group = _group_for_instructor(db, group_id, current_user)
+
+    assignment_ids = [row[0] for row in db.query(GroupQuizAssignment.id).filter(GroupQuizAssignment.group_id == group.id).all()]
+    if assignment_ids:
+        db.query(GroupQuizAttempt).filter(GroupQuizAttempt.assignment_id.in_(assignment_ids)).delete(synchronize_session=False)
+        db.query(GroupQuizAssignmentComponent).filter(GroupQuizAssignmentComponent.assignment_id.in_(assignment_ids)).delete(synchronize_session=False)
+        db.query(GroupQuizAssignment).filter(GroupQuizAssignment.group_id == group.id).delete(synchronize_session=False)
+
+    db.query(GroupStudentProgress).filter(GroupStudentProgress.group_id == group.id).delete(synchronize_session=False)
+    db.query(GroupMembership).filter(GroupMembership.group_id == group.id).delete(synchronize_session=False)
+    db.query(GroupMessage).filter(GroupMessage.group_id == group.id).delete(synchronize_session=False)
+    db.query(GroupResource).filter(GroupResource.group_id == group.id).delete(synchronize_session=False)
+    
+    db.delete(group)
+    db.commit()
+    
+    return {"message": "Group deleted successfully"}
 
 
 @router.get("/{group_id}/analytics")
