@@ -393,7 +393,7 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
               <ArrowLeft size={17} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {tt('studentGroupsTitle', 'My Groups')}
             </button>
             <div className="student-group-page-title">
-              <span className="student-kicker">{label('currentGroup', 'Current group', 'Current group')}</span>
+              <span className="student-kicker">{label('currentGroup', 'Current group', 'المجموعة الحالية')}</span>
               <h2><span className="student-title-icon"><BookOpen size={22} /></span>{selectedGroup.name}</h2>
               <p>{selectedGroup.courseName}</p>
             </div>
@@ -408,7 +408,7 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
             <aside className="student-group-sidebar">
               <div className="student-group-card">
                 <div className="student-card-heading">
-                  <h4><FileText size={18} /> <span>{label('resourceLibrary', 'Resource library', 'Resource library')}</span></h4>
+                  <h4><FileText size={18} /> <span>{label('resourceLibrary', 'Resource library', 'مكتبة الموارد')}</span></h4>
                 </div>
                 {selectedGroup.resources?.length ? selectedGroup.resources.map(resource => (
                   <button key={`${resource.documentId || resource.id}`} type="button" onClick={() => openResource(resource)} className="student-resource-row"><FileText size={15} /> <span>{resource.text}</span></button>
@@ -519,7 +519,7 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
         <>
           <div className="student-groups-topbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
             <div className="student-groups-heading">
-              <span className="student-kicker">{label('learningSpace', 'Learning space', 'Learning space')}</span>
+              <span className="student-kicker">{label('learningSpace', 'Learning space', 'مساحة التعلم')}</span>
               <h2><span className="student-title-icon"><Users size={22} /></span>{tt('studentGroupsTitle', 'My Groups')}</h2>
               <p style={{ margin: 0 }}>{tt('studentGroupsSubtitle', 'Access your group resources and quizzes.')}</p>
             </div>
@@ -529,7 +529,7 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
             </button>
           </div>
 
-          <div className="student-group-tabs student-group-list-grid" aria-label={label('joinedGroups', 'Joined groups', 'Joined groups')} style={{ marginTop: '25px' }}>
+          <div className="student-group-tabs student-group-list-grid" aria-label={label('joinedGroups', 'Joined groups', 'المجموعات المنضمة')} style={{ marginTop: '25px' }}>
             {groupsLoading ? (
               Array.from({ length: 2 }).map((_, idx) => (
                 <div key={idx} className="student-group-tab student-group-list-card" style={{ minHeight: '110px', background: '#f1f5f9', opacity: 0.6, animation: 'pulse 1.5s infinite ease-in-out', border: '1px solid rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: '8px', padding: '20px' }}>
@@ -568,14 +568,14 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
                 <form onSubmit={(event) => { event.preventDefault(); joinGroup(); }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>{label('joinCode', 'Join code', 'Join code')}</label>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#64748b', marginBottom: '8px' }}>{label('joinCode', 'Join code', 'رمز الانضمام')}</label>
                       <input value={joinCode} onChange={(e) => setJoinCode(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="1234" inputMode="numeric" maxLength={4} style={{ width: '100%', border: '2px solid #e2e8f0', borderRadius: '12px', padding: '14px', fontSize: '24px', textAlign: 'center', letterSpacing: '12px', outline: 'none', transition: 'border-color 0.2s', color: '#0f172a', fontWeight: 800, boxSizing: 'border-box' }} onFocus={e => e.target.style.borderColor = '#3b82f6'} onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <button type="submit" disabled={isJoining || joinCode.length < 4} className="btn-luxe primary" style={{ flex: 1, justifyContent: 'center', padding: '12px', fontSize: '15px' }}>
                         {isJoining ? <Loader2 size={18} className="spin-icon" /> : tt('join', 'Join')}
                       </button>
-                      <button type="button" onClick={isScanning ? stopScanner : startScanner} className="btn-luxe" title={isScanning ? label('stopScan', 'Stop scan', 'Stop scan') : label('scanQr', 'Scan QR', 'Scan QR')} style={{ padding: '12px 16px' }}>
+                      <button type="button" onClick={isScanning ? stopScanner : startScanner} className="btn-luxe" title={isScanning ? label('stopScan', 'Stop scan', 'إيقاف المسح') : label('scanQr', 'Scan QR', 'مسح رمز QR')} style={{ padding: '12px 16px' }}>
                         {isScanning ? <X size={20} /> : <QrCode size={20} color="#3b82f6" />}
                       </button>
                     </div>

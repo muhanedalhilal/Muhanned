@@ -553,12 +553,12 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
               }} />
             ) : (
               <div style={{ textAlign: 'center' }}>
-                <p style={{ color: '#64748b', marginBottom: '16px' }}>Course not found.</p>
+                <p style={{ color: '#64748b', marginBottom: '16px' }}>{t.courseNotFound || 'المادة غير موجودة.'}</p>
                 <button
                   onClick={() => setSelectedCourseId(null)}
                   style={{ padding: '10px 20px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: '600' }}
                 >
-                  {t.backToDashboard || 'Back to Dashboard'}
+                  {t.backToDashboard || 'العودة للوحة التحكم'}
                 </button>
               </div>
             )}
