@@ -485,6 +485,20 @@ async def join_group(
     return group_payload
 
 
+@router.post("/{group_id}/regenerate-code")
+def regenerate_join_code_endpoint(
+    group_id: int,
+    current_user: DBUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    group = _group_for_instructor(db, group_id, current_user)
+    group.join_code = generate_unique_join_code(db, Group)
+    db.add(group)
+    db.commit()
+    db.refresh(group)
+    return _serialize_group(db, group, current_user, include_detail=True)
+
+
 @router.get("/{group_id}")
 def get_group(
     group_id: int,

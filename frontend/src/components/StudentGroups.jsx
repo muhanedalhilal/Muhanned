@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Award, BookOpen, ChevronDown, ChevronUp, ClipboardList, FileText, Layers, Loader2, Lock, MessageSquare, Plus, QrCode, Send, Users, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api, openResource } from '../services/api';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const instructorRoles = new Set(['teacher', 'admin', 'instructor']);
 
@@ -126,9 +127,7 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
   const [isSendingPublic, setIsSendingPublic] = useState(false);
   const [isSendingPrivate, setIsSendingPrivate] = useState(false);
   const selectedGroupRef = useRef(null);
-  const videoRef = useRef(null);
-  const scanTimerRef = useRef(null);
-  const streamRef = useRef(null);
+  const html5QrCodeRef = useRef(null);
 
   const clearActiveGroup = () => {
     setSelectedGroup(null);
@@ -290,52 +289,81 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
       localStorage.removeItem('pendingJoinCode');
       joinGroup(pendingCode);
     }
+    return () => {
+      if (html5QrCodeRef.current) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            html5QrCodeRef.current.stop();
+          }
+        } catch (e) {
+          console.error("Scanner cleanup error:", e);
+        }
+      }
+    };
   }, []);
 
-  const stopScanner = () => {
-    if (scanTimerRef.current) clearInterval(scanTimerRef.current);
-    scanTimerRef.current = null;
-    streamRef.current?.getTracks()?.forEach(track => track.stop());
-    streamRef.current = null;
+  const stopScanner = async () => {
     setIsScanning(false);
+    if (html5QrCodeRef.current) {
+      try {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
+      } catch (err) {
+        console.error("Failed to stop scanner:", err);
+      }
+      html5QrCodeRef.current = null;
+    }
   };
 
   const startScanner = async () => {
     setScanError('');
-    if (!('BarcodeDetector' in window)) {
-      setScanError(tt('qrUnsupported', 'QR scanning is not supported in this browser. Type the join code instead.'));
-      return;
-    }
-    try {
-      const detector = new window.BarcodeDetector({ formats: ['qr_code', 'code_39', 'code_128'] });
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      streamRef.current = stream;
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
-      setIsScanning(true);
-      scanTimerRef.current = setInterval(async () => {
-        const codes = await detector.detect(videoRef.current);
-        const raw = codes?.[0]?.rawValue;
-        if (!raw) return;
-        
-        let cleanCode = '';
-        const urlMatch = raw.match(/[?&]join=(\d{4})/);
-        if (urlMatch) {
-          cleanCode = urlMatch[1];
-        } else {
-          const matches = raw.match(/\b\d{4}\b/g) || [];
-          const validCode = matches.find(num => num !== '5173' && num !== '8000' && num !== '3000') || matches[0] || raw;
-          cleanCode = validCode.replace(/\D/g, '').slice(0, 4);
+    setIsScanning(true);
+    
+    setTimeout(async () => {
+      try {
+        const container = document.getElementById("reader-container");
+        if (!container) {
+          throw new Error("Reader container element not found.");
         }
         
-        stopScanner();
-        setJoinCode(cleanCode);
-        joinGroup(cleanCode);
-      }, 800);
-    } catch (err) {
-      setScanError(err.message || tt('cameraStartError', 'Unable to start camera scanner.'));
-      stopScanner();
-    }
+        const html5QrCode = new Html5Qrcode("reader-container");
+        html5QrCodeRef.current = html5QrCode;
+        
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: (width, height) => {
+              const min = Math.min(width, height);
+              const boxSize = Math.floor(min * 0.7);
+              return { width: boxSize, height: boxSize };
+            }
+          },
+          (decodedText) => {
+            let cleanCode = '';
+            const urlMatch = decodedText.match(/[?&]join=(\d{4})/);
+            if (urlMatch) {
+              cleanCode = urlMatch[1];
+            } else {
+              const matches = decodedText.match(/\b\d{4}\b/g) || [];
+              const validCode = matches.find(num => num !== '5173' && num !== '8000' && num !== '3000') || matches[0] || decodedText;
+              cleanCode = validCode.replace(/\D/g, '').slice(0, 4);
+            }
+            
+            stopScanner();
+            setJoinCode(cleanCode);
+            joinGroup(cleanCode);
+          },
+          (errorMessage) => {
+            // Silence noisy frame-level errors
+          }
+        );
+      } catch (err) {
+        setScanError(err.message || tt('cameraStartError', 'Unable to start camera scanner.'));
+        setIsScanning(false);
+      }
+    }, 150);
   };
 
   const sendPublic = async () => {
@@ -607,8 +635,17 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
                 </form>
 
                 {(isScanning || scanError) && (
-                  <div style={{ marginTop: '20px', borderRadius: '12px', overflow: 'hidden', background: '#0f172a', border: '1px solid #e2e8f0' }}>
-                    <video ref={videoRef} style={{ display: isScanning ? 'block' : 'none', width: '100%', height: 'auto', minHeight: '200px', objectFit: 'cover' }} muted playsInline />
+                  <div style={{ marginTop: '20px', borderRadius: '12px', overflow: 'hidden', background: '#000000', border: '1px solid #cbd5e1' }}>
+                    {isScanning && (
+                      <div 
+                        id="reader-container" 
+                        style={{ 
+                          width: '100%', 
+                          background: '#000000', 
+                          overflow: 'hidden'
+                        }} 
+                      />
+                    )}
                     {scanError && <p style={{ color: '#ef4444', padding: '12px', textAlign: 'center', margin: 0, background: '#fef2f2', fontSize: '14px', fontWeight: 600 }}>{scanError}</p>}
                   </div>
                 )}

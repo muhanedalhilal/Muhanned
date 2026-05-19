@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Activity, AlertCircle, ArrowLeft, BookOpen, Check, ClipboardList, Copy, FileText, Layers, Loader2, Lock, Mail, MessageSquare, Plus, QrCode, Send, Trash2, Upload, UserPlus, Users, Wand2, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api, openResource } from '../services/api';
-import QRCode from 'qrcode';
+import * as QRCodeModule from 'qrcode';
+const QRCode = QRCodeModule.default || QRCodeModule;
 
 const instructorRoles = new Set(['teacher', 'admin', 'instructor']);
 
@@ -167,6 +168,33 @@ export default function InstructorDashboard({ t, isRtl }) {
       }
     }
     setLoading(false);
+  };
+
+  const handleRegenerateJoinCode = async () => {
+    if (!selectedGroup) return;
+    const confirmMsg = isRtl
+      ? 'هل أنت متأكد من رغبتك في إعادة توليد رمز الانضمام؟ سيبقى الطلاب الحاليون في المجموعة، ولكن يجب على الطلاب الجدد استخدام الرمز الجديد.'
+      : 'Are you sure you want to regenerate the join code? Existing students will remain in the group, but new students must use the new code.';
+    if (!window.confirm(confirmMsg)) return;
+
+    const res = await api.post(`/groups/${selectedGroup.id}/regenerate-code`);
+    if (res.ok) {
+      setSelectedGroup(res.data);
+      selectedGroupRef.current = res.data;
+      if (selectedCourse) {
+        setCourses(prevCourses => prevCourses.map(c => {
+          if (c.id === selectedCourse.id) {
+            return {
+              ...c,
+              groups: (c.groups || []).map(g => g.id === res.data.id ? res.data : g)
+            };
+          }
+          return c;
+        }));
+      }
+    } else {
+      alert(res.message || 'Failed to regenerate join code.');
+    }
   };
 
   const loadGroupDetail = async (groupId, preferredStudentId = selectedStudentId) => {
@@ -1531,7 +1559,34 @@ return (
               <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', marginBottom: '20px', textAlign: 'center' }}>
                 <h4 style={{ margin: '0 0 10px', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><QrCode size={18} color="#3b82f6" /> {tt('joinQrCode', 'Join QR Code')}</h4>
                 <img src={qrDataUrl || selectedGroup?.barcodeDataUrl} alt={`QR code for ${selectedGroup?.joinCode}`} style={{ width: '100%', maxWidth: '180px', aspectRatio: '1 / 1', display: 'block', margin: '0 auto', imageRendering: 'pixelated', borderRadius: '10px' }} />
-                <div style={{ marginTop: '10px', fontSize: '18px', fontWeight: 900, color: '#3b82f6', letterSpacing: '2px' }}>{selectedGroup?.joinCode}</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginTop: '10px' }}>
+                  <div style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', letterSpacing: '2px' }}>{selectedGroup?.joinCode}</div>
+                  <button 
+                    type="button" 
+                    onClick={handleRegenerateJoinCode} 
+                    title={isRtl ? "تغيير كود الانضمام" : "Regenerate Join Code"}
+                    style={{ 
+                      background: '#eff6ff', 
+                      border: '1px solid #bfdbfe', 
+                      borderRadius: '8px', 
+                      padding: '4px 10px', 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '6px',
+                      color: '#2563eb',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      transition: 'all 0.2s',
+                      outline: 'none'
+                    }}
+                    onMouseOver={(e) => { e.currentTarget.style.background = '#dbeafe'; }}
+                    onMouseOut={(e) => { e.currentTarget.style.background = '#eff6ff'; }}
+                  >
+                    <Wand2 size={13} />
+                    {isRtl ? "تغيير الرمز" : "Change Code"}
+                  </button>
+                </div>
               </div>
               <form onSubmit={handleAddPendingStudent} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px', marginBottom: '15px' }}>
                 <div style={{ position: 'relative', minWidth: 0 }}>
