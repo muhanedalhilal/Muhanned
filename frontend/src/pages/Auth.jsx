@@ -136,8 +136,9 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
               data: {
                 access_token: data.session.access_token,
                 email: data.user?.email || formData.email,
-                name: data.user?.user_metadata?.name || '',
-                role: data.user?.user_metadata?.role || 'student',
+                // Intentionally omit role and name here — force /users/me fetch below
+                // to get the correct role from the DB, not from Supabase metadata
+                // (metadata may be missing or stale for existing accounts)
               },
             };
           }
