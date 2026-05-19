@@ -284,6 +284,14 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
     }
   };
 
+  useEffect(() => {
+    const pendingCode = localStorage.getItem('pendingJoinCode');
+    if (pendingCode) {
+      localStorage.removeItem('pendingJoinCode');
+      joinGroup(pendingCode);
+    }
+  }, []);
+
   const stopScanner = () => {
     if (scanTimerRef.current) clearInterval(scanTimerRef.current);
     scanTimerRef.current = null;
@@ -309,8 +317,17 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
         const codes = await detector.detect(videoRef.current);
         const raw = codes?.[0]?.rawValue;
         if (!raw) return;
-        const parsed = raw.match(/\b\d{4}\b/)?.[0] || raw;
-        const cleanCode = parsed.replace(/\D/g, '').slice(0, 4);
+        
+        let cleanCode = '';
+        const urlMatch = raw.match(/[?&]join=(\d{4})/);
+        if (urlMatch) {
+          cleanCode = urlMatch[1];
+        } else {
+          const matches = raw.match(/\b\d{4}\b/g) || [];
+          const validCode = matches.find(num => num !== '5173' && num !== '8000' && num !== '3000') || matches[0] || raw;
+          cleanCode = validCode.replace(/\D/g, '').slice(0, 4);
+        }
+        
         stopScanner();
         setJoinCode(cleanCode);
         joinGroup(cleanCode);

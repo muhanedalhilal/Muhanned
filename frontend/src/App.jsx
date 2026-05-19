@@ -675,6 +675,32 @@ function App() {
     localStorage.setItem('massar_lang', language);
   }, [language]);
 
+  // Parse pending join code from URL on app load
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const joinCode = params.get('join');
+    if (joinCode && joinCode.length === 4 && /^\d+$/.test(joinCode)) {
+      localStorage.setItem('pendingJoinCode', joinCode);
+      
+      // If student is already logged in, redirect them to the dashboard immediately!
+      const savedSession = localStorage.getItem('massar_auth');
+      if (savedSession) {
+        try {
+          const sessionData = JSON.parse(savedSession);
+          if (sessionData.role !== 'teacher' && sessionData.role !== 'admin') {
+            setCurrentPage('dashboard');
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      
+      // Clear the query parameter from the address bar cleanly
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }, []);
+
   // Security State
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginView, setIsLoginView] = useState(true);

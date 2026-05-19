@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Activity, AlertCircle, ArrowLeft, BookOpen, Check, ClipboardList, Copy, FileText, Layers, Loader2, Lock, Mail, MessageSquare, Plus, QrCode, Send, Trash2, Upload, UserPlus, Users, Wand2, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api, openResource } from '../services/api';
+import QRCode from 'qrcode';
 
 const instructorRoles = new Set(['teacher', 'admin', 'instructor']);
 
@@ -85,7 +86,24 @@ function ChatPanel({ title, icon, messages, value, onChange, setValue, onSend, d
 export default function InstructorDashboard({ t, isRtl }) {
   const tt = (key, fallback) => t?.[key] || fallback;
   const [activeView, setActiveView] = useState(() => sessionStorage.getItem('idash_view') || 'courses');
+  const [qrDataUrl, setQrDataUrl] = useState('');
   const [courses, setCourses] = useState([]);
+
+  useEffect(() => {
+    if (selectedGroup?.joinCode) {
+      const joinUrl = `${window.location.origin}/?join=${selectedGroup.joinCode}`;
+      QRCode.toDataURL(joinUrl, {
+        width: 256,
+        margin: 2,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff'
+        }
+      })
+        .then(url => setQrDataUrl(url))
+        .catch(err => console.error('Failed to generate QR Code:', err));
+    }
+  }, [selectedGroup, showAddStudentModal]);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1512,7 +1530,7 @@ return (
               </div>
               <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', marginBottom: '20px', textAlign: 'center' }}>
                 <h4 style={{ margin: '0 0 10px', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}><QrCode size={18} color="#3b82f6" /> {tt('joinQrCode', 'Join QR Code')}</h4>
-                <img src={selectedGroup?.barcodeDataUrl} alt={`QR code for ${selectedGroup?.joinCode}`} style={{ width: '100%', maxWidth: '180px', aspectRatio: '1 / 1', display: 'block', margin: '0 auto', imageRendering: 'pixelated', borderRadius: '10px' }} />
+                <img src={qrDataUrl || selectedGroup?.barcodeDataUrl} alt={`QR code for ${selectedGroup?.joinCode}`} style={{ width: '100%', maxWidth: '180px', aspectRatio: '1 / 1', display: 'block', margin: '0 auto', imageRendering: 'pixelated', borderRadius: '10px' }} />
                 <div style={{ marginTop: '10px', fontSize: '18px', fontWeight: 900, color: '#3b82f6', letterSpacing: '2px' }}>{selectedGroup?.joinCode}</div>
               </div>
               <form onSubmit={handleAddPendingStudent} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px', marginBottom: '15px' }}>
