@@ -974,7 +974,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
               <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'rgba(0,0,0,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.05)' }}>
                 {(isSuggestingComponents || suggestedComponents.length > 0) && (
                   <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '10px', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
-                    <h4 style={{ margin: '0 0 8px', fontSize: '13px', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <h4 className="ai-suggestions-title" style={{ margin: '0 0 8px', fontSize: '13px', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {isSuggestingComponents ? <Loader2 size={14} className="spin-icon" /> : <Wand2 size={14} />}
                       {isSuggestingComponents ? tt('aiSuggestionsLoading', 'AI suggestions loading...') : tt('aiSuggestionsAdd', 'AI Suggestions — click to add')}
                     </h4>
@@ -994,7 +994,7 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                   value={newComponentName}
                   onChange={(e) => { setNewComponentName(e.target.value); if (componentError) setComponentError(''); }}
                   placeholder={tt('manualTopicPlaceholder', 'Or type a topic manually...')}
-                  className="input-luxe"
+                  className="input-luxe add-component-input"
                   disabled={isValidatingComponent}
                   style={{ background: '#ffffff', color: '#0f172a', border: `1px solid ${componentError ? '#ef4444' : '#3b82f6'}`, width: '100%', marginBottom: '0' }}
                   onKeyDown={(e) => {
@@ -1003,20 +1003,20 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
                   }}
                 />
                 {componentError && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px', fontSize: '13px', color: '#dc2626', fontWeight: '500', lineHeight: '1.5' }}>
+                  <div className="component-error-msg" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', background: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '10px', fontSize: '13px', color: '#dc2626', fontWeight: '500', lineHeight: '1.5' }}>
                     <span style={{ flexShrink: 0 }}>x</span>
                     <span>{componentError}</span>
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn-luxe primary hover-lift" disabled={isValidatingComponent || !newComponentName.trim()} onClick={() => handleSaveComponent(selectedCourse.id)} style={{ padding: '8px', flex: 1, justifyContent: 'center' }}>
+                  <button className="btn-luxe primary hover-lift save-component-btn" disabled={isValidatingComponent || !newComponentName.trim()} onClick={() => handleSaveComponent(selectedCourse.id)} style={{ padding: '8px', flex: 1, justifyContent: 'center' }}>
                     {isValidatingComponent ? <Loader2 size={16} className="spin-icon" /> : tt('saveTitle', 'Save')}
                   </button>
-                  <button className="btn-luxe hover-lift" disabled={isValidatingComponent} onClick={() => { setIsAddingComponent(false); setNewComponentName(''); setSuggestedComponents([]); setComponentError(''); }} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}>{tt('cancelTitle', 'Cancel')}</button>
+                  <button className="btn-luxe hover-lift cancel-component-btn" disabled={isValidatingComponent} onClick={() => { setIsAddingComponent(false); setNewComponentName(''); setSuggestedComponents([]); setComponentError(''); }} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', padding: '8px', flex: 1, justifyContent: 'center' }}>{tt('cancelTitle', 'Cancel')}</button>
                 </div>
               </div>
             ) : (
-              <button className="btn-luxe hover-lift" onClick={() => { setIsAddingComponent(true); fetchSuggestions(selectedCourse.id); }} style={{ background: 'rgba(0, 0, 0, 0.03)', border: '1px dashed rgba(0, 0, 0, 0.15)', color: '#1e293b', marginTop: '10px', width: '100%', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+              <button className="btn-luxe hover-lift add-component-btn" onClick={() => { setIsAddingComponent(true); fetchSuggestions(selectedCourse.id); }} style={{ background: 'rgba(0, 0, 0, 0.03)', border: '1px dashed rgba(0, 0, 0, 0.15)', color: '#1e293b', marginTop: '10px', width: '100%', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
                 <Plus size={18} /> <span>{t.addComponent || 'Add Component'}</span>
               </button>
             )}

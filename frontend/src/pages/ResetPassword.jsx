@@ -18,7 +18,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
       if (error) {
         setStatus({
           message: isRtl
-            ? 'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø±Ø§Ø¨Ø· Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø©.'
+            ? 'حدث خطأ أثناء التحقق من رابط الاستعادة.'
             : 'Error checking recovery link.',
           type: 'error',
         });
@@ -61,7 +61,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
     if (!canReset) {
       setStatus({
         message: isRtl
-          ? 'Ø±Ø§Ø¨Ø· Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø© ØºÙŠØ± ØµØ§Ù„Ø­ Ø£Ùˆ Ù…Ù†ØªÙ‡ÙŠ. Ø§Ø·Ù„Ø¨ Ø±Ø§Ø¨Ø·Ù‹Ø§ Ø¬Ø¯ÙŠØ¯Ù‹Ø§.'
+          ? 'رابط الاستعادة غير صالح أو منتهي. اطلب رابطًا جديدًا.'
           : 'Recovery link is invalid or expired. Please request a new link.',
         type: 'error',
       });
@@ -70,7 +70,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
 
     if (password !== confirmPassword) {
       setStatus({
-        message: isRtl ? 'ÙƒÙ„Ù…ØªÙŠ Ø§Ù„Ù…Ø±ÙˆØ± ØºÙŠØ± Ù…ØªØ·Ø§Ø¨Ù‚ØªÙŠÙ†.' : 'Passwords do not match.',
+        message: isRtl ? 'كلمتي المرور غير متطابقتين.' : 'Passwords do not match.',
         type: 'error',
       });
       return;
@@ -82,7 +82,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
     if (!passwordRegex.test(password)) {
       setStatus({
         message: isRtl
-          ? 'ÙŠØ¬Ø¨ Ø£Ù† ØªØ­ØªÙˆÙŠ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø¹Ù„Ù‰ 6 Ø£Ø­Ø±Ù Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„ØŒ ÙˆØ­Ø±Ù ÙƒØ¨ÙŠØ±ØŒ ÙˆØ±Ù‚Ù…ØŒ ÙˆØ±Ù…Ø² Ø®Ø§Øµ.'
+          ? 'يجب أن تحتوي كلمة المرور على 6 أحرف على الأقل، وحرف كبير، ورقم، ورمز خاص.'
           : 'Must contain at least 6 characters, 1 capital letter, 1 number, and 1 special character.',
         type: 'error',
       });
@@ -99,7 +99,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
       if (error) {
         console.log('Update password error:', error);
         setStatus({
-          message: error.message || (isRtl ? 'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ­Ø¯ÙŠØ« ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.' : 'Error updating password. Please try again.'),
+          message: error.message || (isRtl ? 'حدث خطأ أثناء تحديث كلمة المرور. يرجى المحاولة مرة أخرى.' : 'Error updating password. Please try again.'),
           type: 'error'
         });
         return;
@@ -107,7 +107,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
 
       setIsSuccess(true);
       setStatus({
-        message: isRtl ? 'ØªÙ… ØªØ­Ø¯ÙŠØ« ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø¨Ù†Ø¬Ø§Ø­!' : 'Password updated successfully!',
+        message: isRtl ? 'تم تحديث كلمة المرور بنجاح!' : 'Password updated successfully!',
         type: 'success',
       });
 
@@ -115,7 +115,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
     } catch (err) {
       console.log('Unexpected update password error:', err);
       setStatus({
-        message: isRtl ? 'Ø­Ø¯Ø« Ø®Ø·Ø£ ØºÙŠØ± Ù…ØªÙˆÙ‚Ø¹' : 'An unexpected error occurred.',
+        message: isRtl ? 'حدث خطأ غير متوقع' : 'An unexpected error occurred.',
         type: 'error',
       });
     } finally {
@@ -135,7 +135,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
         }}
       >
         <p style={{ color: '#64748b', fontSize: '16px' }}>
-          {isRtl ? 'Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø±Ø§Ø¨Ø·...' : 'Checking recovery link...'}
+          {isRtl ? 'جاري التحقق من الرابط...' : 'Checking recovery link...'}
         </p>
       </div>
     );
@@ -176,7 +176,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
               margin: '0 0 10px',
             }}
           >
-            {isRtl ? 'ØªØ¹ÙŠÙŠÙ† ÙƒÙ„Ù…Ø© Ù…Ø±ÙˆØ± Ø¬Ø¯ÙŠØ¯Ø©' : 'Set New Password'}
+            {isRtl ? 'تعيين كلمة مرور جديدة' : 'Set New Password'}
           </h2>
 
           <p
@@ -188,7 +188,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
             }}
           >
             {isRtl
-              ? 'Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø© Ù„Ø­Ø³Ø§Ø¨Ùƒ'
+              ? 'الرجاء إدخال كلمة المرور الجديدة لحسابك'
               : 'Please enter your new password for your account.'}
           </p>
         </div>
@@ -235,7 +235,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
                 gap: '8px',
               }}
             >
-              {isRtl ? 'Ø§Ù„Ø¹ÙˆØ¯Ø© Ù„ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„' : 'Return to Login'}
+              {isRtl ? 'العودة لتسجيل الدخول' : 'Return to Login'}
               <ArrowRight size={20} style={{ transform: isRtl ? 'rotate(180deg)' : 'none' }} />
             </button>
           </div>
@@ -257,7 +257,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
                 }}
               >
                 {isRtl
-                  ? 'Ø±Ø§Ø¨Ø· Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø© ØºÙŠØ± ØµØ§Ù„Ø­ Ø£Ùˆ Ù…Ù†ØªÙ‡ÙŠ. Ø§Ø·Ù„Ø¨ Ø±Ø§Ø¨Ø·Ù‹Ø§ Ø¬Ø¯ÙŠØ¯Ù‹Ø§.'
+                  ? 'رابط الاستعادة غير صالح أو منتهي. اطلب رابطًا جديدًا.'
                   : 'Recovery link is invalid or expired. Please request a new link.'}
               </div>
             )}
@@ -273,12 +273,12 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
                   textAlign: isRtl ? 'right' : 'left',
                 }}
               >
-                {isRtl ? 'ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± Ø§Ù„Ø¬Ø¯ÙŠØ¯Ø©' : 'New Password'}
+                {isRtl ? 'كلمة المرور الجديدة' : 'New Password'}
               </label>
 
               <input
                 type="password"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••••"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -300,12 +300,12 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
                   textAlign: isRtl ? 'right' : 'left',
                 }}
               >
-                {isRtl ? 'ØªØ£ÙƒÙŠØ¯ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±' : 'Confirm Password'}
+                {isRtl ? 'تأكيد كلمة المرور' : 'Confirm Password'}
               </label>
 
               <input
                 type="password"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••••"
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -327,7 +327,7 @@ export default function ResetPassword({ t, isRtl, onComplete }) {
             >
               {isLoading
                 ? <span className="loader"></span>
-                : <span>{isRtl ? 'Ø­ÙØ¸ ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ±' : 'Save Password'}</span>}
+                : <span>{isRtl ? 'حفظ كلمة المرور' : 'Save Password'}</span>}
             </button>
           </form>
         )}

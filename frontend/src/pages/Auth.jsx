@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { CheckCircle, AlertTriangle, CloudOff, BrainCircuit, ArrowLeft, Mail } from 'lucide-react';
 import { api } from '../services/api';
 import { supabase } from '../services/supabase';
@@ -62,44 +62,29 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
     e.preventDefault();
 
     const email = resetEmail.trim();
-
     if (!email) return;
 
     setIsResetLoading(true);
     setResetStatus({ message: "", type: "" });
-    setDevResetLink(""); // Clear previous link
+    setDevResetLink("");
 
     try {
       const redirectUrl = `${window.location.origin}/?page=reset-password`;
 
-      const response = await api.post('/auth/forgot-password', {
-        email: email,
-        redirect_url: redirectUrl,
+      // Use Supabase directly — works whether or not the local backend is running
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl,
       });
 
-      if (!response.ok) {
-        setResetStatus({
-          message: response.message || "reset_error",
-          type: "error",
-        });
+      if (error) {
+        setResetStatus({ message: "reset_error", type: "error" });
         return;
       }
 
-      if (response.data && response.data.reset_link) {
-        setDevResetLink(response.data.reset_link);
-      }
-
-      setResetStatus({
-        message: "reset_sent",
-        type: "success",
-      });
+      setResetStatus({ message: "reset_sent", type: "success" });
     } catch (err) {
-      console.log("Reset password catch error:", err);
-
-      setResetStatus({
-        message: "reset_error",
-        type: "error",
-      });
+      console.log("Reset password error:", err);
+      setResetStatus({ message: "reset_error", type: "error" });
     } finally {
       setIsResetLoading(false);
     }
