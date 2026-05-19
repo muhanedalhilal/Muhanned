@@ -333,7 +333,10 @@ const translations = {
     unableJoinGroup: "Unable to join group.",
     qrUnsupported: "QR scanning is not supported in this browser. Type the join code instead.",
     cameraStartError: "Unable to start camera scanner.",
-    copyCode: "Copy join code"
+    copyCode: "Copy join code",
+    discussions: "Discussions & Chat",
+    myProgress: "My Progress",
+    groupSummary: "Group summary"
   },
   ar: {
     appName: "مسار",
@@ -652,7 +655,10 @@ const translations = {
     unableJoinGroup: "تعذر الانضمام إلى المجموعة.",
     qrUnsupported: "مسح QR غير مدعوم في هذا المتصفح. اكتب كود الانضمام بدلاً من ذلك.",
     cameraStartError: "تعذر تشغيل ماسح الكاميرا.",
-    copyCode: "نسخ كود الانضمام"
+    copyCode: "نسخ كود الانضمام",
+    discussions: "المناقشات والمحادثة",
+    myProgress: "تقدمي المعرفي",
+    groupSummary: "ملخص المجموعة"
   }
 };
 
