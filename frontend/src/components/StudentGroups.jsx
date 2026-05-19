@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Award, BookOpen, ChevronDown, ChevronUp, ClipboardList, FileText, Layers, Loader2, Lock, MessageSquare, Plus, QrCode, Send, Users, X } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api, openResource } from '../services/api';
-import { Html5Qrcode } from 'html5-qrcode';
 
 const instructorRoles = new Set(['teacher', 'admin', 'instructor']);
 
@@ -327,7 +326,12 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
           throw new Error("Reader container element not found.");
         }
         
-        const html5QrCode = new Html5Qrcode("reader-container");
+        const Html5QrcodeClass = window.Html5Qrcode;
+        if (!Html5QrcodeClass) {
+          throw new Error(isRtl ? 'جاري تحميل مكتبة القارئ... برجاء المحاولة بعد قليل' : 'Scanner library is loading. Please retry in a moment.');
+        }
+        
+        const html5QrCode = new Html5QrcodeClass("reader-container");
         html5QrCodeRef.current = html5QrCode;
         
         await html5QrCode.start(
