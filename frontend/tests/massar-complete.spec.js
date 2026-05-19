@@ -379,11 +379,11 @@ test.describe('Category 2: Password Recovery Flows', () => {
 
   test('TC024: Verify invalid forgot password email triggers API error display', async ({ page }) => {
     await page.locator('button', { hasText: /Forgot Password|نسيت كلمة المرور/ }).first().click();
-    await page.route('**/auth/v1/recover**', async (route) => {
+    await page.route('**/auth/forgot-password', async (route) => {
       await route.fulfill({
         status: 400,
         contentType: 'application/json',
-        body: JSON.stringify({ error: { message: 'Failed to send reset link' } })
+        body: JSON.stringify({ message: 'reset_error' })
       });
     });
     await page.fill('input[placeholder="Email address"]', 'student@massar.edu');
@@ -393,11 +393,11 @@ test.describe('Category 2: Password Recovery Flows', () => {
 
   test('TC025: Verify successful recovery password generation link sent message', async ({ page }) => {
     await page.locator('button', { hasText: /Forgot Password|نسيت كلمة المرور/ }).first().click();
-    await page.route('**/auth/v1/recover**', async (route) => {
+    await page.route('**/auth/forgot-password', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({})
+        body: JSON.stringify({ message: 'reset_sent' })
       });
     });
     await page.fill('input[placeholder="Email address"]', 'student@massar.edu');
@@ -407,11 +407,11 @@ test.describe('Category 2: Password Recovery Flows', () => {
 
   test('TC026: Verify developer reset shortcut link renders when returned', async ({ page }) => {
     await page.locator('button', { hasText: /Forgot Password|نسيت كلمة المرور/ }).first().click();
-    await page.route('**/auth/v1/recover**', async (route) => {
+    await page.route('**/auth/forgot-password', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({})
+        body: JSON.stringify({ reset_link: 'http://localhost:5173/?page=reset-password' })
       });
     });
     await page.fill('input[placeholder="Email address"]', 'student@massar.edu');

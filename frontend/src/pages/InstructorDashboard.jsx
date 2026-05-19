@@ -87,6 +87,9 @@ function ChatPanel({ title, icon, messages, value, onChange, setValue, onSend, d
 export default function InstructorDashboard({ t, isRtl }) {
   const tt = (key, fallback) => t?.[key] || fallback;
   const [activeView, setActiveView] = useState(() => sessionStorage.getItem('idash_view') || 'courses');
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [courses, setCourses] = useState([]);
 
@@ -105,8 +108,6 @@ export default function InstructorDashboard({ t, isRtl }) {
         .catch(err => console.error('Failed to generate QR Code:', err));
     }
   }, [selectedGroup, showAddStudentModal]);
-  const [selectedCourse, setSelectedCourse] = useState(null);
-  const [selectedGroup, setSelectedGroup] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   const [showAddGroupModal, setShowAddGroupModal] = useState(false);
@@ -131,7 +132,6 @@ export default function InstructorDashboard({ t, isRtl }) {
   const [studentEmail, setStudentEmail] = useState('');
   const [studentEmailError, setStudentEmailError] = useState('');
   const [isAddingStudent, setIsAddingStudent] = useState(false);
-  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [isOpeningAddStudentModal, setIsOpeningAddStudentModal] = useState(false);
   const [pendingStudents, setPendingStudents] = useState([]);
   const [removingStudentId, setRemovingStudentId] = useState(null);
