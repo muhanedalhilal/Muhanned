@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import {
   ArrowLeft, CheckCircle2, XCircle, Trophy, Medal,
@@ -459,13 +459,14 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
      ACTIVE QUIZ â€” clean card design
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   const currentQ = questions[currentIdx];
-  const LETTERS = isRtl ? ['Ø£', 'Ø¨', 'Ø¬', 'Ø¯'] : ['A', 'B', 'C', 'D'];
+  // Always use A/B/C/D — works for both LTR and RTL UI
+  const LETTERS = ['A', 'B', 'C', 'D'];
 
   return (
     <div style={{ width: '100%', maxWidth: '1000px', margin: '0 auto', padding: '0 24px 40px', animation: 'fadeIn 0.3s ease' }}>
 
       {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px', paddingTop: '8px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '28px', paddingTop: '8px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
         <button onClick={handleManualEnd} style={{
           width: '40px', height: '40px', borderRadius: '12px',
           background: 'white', border: '1px solid #e2e8f0',
@@ -479,7 +480,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
         </button>
 
         <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexDirection: isRtl ? 'row-reverse' : 'row' }}>
             <span style={{ fontSize: '13px', fontWeight: '800', color: '#0B1F3A', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
               {t.quizQuestion || 'Question'} {currentIdx + 1}
             </span>
@@ -504,7 +505,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
         boxShadow: '0 20px 50px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9',
         animation: 'slideUp 0.4s ease'
       }}>
-        <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', lineHeight: '1.5', margin: '0 0 32px 0' }}>
+        <h2 dir="auto" style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', lineHeight: '1.5', margin: '0 0 32px 0', textAlign: 'start' }}>
           {currentQ.question}
         </h2>
 
@@ -522,13 +523,14 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
                 disabled={showResult}
                 style={{
                   padding: '20px 24px', borderRadius: '16px',
-                  textAlign: isRtl ? 'right' : 'left', fontSize: '16px', fontWeight: '600',
+                  fontSize: '16px', fontWeight: '600',
                   border: '2px solid',
                   borderColor: showAsCorrect ? '#10b981' : (showAsWrong ? '#ef4444' : (isSelected ? '#3b82f6' : '#f1f5f9')),
                   background: showAsCorrect ? '#f0fdf4' : (showAsWrong ? '#fef2f2' : (isSelected ? '#eff6ff' : 'white')),
                   color: showAsCorrect ? '#065f46' : (showAsWrong ? '#991b1b' : (isSelected ? '#1e40af' : '#1e293b')),
                   cursor: showResult ? 'default' : 'pointer',
                   display: 'flex', alignItems: 'center', gap: '16px',
+                  flexDirection: isRtl ? 'row-reverse' : 'row',
                   transition: 'all 0.2s ease',
                   position: 'relative', overflow: 'hidden'
                 }}
@@ -538,11 +540,12 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
                   background: showAsCorrect ? '#10b981' : (showAsWrong ? '#ef4444' : (isSelected ? '#3b82f6' : '#f1f5f9')),
                   color: isSelected || showResult ? 'white' : '#64748b',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '14px', fontWeight: '800', flexShrink: 0
+                  fontSize: '14px', fontWeight: '800', flexShrink: 0,
+                  fontFamily: 'monospace'
                 }}>
                   {showAsCorrect ? <CheckCircle2 size={18} /> : (showAsWrong ? <XCircle size={18} /> : LETTERS[i])}
                 </div>
-                <span style={{ flex: 1 }}>{opt}</span>
+                <span dir="auto" style={{ flex: 1, textAlign: 'start' }}>{opt}</span>
               </button>
             );
           })}
@@ -557,6 +560,7 @@ export default function Quiz({ t, isRtl, setCurrentPage, selectedComponents, sel
                 background: '#0f172a', color: 'white', border: 'none',
                 fontSize: '16px', fontWeight: '700', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                flexDirection: isRtl ? 'row-reverse' : 'row',
                 boxShadow: '0 10px 25px rgba(15,23,42,0.2)', transition: 'all 0.2s'
               }}
               onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
