@@ -24,7 +24,7 @@ export default function Auth({ t, isLoginView, setIsLoginView, onSecureLogin, is
       auth_failed: tt('authFailed', isRtl ? 'فشلت المصادقة. يرجى التحقق من بياناتك والمحاولة مرة أخرى.' : 'Authentication failed. Please check your details and try again.'),
       user_not_found: tt('userNotFound', isRtl ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة، أو أن هذا الحساب غير موجود.' : 'Incorrect email or password, or this account does not exist.'),
       server_error: tt('serverError', isRtl ? 'فشل الاتصال بالخادم.' : 'Server connection failed.'),
-      reset_sent: tt('resetSent', isRtl ? 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد.' : 'Password reset link sent to your email. Please check your inbox.'),
+      reset_sent: tt('resetSent', isRtl ? 'تم إرسال رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد (أو البريد المهمل/Spam).' : 'Password reset link sent to your email. Please check your inbox (or Spam/Junk folder).'),
       reset_error: tt('resetError', isRtl ? 'فشل إرسال رابط إعادة التعيين. يرجى التحقق من البريد الإلكتروني والمحاولة مرة أخرى.' : 'Failed to send reset link. Please check your email and try again.'),
       generic_error: tt('genericError', isRtl ? 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى لاحقاً.' : 'An unexpected error occurred. Please try again later.'),
       confirm_email_first: tt('confirmEmailFirst', isRtl ? 'يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.' : 'Please confirm your email before signing in.'),
