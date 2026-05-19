@@ -1123,20 +1123,26 @@ export default function Dashboard({ t, isRtl, currentPage, selectedCourseId, set
               </div>
             ) : (
               <div style={{ flex: 1, minHeight: '550px', width: '100%', marginBottom: '20px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 10, right: isRtl ? 20 : 10, left: isRtl ? 10 : 45, bottom: 40 }}>
+                <ResponsiveContainer width="100%" height="100%" style={{ direction: 'ltr' }}>
+                  <BarChart data={chartData} margin={{ top: 10, right: isRtl ? 60 : 10, left: isRtl ? 10 : 60, bottom: 40 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                    <XAxis dataKey="name" stroke="#94a3b8" interval={0} height={200} tick={<CustomXAxisTick isRtl={isRtl} />} />
+                    <XAxis dataKey="name" stroke="#94a3b8" interval={0} height={200} tick={<CustomXAxisTick isRtl={false} />} />
                     <YAxis
-                      orientation={isRtl ? "right" : "left"}
+                      orientation={isRtl ? 'right' : 'left'}
                       domain={[0, 100]}
                       stroke="#94a3b8"
-                      width={isRtl ? 80 : 85}
-                      dx={0}
-                      tickMargin={isRtl ? 35 : 12}
+                      width={50}
+                      tickMargin={8}
                       tick={{ fill: '#334155', fontSize: 18, fontWeight: '900' }}
                       ticks={[0, 25, 50, 75, 100]}
-                      tickFormatter={(val) => `${val}%`}
+                      tickFormatter={(val) => {
+                        if (isRtl) {
+                          const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                          const formatted = String(val).replace(/[0-9]/g, (w) => arabicDigits[+w]);
+                          return `${formatted}٪`;
+                        }
+                        return `${val}%`;
+                      }}
                     />
                     <Tooltip cursor={{ fill: 'rgba(0,0,0,0.02)' }} content={({ active, payload }) => { if (active && payload && payload.length) { return (<div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '10px', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}><p style={{ margin: '0 0 5px 0', fontWeight: 'bold' }}>{payload[0].payload.fullName}</p><p style={{ margin: 0, color: payload[0].payload.fill }}>{t.progressHover || 'Progress:'} {payload[0].value}%</p></div>); } return null; }} />
                     <Bar dataKey="progress" radius={[4, 4, 0, 0]} maxBarSize={50} />

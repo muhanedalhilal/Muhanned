@@ -1011,11 +1011,26 @@ export default function InstructorDashboard({ t, isRtl }) {
             </div>
             <div style={{ height: '260px', overflowX: 'auto', overflowY: 'hidden', paddingBottom: '10px' }}>
               <div style={{ height: '100%', minWidth: `${Math.max(200, analyticsData.length * 60)}px` }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analyticsData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                <ResponsiveContainer width="100%" height="100%" style={{ direction: 'ltr' }}>
+                  <BarChart data={analyticsData} margin={{ top: 10, right: isRtl ? 50 : 10, left: isRtl ? 10 : 50, bottom: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                    <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
-                    <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <YAxis
+                      orientation={isRtl ? 'right' : 'left'}
+                      domain={[0, 100]}
+                      stroke="#94a3b8"
+                      width={40}
+                      tickMargin={6}
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(val) => {
+                        if (isRtl) {
+                          const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                          const formatted = String(val).replace(/[0-9]/g, (w) => arabicDigits[+w]);
+                          return `${formatted}٪`;
+                        }
+                        return `${val}%`;
+                      }}
+                    />
                     <Tooltip formatter={(v) => [`${v}%`, tt('mastery', 'Mastery')]} />
                     <Bar dataKey="mastery" fill="#3b82f6" radius={[6, 6, 0, 0]} />
                   </BarChart>
@@ -1032,11 +1047,26 @@ export default function InstructorDashboard({ t, isRtl }) {
             {kcMasteryData.length ? (
               <div style={{ height: '260px', overflowX: 'auto', overflowY: 'hidden', paddingBottom: '10px' }}>
                 <div style={{ height: '100%', minWidth: `${Math.max(200, kcMasteryData.length * 70)}px` }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={kcMasteryData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                  <ResponsiveContainer width="100%" height="100%" style={{ direction: 'ltr' }}>
+                    <BarChart data={kcMasteryData} margin={{ top: 10, right: isRtl ? 50 : 10, left: isRtl ? 10 : 50, bottom: 10 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(v) => v.length > 12 ? v.substring(0, 12) + '...' : v} />
-                      <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 12 }} />
+                      <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(v) => v.length > 12 ? v.substring(0, 12) + '...' : v} />
+                      <YAxis
+                        orientation={isRtl ? 'right' : 'left'}
+                        domain={[0, 100]}
+                        stroke="#94a3b8"
+                        width={40}
+                        tickMargin={6}
+                        tick={{ fill: '#64748b', fontSize: 12 }}
+                        tickFormatter={(val) => {
+                          if (isRtl) {
+                            const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                            const formatted = String(val).replace(/[0-9]/g, (w) => arabicDigits[+w]);
+                            return `${formatted}٪`;
+                          }
+                          return `${val}%`;
+                        }}
+                      />
                       <Tooltip formatter={(v) => [`${v}%`, tt('avgMastery', 'Avg. Mastery')]} />
                       <Bar dataKey="mastery" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
                     </BarChart>
@@ -1114,10 +1144,10 @@ export default function InstructorDashboard({ t, isRtl }) {
           </div>
           {kcChartData.length ? (
             <div style={{ minHeight: '400px', width: '100%' }}>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={400} style={{ direction: 'ltr' }}>
                 <BarChart
                   data={kcChartData}
-                  margin={{ top: 10, right: 20, left: isRtl ? 10 : 45, bottom: 80 }}
+                  margin={{ top: 10, right: isRtl ? 60 : 20, left: isRtl ? 20 : 60, bottom: 80 }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                   <XAxis
@@ -1125,17 +1155,24 @@ export default function InstructorDashboard({ t, isRtl }) {
                     stroke="#94a3b8"
                     interval={0}
                     height={120}
-                    tick={<CustomXAxisTick isRtl={isRtl} />}
+                    tick={<CustomXAxisTick isRtl={false} />}
                   />
                   <YAxis
                     orientation={isRtl ? 'right' : 'left'}
                     domain={[0, 100]}
                     stroke="#94a3b8"
-                    width={isRtl ? 80 : 85}
-                    tickMargin={isRtl ? 35 : 12}
+                    width={50}
+                    tickMargin={8}
                     tick={{ fill: '#334155', fontSize: 16, fontWeight: '900' }}
                     ticks={[0, 25, 50, 75, 100]}
-                    tickFormatter={(val) => `${val}%`}
+                    tickFormatter={(val) => {
+                      if (isRtl) {
+                        const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                        const formatted = String(val).replace(/[0-9]/g, (w) => arabicDigits[+w]);
+                        return `${formatted}٪`;
+                      }
+                      return `${val}%`;
+                    }}
                   />
                   <Tooltip
                     cursor={{ fill: 'rgba(0,0,0,0.02)' }}
@@ -1374,11 +1411,26 @@ export default function InstructorDashboard({ t, isRtl }) {
                 </div>
                 <div style={{ height: '280px', overflowX: 'auto', overflowY: 'hidden', paddingBottom: '10px' }}>
                   <div style={{ height: '100%', minWidth: `${Math.max(100, courseGroupMasteryData.length * 60)}px` }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={courseGroupMasteryData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                    <ResponsiveContainer width="100%" height="100%" style={{ direction: 'ltr' }}>
+                      <BarChart data={courseGroupMasteryData} margin={{ top: 10, right: isRtl ? 50 : 10, left: isRtl ? 10 : 50, bottom: 10 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} />
-                        <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 12 }} />
+                        <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 12 }} />
+                        <YAxis
+                          orientation={isRtl ? 'right' : 'left'}
+                          domain={[0, 100]}
+                          stroke="#94a3b8"
+                          width={40}
+                          tickMargin={6}
+                          tick={{ fill: '#64748b', fontSize: 12 }}
+                          tickFormatter={(val) => {
+                            if (isRtl) {
+                              const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                              const formatted = String(val).replace(/[0-9]/g, (w) => arabicDigits[+w]);
+                              return `${formatted}٪`;
+                            }
+                            return `${val}%`;
+                          }}
+                        />
                         <Tooltip formatter={(value, name, item) => [`${value}% (${item?.payload?.students ?? 0} ${t.students || 'students'})`, tt('avgStudentMastery', 'Avg. Mastery')]} />
                         <Bar dataKey="averageMastery" name={tt('avgStudentMastery', 'Avg. Mastery')} fill="#10b981" radius={[6, 6, 0, 0]} />
                       </BarChart>
@@ -1396,11 +1448,26 @@ export default function InstructorDashboard({ t, isRtl }) {
                 </div>
                 <div style={{ height: '280px', overflowX: 'auto', overflowY: 'hidden', paddingBottom: '10px' }}>
                   <div style={{ height: '100%', minWidth: `${Math.max(100, courseComponentMasteryData.length * 60)}px` }}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={courseComponentMasteryData} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                    <ResponsiveContainer width="100%" height="100%" style={{ direction: 'ltr' }}>
+                      <BarChart data={courseComponentMasteryData} margin={{ top: 10, right: isRtl ? 50 : 10, left: isRtl ? 10 : 50, bottom: 10 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value} />
-                        <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 12 }} />
+                        <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#64748b', fontSize: 12 }} tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value} />
+                        <YAxis
+                          orientation={isRtl ? 'right' : 'left'}
+                          domain={[0, 100]}
+                          stroke="#94a3b8"
+                          width={40}
+                          tickMargin={6}
+                          tick={{ fill: '#64748b', fontSize: 12 }}
+                          tickFormatter={(val) => {
+                            if (isRtl) {
+                              const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                              const formatted = String(val).replace(/[0-9]/g, (w) => arabicDigits[+w]);
+                              return `${formatted}٪`;
+                            }
+                            return `${val}%`;
+                          }}
+                        />
                         <Tooltip formatter={(value) => [`${value}%`, tt('avgStudentMastery', 'Avg. Mastery')]} />
                         <Bar dataKey="averageMastery" name={tt('avgStudentMastery', 'Avg. Mastery')} fill="#8b5cf6" radius={[6, 6, 0, 0]} />
                       </BarChart>

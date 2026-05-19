@@ -459,10 +459,10 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
                 </h4>
                 {kcChartData.length > 0 ? (
                   <div style={{ minHeight: '350px', width: '100%' }}>
-                    <ResponsiveContainer width="100%" height={350}>
+                    <ResponsiveContainer width="100%" height={350} style={{ direction: 'ltr' }}>
                       <BarChart
                         data={kcChartData}
-                        margin={{ top: 10, right: 20, left: isRtl ? 10 : 45, bottom: 80 }}
+                        margin={{ top: 10, right: isRtl ? 60 : 20, left: isRtl ? 20 : 60, bottom: 80 }}
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                         <XAxis
@@ -470,17 +470,24 @@ export default function StudentGroups({ t, isRtl, setCurrentPage, setSelectedCou
                           stroke="#94a3b8"
                           interval={0}
                           height={120}
-                          tick={<CustomXAxisTick isRtl={isRtl} />}
+                          tick={<CustomXAxisTick isRtl={false} />}
                         />
                         <YAxis
                           orientation={isRtl ? 'right' : 'left'}
                           domain={[0, 100]}
                           stroke="#94a3b8"
-                          width={isRtl ? 80 : 85}
-                          tickMargin={isRtl ? 35 : 12}
+                          width={50}
+                          tickMargin={8}
                           tick={{ fill: '#334155', fontSize: 16, fontWeight: '900' }}
                           ticks={[0, 25, 50, 75, 100]}
-                          tickFormatter={(val) => `${val}%`}
+                          tickFormatter={(val) => {
+                            if (isRtl) {
+                              const arabicDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
+                              const formatted = String(val).replace(/[0-9]/g, (w) => arabicDigits[+w]);
+                              return `${formatted}٪`;
+                            }
+                            return `${val}%`;
+                          }}
                         />
                         <Tooltip
                           cursor={{ fill: 'rgba(0,0,0,0.02)' }}
