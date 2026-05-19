@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { User, Mail, Lock, Save, ArrowLeft } from 'lucide-react';
 
-export default function Profile({ t, onBack, currentUser, setCurrentUser, authToken }) {
+export default function Profile({ t, onBack, currentUser, setCurrentUser, authToken, isRtl }) {
   const [profileData, setProfileData] = useState({
     name: currentUser?.name || '',
     email: currentUser?.email || '',
@@ -27,7 +27,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
     if (profileData.password) payload.password = profileData.password;
 
     if (Object.keys(payload).length === 0) {
-      setMessage({ type: 'info', text: 'No changes to save.' });
+      setMessage({ type: 'info', text: t.noChangesToSave || 'No changes to save.' });
       setIsLoading(false);
       return;
     }
@@ -52,12 +52,12 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
             name: data.user?.name || profileData.name
           });
         }
-        setMessage({ type: 'success', text: data.message || t.profileSaved || 'Profile updated!' });
+        setMessage({ type: 'success', text: data.message || t.profileSaved || 'Profile successfully updated!' });
       } else {
-        setMessage({ type: 'error', text: data.detail || 'Update failed.' });
+        setMessage({ type: 'error', text: data.detail || t.updateFailed || 'Update failed.' });
       }
     } catch {
-      setMessage({ type: 'error', text: 'Server connection failed.' });
+      setMessage({ type: 'error', text: t.serverError || 'Server connection failed.' });
     } finally {
       setIsLoading(false);
       setTimeout(() => setMessage(null), 4000);
@@ -68,7 +68,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
     <div className="dashboard-section command-center" style={{ maxWidth: '600px', margin: '0 auto' }}>
       <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
         <button className="btn-luxe" onClick={onBack} style={{ background: 'rgba(0,0,0,0.05)', color: '#1e293b' }}>
-          <ArrowLeft size={18} /> {t.backToDashboard || 'Back'}
+          <ArrowLeft size={18} style={{ transform: isRtl ? 'scaleX(-1)' : 'none' }} /> {t.backToDashboard || 'Back'}
         </button>
       </div>
 
@@ -83,7 +83,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
         <form onSubmit={handleSubmit} className="luxe-panel">
           <div className="form-body">
             <div style={{ position: 'relative' }}>
-              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.fullName || 'Full Name'}</label>
+              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: isRtl ? 'right' : 'left' }}>{t.fullName || 'Full Name'}</label>
               <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
                 <User size={18} color="#94a3b8" />
                 <input
@@ -99,7 +99,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
             </div>
 
             <div style={{ position: 'relative' }}>
-              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.email || 'Email Address'}</label>
+              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: isRtl ? 'right' : 'left' }}>{t.email || 'Email Address'}</label>
               <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
                 <Mail size={18} color="#94a3b8" />
                 <input
@@ -115,7 +115,7 @@ export default function Profile({ t, onBack, currentUser, setCurrentUser, authTo
             </div>
 
             <div style={{ position: 'relative' }}>
-              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: 'left' }}>{t.password || 'New Password'}</label>
+              <label style={{ color: '#94a3b8', fontSize: '14px', marginBottom: '8px', display: 'block', textAlign: isRtl ? 'right' : 'left' }}>{t.password || 'New Password'}</label>
               <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '12px', padding: '0 15px' }}>
                 <Lock size={18} color="#94a3b8" />
                 <input

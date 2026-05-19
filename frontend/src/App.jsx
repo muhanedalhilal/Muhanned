@@ -336,7 +336,9 @@ const translations = {
     copyCode: "Copy join code",
     discussions: "Discussions & Chat",
     myProgress: "My Progress",
-    groupSummary: "Group summary"
+    groupSummary: "Group summary",
+    noChangesToSave: "No changes to save.",
+    updateFailed: "Update failed."
   },
   ar: {
     appName: "مسار",
@@ -658,7 +660,9 @@ const translations = {
     copyCode: "نسخ كود الانضمام",
     discussions: "المناقشات والمحادثة",
     myProgress: "تقدمي المعرفي",
-    groupSummary: "ملخص المجموعة"
+    groupSummary: "ملخص المجموعة",
+    noChangesToSave: "لا توجد تعديلات لحفظها.",
+    updateFailed: "فشل تحديث البيانات."
   }
 };
 
