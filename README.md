@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎓 Massar — AI-Powered Adaptive Learning Platform
+#  Massar — AI-Powered Adaptive Learning Platform
 
 **An intelligent, full-stack educational platform that uses Bayesian Knowledge Tracing (BKT) to personalize every student's learning journey in real time.**
 
@@ -14,7 +14,7 @@
 
 ---
 
-## 📖 Project Overview
+##  Project Overview
 
 **Massar** (مسار — Arabic for "pathway") is a full-stack adaptive learning management system (LMS) built as a capstone university project. It goes beyond traditional LMS platforms by integrating a real-time AI engine that:
 
@@ -36,7 +36,7 @@ The platform supports three user roles — **Students**, **Instructors**, and **
 - **AI-Powered Study Aids** — One-click generation of Markdown summary sheets and Mermaid.js interactive mind maps per course.
 - **Content Validation** — AI validates instructor-manually-added topics against uploaded document content to prevent inaccurate knowledge maps.
 
-### 👩‍🎓 Student Experience
+###  Student Experience
 - Personal dashboard with per-course mastery progress charts (Recharts).
 - Take adaptive quizzes tied to specific knowledge components.
 - Download AI-generated study summaries as PDF.
@@ -44,7 +44,7 @@ The platform supports three user roles — **Students**, **Instructors**, and **
 - Group chat with real-time messaging (Supabase Realtime).
 - Full Arabic/English bilingual interface with RTL layout switching.
 
-### 👨‍🏫 Instructor Dashboard
+###  Instructor Dashboard
 - Create and manage courses with full CRUD.
 - Upload course documents (PDF, PPTX) — AI processes them automatically.
 - View and edit AI-generated knowledge components for each course.
@@ -52,19 +52,19 @@ The platform supports three user roles — **Students**, **Instructors**, and **
 - Track individual and group student progress with interactive charts.
 - Assign group-level quizzes from any knowledge component pool.
 
-### 🔐 Authentication & Authorization
+###  Authentication & Authorization
 - Email/password authentication via Supabase Auth.
 - Google OAuth (Single Sign-On).
 - Password reset via email link.
 - JWT-based role validation on every protected API endpoint.
 
-### 🛡️ Admin Panel
+###  Admin Panel
 - Full user management: view, promote, demote, and delete users.
 - Override user roles across the platform.
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -81,7 +81,7 @@ The platform supports three user roles — **Students**, **Instructors**, and **
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 massar/
@@ -147,7 +147,7 @@ Dashboard re-renders with updated Recharts progress bars
 
 ---
 
-## 🚀 Installation & Local Setup
+##  Installation & Local Setup
 
 ### Prerequisites
 - **Python 3.12+** — [python.org](https://www.python.org/downloads/)
@@ -216,7 +216,7 @@ npm run dev
 
 ---
 
-## 🖥️ Usage
+##  Usage
 
 | Role | Access |
 |---|---|
