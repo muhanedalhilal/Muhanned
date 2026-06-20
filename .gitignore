@@ -1,31 +1,108 @@
-# Environments
+# ============================================================
+# Massar — .gitignore
+# ============================================================
+
+# ── Secrets & Environment Variables ─────────────────────────
+.env
+.env.*
+!.env.example
+serviceAccountKey.json
+*.pem
+*.key
+*.p12
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.whl
+MANIFEST
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.hypothesis/
+.pytest_cache/
+.ruff_cache/
+*.db
+*.sqlite3
+*.log
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+
+# ── Virtual Environments ─────────────────────────────────────
 venv/
 .venv/
 env/
-.env
+ENV/
+.env/
+venv.bak/
 
-# Node
-node_modules/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.egg-info/
-*.db
-*.log
+# ── Generated / Runtime Files ────────────────────────────────
 backend/generated/
+backend/uploads/
+backend/test_write_access.txt
+
+# ── Node.js / Frontend ───────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp
+.pnp.js
+.yarn/
+
+# ── Vite / Build Output ──────────────────────────────────────
 dist/
-build/
+dist-ssr/
+*.local
 
-# Firebase Secrets - DO NOT COMMIT!
-serviceAccountKey.json
+# ── Playwright Test Artifacts ────────────────────────────────
+playwright-report/
+test-results/
+.playwright/
 
-# IDE
-.idea/
+# ── IDE / Editor ─────────────────────────────────────────────
 .vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.bak
+*.orig
 
-# OS
+# ── OS Artifacts ─────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ── Scratch / Temporary Files ────────────────────────────────
+*.tmp
+*.temp
+old_*.txt
+v_*.txt
+remote_*.txt
+Untitled
