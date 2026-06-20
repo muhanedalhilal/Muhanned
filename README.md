@@ -27,9 +27,9 @@ The platform supports three user roles — **Students**, **Instructors**, and **
 
 ---
 
-## ✨ Features
+##  Features
 
-### 🧠 AI & Adaptive Learning Engine
+###  AI & Adaptive Learning Engine
 - **Automatic Knowledge Component Extraction** — Upload any PDF/PPTX and Gemini 2.5 Flash extracts the 5–7 most critical learning concepts from the actual document content (never from the filename or course title).
 - **Bayesian Knowledge Tracing (BKT)** — A four-parameter probabilistic model updates each student's mastery probability after every quiz answer in real time.
 - **Adaptive Quiz Generation** — Quizzes are dynamically generated from a student's weakest knowledge components, with difficulty scaling to their current mastery level.
@@ -226,7 +226,7 @@ npm run dev
 
 ---
 
-## 📸 Screenshots
+##  Screenshots
 
 > _Screenshots and a live demo will be added here._
 
@@ -256,7 +256,7 @@ After each quiz answer, the posterior mastery probability is updated using Bayes
 
 ---
 
-## 🔭 Future Improvements
+##  Future Improvements
 
 - [ ] **Spaced Repetition Scheduler** — Integrate SM-2/Anki-style review scheduling based on BKT mastery decay over time.
 - [ ] **Mobile App** — React Native companion app with offline quiz caching.
@@ -269,7 +269,7 @@ After each quiz answer, the posterior mastery probability is updated using Bayes
 
 ---
 
-## 📄 License
+##  License
 
 This project was developed as a university capstone project. All rights reserved.
 
